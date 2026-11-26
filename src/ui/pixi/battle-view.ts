@@ -77,12 +77,9 @@ async function resharpen() {
     }),
   );
 }
-/* the new card art, cropped to the tile's window. Only the mage scenes: the Knight, Lich and Assassin busts
-   in card-art.ts were a concept that was dropped. Everything else keeps the old icon. */
-const SCENES = new Set(['apprentice', 'firemage', 'stormmage', 'archmage']);
-const hasScene = (id: string) => SCENES.has(id) && CARD_ART.has(id);
+/* the card art, cropped to the tile's window, for units that have a scene. Everything else keeps the old icon. */
 const artTex = (u: BattleUnit, w: number, h: number) =>
-  hasScene(u.d.id)
+  CARD_ART.inGame(u.d.id)
     ? svgTex(`card:${u.d.id}:${w}x${h}`, CARD_ART.svg(u.d.id, u.d.name, u.size > 1, '-px'), w, h)
     : svgTex('icon:' + u.d.id, ART.unit(u.d.id), 80, 80);
 const SWORD = `<svg viewBox="0 0 24 24"><path fill="#f0b25a" d="M19 2l3 0 0 3-10.5 10.5 2 2-1.5 1.5-2.5-2.5-3.2 3.2 .7 2.3-2 0-3-3 0-2 2.3 .7 3.2-3.2-2.5-2.5 1.5-1.5 2 2z"/></svg>`;
@@ -286,7 +283,7 @@ async function makeView(B: Battle, u: BattleUnit, pop: boolean): Promise<View> {
   win.addChild(winMask);
   win.mask = winMask;
   let art: Sprite;
-  if (hasScene(u.d.id)) art = await sharpSprite(() => artTex(u, winW, winH), winW, winH);
+  if (CARD_ART.inGame(u.d.id)) art = await sharpSprite(() => artTex(u, winW, winH), winW, winH);
   else {
     /* no card art yet: the old icon on a dark faction backdrop */
     win.addChild(new Graphics().rect(0, 0, winW, winH).fill(mix(FACTION[u.d.f] ?? 0x555555, 0x0b0d0f, 0.6)));

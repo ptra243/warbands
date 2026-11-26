@@ -898,13 +898,19 @@ p.nums span:last-child {
 }
 .crest {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(var(--n, 3), 1fr);
   gap: 6px;
 }
 .crest .u {
   aspect-ratio: 1;
   padding: 4px;
   cursor: inherit;
+}
+/* two scenes fill the row of three icons: a landscape crop keeps the row the same height */
+.crest .u.scene {
+  aspect-ratio: 3 / 2;
+  padding: 0;
+  overflow: hidden;
 }
 .crest svg {
   width: 100%;

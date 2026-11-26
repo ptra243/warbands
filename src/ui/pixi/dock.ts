@@ -10,8 +10,6 @@ import { CARD_ART } from '../card-art.ts';
 const RARITY = ['', '#a9b0ae', '#6cc070', '#5aa4e6', '#b77be8', '#f0b23a'];
 const RNAME = ['', 'Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
 const FACTION_BG: Record<string, string> = { H: '#22344d', E: '#22402e', U: '#3a2a4e', N: '#40361f' };
-/* only the mage scenes: the busts in card-art.ts are a dropped concept */
-const SCENES = new Set(['apprentice', 'firemage', 'stormmage', 'archmage']);
 const MIN_DOCK = 120;
 
 let dock: HTMLElement | null = null,
@@ -72,10 +70,9 @@ export function inspect(u: BattleUnit | null, why: string): void {
     shown = u.bid;
     const d = u.d,
       r = rarityOf(d.cost),
-      art =
-        SCENES.has(d.id) && CARD_ART.has(d.id)
-          ? CARD_ART.svg(d.id, d.name, false, '-insp')
-          : `<div class="pd-icon" style="background:${FACTION_BG[d.f] || '#333'}">${ART.unit(d.id)}</div>`;
+      art = CARD_ART.inGame(d.id)
+        ? CARD_ART.svg(d.id, d.name, false, '-insp')
+        : `<div class="pd-icon" style="background:${FACTION_BG[d.f] || '#333'}">${ART.unit(d.id)}</div>`;
     const item = u.o.item ? W.ITEMS[u.o.item] : null;
     insp.innerHTML = `<div class="pd-pic" style="--rare:${RARITY[r]}">${art}</div>
 <div class="pd-info">

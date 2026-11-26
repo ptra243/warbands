@@ -1,6 +1,7 @@
 /* Screens as HTML strings: shop, board, bench, encounters, leader pick, battle summary, end of run. */
 import * as W from '../engine/index.ts';
 import { ART } from './art.ts';
+import { CARD_ART } from './card-art.ts';
 import { PORTRAIT } from './portraits.ts';
 import { S } from './state.ts';
 
@@ -278,17 +279,22 @@ export function encounterHTML() {
 }
 export function pickHTML() {
   const show: Record<string, string[]> = {
-    H: ['footman', 'priest', 'archmage'],
+    H: ['paladin', 'archmage'],
     E: ['scout', 'sunspire', 'matriarch'],
     U: ['skeleton', 'necromancer', 'herald'],
   };
+  /* a unit with card art shows its scene, landscape-cropped; the rest show their icon */
+  const crest = (f: string, id: string) =>
+    CARD_ART.inGame(id)
+      ? `<span class="u scene f${f}">${CARD_ART.svg(id, W.U[id].name, W.U[id].size > 1, '-pick')}</span>`
+      : `<span class="u f${f}">${ART.unit(id)}</span>`;
   return `<div class="wrap pick"><header class="intro"><h1>Warband</h1><p class="lede">Draft a single row of ten slots. Each unit strikes whatever stands opposite it, and anything left unblocked hits the enemy hero. Win ten battles before you lose five.</p></header>
 <div class="factions">${(Object.keys(W.FACTIONS) as W.FactionId[])
     .filter((f) => f !== 'N')
     .map(
       (
         f,
-      ) => `<button class="fac f${f}" data-act="pick:${f}"><span class="crest">${show[f].map((id) => `<span class="u f${f}">${ART.unit(id)}</span>`).join('')}</span><h2>${W.FACTIONS[f].name}</h2><p>${W.FACTIONS[f].blurb}</p>
+      ) => `<button class="fac f${f}" data-act="pick:${f}"><span class="crest" style="--n: ${show[f].length}">${show[f].map((id) => crest(f, id)).join('')}</span><h2>${W.FACTIONS[f].name}</h2><p>${W.FACTIONS[f].blurb}</p>
 <p class="chips">${Object.keys(W.TRIBES)
         .filter((k) => W.TRIBES[k].f === f && W.TRIBES[k].th.length && k !== 'Party')
         .map(chip)
