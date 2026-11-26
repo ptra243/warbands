@@ -35,18 +35,20 @@ CI runs `check`, the build and the browser checks on every push and pull request
 
 ## Layout
 
-| Path            | What it is                                                                                                                                                                                                      |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/engine/`   | All rules: units, tribes, items, leaders, relics, the battle simulation, the shop and economy, encounters, bosses, the post-game and the run log. No DOM, so it also runs in Node. `index.ts` is its interface. |
-| `src/ui/`       | Screens and input: faction and leader pick, shop, battle, summary, end screen, drag and drop, hover cards, saving and loading.                                                                                  |
-| `src/ui/art.ts` | Unit, item and tribe icons as inline SVG. `portraits.ts` holds the nine leader portraits.                                                                                                                       |
-| `src/style.css` | Styles.                                                                                                                                                                                                         |
-| `index.html`    | The page Vite builds from.                                                                                                                                                                                      |
-| `tools/`        | Balance tools that run the engine in Node.                                                                                                                                                                      |
-| `tests/`        | Unit tests and the golden rules fingerprint (Vitest); `tests/e2e/` holds the browser checks (Playwright).                                                                                                       |
-| `DESIGN.md`     | Rules summary, the reasoning behind the main decisions, balance state and open threads.                                                                                                                         |
-| `runs/`         | Run logs from real play, one file per run, with an index.                                                                                                                                                       |
-| `db/schema.sql` | The tables and access rules of the hosted database used outside Claude.                                                                                                                                         |
+| Path                 | What it is                                                                                                                                                                                                      |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/engine/`        | All rules: units, tribes, items, leaders, relics, the battle simulation, the shop and economy, encounters, bosses, the post-game and the run log. No DOM, so it also runs in Node. `index.ts` is its interface. |
+| `src/ui/`            | Screens and input: faction and leader pick, shop, battle, summary, end screen, drag and drop, hover cards, saving and loading.                                                                                  |
+| `src/ui/art.ts`      | Unit, item and tribe icons as inline SVG. `portraits.ts` holds the nine leader portraits.                                                                                                                       |
+| `src/ui/card-art.ts` | Illustrated card art for units, a study not yet used by the game. `facets.ts` is the drawing kit it shares with the portraits.                                                                                  |
+| `ART.md`             | How to draw card art in the approved style, with reference renders in `art/reference/`.                                                                                                                         |
+| `src/style.css`      | Styles.                                                                                                                                                                                                         |
+| `index.html`         | The page Vite builds from.                                                                                                                                                                                      |
+| `tools/`             | Balance tools that run the engine in Node, and `cards.ts`, which renders card art for review.                                                                                                                   |
+| `tests/`             | Unit tests and the golden rules fingerprint (Vitest); `tests/e2e/` holds the browser checks (Playwright).                                                                                                       |
+| `DESIGN.md`          | Rules summary, the reasoning behind the main decisions, balance state and open threads.                                                                                                                         |
+| `runs/`              | Run logs from real play, one file per run, with an index.                                                                                                                                                       |
+| `db/schema.sql`      | The tables and access rules of the hosted database used outside Claude.                                                                                                                                         |
 
 ## Tests
 

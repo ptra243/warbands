@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Browser autobattler in strict TypeScript, built by Vite into one self-contained `dist/index.html`. Read `DESIGN.md` before changing rules or balance.
+Browser autobattler in strict TypeScript, built by Vite into one self-contained `dist/index.html`. Read `DESIGN.md` before changing rules or balance, and `ART.md` before drawing or changing unit art.
 
 ## Commands
 
@@ -11,6 +11,7 @@ npm run check         # tsc, ESLint, Prettier, Vitest: run before committing
 npm run test:e2e      # build + Playwright (needs `npx playwright install chromium` or CHROME=path)
 npm run golden:update # re-record the rules baseline after an intended rules change
 npm run bot -- 300    # balance bot; also roundrobin, board-vs-field, postgame
+npm run cards -- <id> # render card art to art/out/ for review (needs Chromium, as above)
 ```
 
 ## Rules that aren't obvious from the code
