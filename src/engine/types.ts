@@ -223,7 +223,8 @@ export interface Ghost {
   open: number;
   round: number;
   power: number;
-  rank?: number;
+  /** strength on the fixed yardstick scale, from yardstick() */
+  score?: number;
 }
 
 export interface PostGame {

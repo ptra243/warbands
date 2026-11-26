@@ -9,6 +9,8 @@ import { genEnemy } from './enemies.ts';
 import { addXp, has } from './run.ts';
 import { LEADERS, RELICS } from './data/leaders.ts';
 import { nextUid } from './ids.ts';
+import { random, seeded, setRandom } from './rng.ts';
+import { YARDSTICK } from './data/yardstick.ts';
 
 /* the board a saved winning run finished its tenth win with, checked against today's units and items */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- validates untrusted saved logs
@@ -57,39 +59,58 @@ export function ghostFrom(x: any, key?: string): Ghost | null {
     return null;
   }
 }
-/* order saved boards by how they actually fare against each other: a quick round-robin under today's rules */
-export function rankGhosts(pool: Ghost[]): Ghost[] {
-  if (pool.length < 2) return pool;
-  const per = pool.length > 12 ? 1 : 2,
-    w = pool.map(() => 0);
-  const bout = (a: Ghost, b: Ghost) => {
-    const B = createBattle(
-      a.units.map((x) => Object.assign({}, x)),
-      b.units.map((x) => Object.assign({}, x)),
-      13,
-      a.open,
-      b.open,
-      { leader: a.leader, relics: a.relics, foeLeader: b.leader, foeRelics: b.relics },
-    );
-    let n = 0;
-    while (!B.over && n++ < 3000) {
-      step(B, 0.05);
-      B.ev.length = 0;
-    }
-    return B.winner;
-  };
-  for (let i = 0; i < pool.length; i++)
-    for (let j = 0; j < pool.length; j++)
-      if (i !== j)
-        for (let k = 0; k < per; k++) {
-          const r = bout(pool[i], pool[j]);
-          if (r === 0) w[i]++;
-          else if (r === 1) w[j]++;
+const SCORE_ROUND = 13,
+  SCORE_STEPS = 7,
+  SCORE_LO = Math.log(0.25),
+  SCORE_HI = Math.log(8);
+/* how strong a board is on a fixed scale: for each yardstick board, the strength multiplier on that board at which
+ this one stops beating it, found by halving. The score is their geometric mean, so 1.5 means it beats the yardstick
+ boards made 50% stronger. Seeded, so the same board always scores the same, and it leaves the run's draws alone. */
+export function yardstick(g: Ghost): number {
+  const old = setRandom(seeded(1));
+  try {
+    let sum = 0;
+    YARDSTICK.forEach((ref, i) => {
+      let lo = SCORE_LO,
+        hi = SCORE_HI;
+      for (let k = 0; k < SCORE_STEPS; k++) {
+        const mid = (lo + hi) / 2;
+        setRandom(seeded(1000 + 31 * i + k));
+        const B = createBattle(
+          g.units.map((x) => Object.assign({}, x)),
+          ref.units.map((x) => Object.assign({}, x)),
+          SCORE_ROUND,
+          g.open,
+          ref.open,
+          { leader: g.leader, relics: g.relics, foeLeader: ref.leader, foeRelics: ref.relics, foeMul: Math.exp(mid) },
+        );
+        let n = 0;
+        while (!B.over && n++ < 3000) {
+          step(B, 0.05);
+          B.ev.length = 0;
         }
-  pool.forEach((g, i) => {
-    g.rank = w[i] / ((pool.length - 1) * per * 2);
-  });
-  return pool;
+        if (B.winner === 0) lo = mid;
+        else hi = mid;
+      }
+      sum += (lo + hi) / 2;
+    });
+    return Math.round(Math.exp(sum / YARDSTICK.length) * 100) / 100;
+  } finally {
+    setRandom(old);
+  }
+}
+const scoreOf = (g: Ghost): number => (g.score == null ? (g.score = yardstick(g)) : g.score);
+/* n boards spread from weakest to strongest: one drawn from each of n equal bands of the scored list */
+export function spreadGhosts(pool: Ghost[], n: number): Ghost[] {
+  const all = pool.slice().sort((a, b) => scoreOf(a) - scoreOf(b));
+  if (all.length <= n) return all;
+  const out: Ghost[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = Math.floor((i * all.length) / n),
+      b = Math.floor(((i + 1) * all.length) / n);
+    out.push(all[a + Math.floor(random() * (b - a))]);
+  }
+  return out;
 }
 export function nextFoe(run: Run): Enemy {
   const P = run.post!,
@@ -100,9 +121,7 @@ export function nextFoe(run: Run): Enemy {
     pool = P.pool.slice();
   }
   if (pool.length) {
-    const g = pool.sort(
-      (a, b) => (a.rank == null ? 0 : a.rank) - (b.rank == null ? 0 : b.rank) || a.power - b.power,
-    )[0];
+    const g = pool.sort((a, b) => scoreOf(a) - scoreOf(b) || a.power - b.power)[0];
     P.faced.push(g.key);
     return {
       faction: g.faction,
@@ -122,7 +141,8 @@ export function nextFoe(run: Run): Enemy {
 /* after the tenth win: keep the board and fight past winning boards, each stronger than the last, until the lives run out */
 export function continueRun(run: Run, ghosts: (Ghost | null)[] | null | undefined): boolean {
   if (run.over !== 'won' || run.post) return false;
-  run.post = { n: 0, faced: [], pool: rankGhosts((ghosts || []).filter((g): g is Ghost => Boolean(g))) };
+  run.post = { n: 0, faced: [], pool: (ghosts || []).filter((g): g is Ghost => Boolean(g)) };
+  run.post.pool.forEach(scoreOf);
   run.over = null;
   run.saved = false;
   run.offer = null;

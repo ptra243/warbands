@@ -47,7 +47,13 @@ async function svgTex(key: string, svg: string, w: number, h: number): Promise<T
     .replace('<svg ', `<svg xmlns="http://www.w3.org/2000/svg" width="${w * res}" height="${h * res}" `);
   const img = new Image();
   img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(sized);
-  await img.decode();
+  try {
+    await img.decode();
+  } catch (e) {
+    /* a picture that won't decode leaves a blank tile rather than a battle that never starts */
+    console.warn('Could not draw', key, e);
+    return Texture.EMPTY;
+  }
   return (textures[k] = Texture.from(img));
 }
 /* every sprite drawn from SVG, so fit() can swap in sharper images after a resize */
@@ -115,8 +121,28 @@ let particles: Particle[] = [];
 let app: Application | null = null,
   failed = false,
   stageEl: HTMLElement | null = null;
+/* WebGL drawn by the CPU (SwiftShader in headless Chrome, llvmpipe on Linux without a GPU). Chrome doesn't flag
+   SwiftShader as a performance caveat, so this asks for the renderer's name instead. */
+const SOFTWARE_GL = /swiftshader|llvmpipe|softpipe|software|basic render/i;
+function softwareGl(): boolean {
+  try {
+    const gl = document.createElement('canvas').getContext('webgl');
+    if (!gl) return false;
+    const info = gl.getExtension('WEBGL_debug_renderer_info');
+    const name = String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+    return SOFTWARE_GL.test(name);
+  } catch {
+    return false;
+  }
+}
 async function ensureApp(): Promise<Application | null> {
   if (app || failed) return app;
+  if (softwareGl()) {
+    failed = true;
+    console.info('No GPU for WebGL; using the classic battle screen.');
+    return null;
+  }
   try {
     const a = new Application();
     await a.init({
@@ -127,7 +153,7 @@ async function ensureApp(): Promise<Application | null> {
       resolution: Math.min(2, window.devicePixelRatio || 1),
       autoDensity: true,
       preference: 'webgl',
-      /* with no GPU (software WebGL) a frame takes well over 100ms and the page stops answering clicks, so
+      /* with no GPU a frame takes 70ms or more and the page stops answering clicks, so
          refuse to start and let the classic screen take over */
       failIfMajorPerformanceCaveat: true,
     });
@@ -233,6 +259,9 @@ interface View {
   phase: number;
 }
 let views = new Map<number, View>();
+/* bumped whenever the field is set up or stopped, so art still loading for an earlier fight is thrown away
+   instead of landing on this one */
+let generation = 0;
 
 const label = (size: number, fill: number, stroke = 4) =>
   new Text({
@@ -253,7 +282,8 @@ const mix = (c: number, to: number, k: number) => {
 };
 const rarityOf = (u: BattleUnit) => RARITY[Math.max(1, Math.min(5, u.d.cost || 1))];
 
-async function makeView(B: Battle, u: BattleUnit, pop: boolean): Promise<View> {
+async function makeView(B: Battle, u: BattleUnit, pop: boolean): Promise<void> {
+  const gen = generation;
   const w = u.size * SLOT - GAP,
     h = CARD_H,
     x0 = -w / 2,
@@ -390,6 +420,10 @@ async function makeView(B: Battle, u: BattleUnit, pop: boolean): Promise<View> {
   aim.position.set(0, u.side === 0 ? y0 - 6 : y0 + h + 6);
   body.addChild(aim);
 
+  if (gen !== generation) {
+    root.destroy({ children: true });
+    return;
+  }
   unitLayer.addChild(root);
   /* pointing at a unit shows it in the inspector */
   root.eventMode = 'static';
@@ -438,7 +472,6 @@ async function makeView(B: Battle, u: BattleUnit, pop: boolean): Promise<View> {
     });
     sparks(c.x, c.y + CARD_H / 2, 0xd8c8ff, 14, 160);
   }
-  return v;
 }
 
 function paintView(B: Battle, v: View) {
@@ -593,6 +626,7 @@ const heroes: HeroView[] = [0, 1].map((side) => {
   return { box, baseX: 0, t, hp, flash, trail: 1 };
 });
 async function buildHeroes(B: Battle, foeName: string) {
+  const gen = generation;
   for (const side of [0, 1]) {
     const h = heroes[side],
       lead = B.lead[side],
@@ -611,6 +645,10 @@ async function buildHeroes(B: Battle, foeName: string) {
         .roundRect(px, -P / 2, P, P, 6)
         .stroke({ width: 2, color: L.edge });
       const img = await sharpSprite(() => svgTex('head:' + lead, PORTRAIT.head(lead), P - 4, P - 4), P - 4, P - 4);
+      if (gen !== generation) {
+        img.destroy();
+        return;
+      }
       img.position.set(px + 2, -P / 2 + 2);
       const m = new Graphics().roundRect(px + 2, -P / 2 + 2, P - 4, P - 4, 4).fill(0xffffff);
       img.mask = m;
@@ -908,8 +946,10 @@ function drawFloor(open: boolean[][]) {
   }
 }
 
-/* set the field up for a battle; it may already be under way if the player switched views mid-fight */
-async function setUp(b: Battle, foeName: string) {
+/* set the field up for a battle; it may already be under way if the player switched views mid-fight. False when
+   a later setUp or a stop overtook this one while the art loaded. */
+async function setUp(b: Battle, foeName: string): Promise<boolean> {
+  const gen = ++generation;
   unitLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
   fxLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
   tweens = [];
@@ -929,14 +969,32 @@ async function setUp(b: Battle, foeName: string) {
   hovered = null;
   dockT = 0;
   await buildHeroes(b, foeName);
+  if (gen !== generation) return false;
   for (const s of [0, 1]) heroes[s].trail = Math.max(0, b.hero[s].hp / b.hero[s].max);
   drawFloor(b.open);
   await Promise.all(b.units.filter((u) => u.alive).map((u) => makeView(b, u, false)));
+  if (gen !== generation) return false;
   b.ev.length = 0;
   paintHud(b);
+  return true;
 }
 
+/* Pixi asks for the next frame only after this one returns, so one error would freeze the battle for good.
+   Report it once and keep going. */
+let reported = false;
+function report(e: unknown) {
+  if (reported) return;
+  reported = true;
+  console.error('Battle view error', e);
+}
 function tick(tk: Ticker) {
+  try {
+    frame(tk);
+  } catch (e) {
+    report(e);
+  }
+}
+function frame(tk: Ticker) {
   const real = Math.min(0.1, tk.deltaMS / 1000),
     dt = real * S.speed;
   if (B && !B.over) {
@@ -947,8 +1005,12 @@ function tick(tk: Ticker) {
       acc -= d;
     }
     hitDelay.clear();
-    for (const e of B.ev) onEvent(B, e);
-    B.ev.length = 0;
+    for (const e of B.ev.splice(0))
+      try {
+        onEvent(B, e);
+      } catch (err) {
+        report(err);
+      }
   }
   if (B) {
     for (const v of views.values()) {
@@ -1067,8 +1129,7 @@ export async function mountPixiBattle(
   stage.appendChild(a.canvas);
   initDock(dock);
   fit();
-  await setUp(b, foeName);
-  if (!current()) return true;
+  if (!(await setUp(b, foeName)) || !current()) return true;
   B = b;
   onEnd = end;
   a.ticker.start();
@@ -1080,5 +1141,6 @@ export function stopPixiBattle(): void {
   onEnd = null;
   B = null;
   hovered = null;
+  generation++;
   if (app) app.ticker.stop();
 }

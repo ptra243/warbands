@@ -257,11 +257,38 @@ export async function downloadRuns(): Promise<void> {
   }
 }
 
+const SCORES = 'wb-scores';
+/* scores depend only on the board and the rules, so they are kept in the browser per rules version */
+function scoreAll(gs: W.Ghost[]): void {
+  let kept: Record<string, number> = {};
+  try {
+    const c = JSON.parse(localStorage.getItem(SCORES) || 'null') as { bal: number; s: Record<string, number> } | null;
+    if (c && c.bal === W.BALANCE) kept = c.s;
+  } catch {
+    /* no cache */
+  }
+  for (const g of gs) {
+    if (kept[g.key] == null) kept[g.key] = W.yardstick(g);
+    g.score = kept[g.key];
+  }
+  try {
+    localStorage.setItem(SCORES, JSON.stringify({ bal: W.BALANCE, s: kept }));
+  } catch {
+    /* storage full or blocked */
+  }
+}
+/* up to 16 boards, spread from weakest to strongest on the yardstick */
+function pickGhosts(gs: W.Ghost[]): W.Ghost[] {
+  const newest = gs.slice(0, 60);
+  scoreAll(newest);
+  return W.spreadGhosts(newest, 16);
+}
+
 /* the final boards of past winning runs, for the post-game. Any failure just means generated opponents. */
 export async function loadGhosts(skip: string | undefined): Promise<W.Ghost[]> {
   try {
     if (!inClaude()) {
-      // the newest boards from the shared pool, at most 16 so ranking them stays quick
+      // the newest boards from the shared pool
       const rows = (await cloud(
         'ghosts?select=run_key,balance,faction,leader,relics,slots,round,units&order=created_at.desc&limit=60',
       )) as GhostRow[] | null;
@@ -269,11 +296,7 @@ export async function loadGhosts(skip: string | undefined): Promise<W.Ghost[]> {
         .filter((r) => r.run_key !== skip)
         .map(ghostOf)
         .filter((g): g is W.Ghost => Boolean(g));
-      for (let i = all.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [all[i], all[j]] = [all[j], all[i]];
-      }
-      return all.slice(0, 16);
+      return pickGhosts(all);
     }
     const db = await claudeDb();
     if (!db) return [];
@@ -281,7 +304,7 @@ export async function loadGhosts(skip: string | undefined): Promise<W.Ghost[]> {
       db.collection('runs').where('outcome', '==', 'won').get(),
       timeout(10000, new Error('timeout')),
     ]);
-    const out: W.Ghost[] = [];
+    const out: (W.Ghost & { ended: string })[] = [];
     for (const d of snap.docs) {
       if (d.id === skip) continue;
       let x: unknown = null;
@@ -291,9 +314,10 @@ export async function loadGhosts(skip: string | undefined): Promise<W.Ghost[]> {
         continue;
       }
       const g = W.ghostFrom(x, d.id);
-      if (g) out.push(g);
+      if (g) out.push(Object.assign(g, { ended: String(d.data().ended || '') }));
     }
-    return out;
+    out.sort((a, b) => b.ended.localeCompare(a.ended));
+    return pickGhosts(out);
   } catch {
     return [];
   }

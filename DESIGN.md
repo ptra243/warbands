@@ -62,9 +62,11 @@ Leaders: Gravecaller (summon shields), Blood Priest (attack on death), Plaguefat
 
 ## Post-game
 
-After the tenth win, "Keep going" keeps the board, gold and at least 3 lives. Opponents are the final boards of your saved winning runs with their leader and relics. They are ordered by a quick round-robin between themselves under current rules, weakest first, and each win makes the next opponent 15% stronger. The score is the number beaten.
+After the tenth win, "Keep going" keeps the board, gold and at least 3 lives. Opponents are the final boards of your saved winning runs with their leader and relics. They come weakest first, and each win makes the next opponent 15% stronger. The score is the number beaten.
 
-Past boards come from the artifact's storage when the page runs inside Claude, and from the shared `ghosts` table in the hosted database everywhere else, where at most 16 of the newest 60 are drawn each time. Every board is checked against the current units and items as it loads, so a row with an unknown unit is skipped.
+Boards are ordered by a yardstick score: each is fought against three fixed reference boards (`src/engine/data/yardstick.ts`, one per faction), and the score is the strength multiplier on those boards at which it stops winning, averaged geometrically. A score of 1.5 means it beats the reference boards made 50% stronger. The fights are seeded, so a board always gets the same score under the same rules, and scores compare across runs. Changing the reference boards changes every score.
+
+Past boards come from the artifact's storage when the page runs inside Claude, and from the shared `ghosts` table in the hosted database everywhere else. The newest 60 are scored (the browser keeps scores per rules version) and 16 are drawn, one from each of 16 equal bands from weakest to strongest. Every board is checked against the current units and items as it loads, so a row with an unknown unit is skipped.
 
 `BALANCE` in the engine goes up with every rules change and is stamped on each saved run. `GHOST_FROM` is the oldest balance version whose boards are still used. Raise it to retire boards; nothing is deleted.
 
@@ -78,7 +80,7 @@ Past boards come from the artifact's storage when the page runs inside Claude, a
 - **A quarter of each boss attack carries through to the hero.** Before that, bosses never threatened a board that could stand in front of them.
 - **Hidden opponent.** Chosen after the game became too easy with full information. It removed the target preview from the shop, which is why the summary screen names what dealt the hero damage.
 - **The Duelist presses one target.** Each hit on the same enemy deals 15% more, up to +90%, and a new target starts over. It used to gain 40% attack when it started with no ally beside it, which rewarded gaps in the line and was settled before the fight began. The bot's Human win rate did not move (35% to 34% over 600 runs).
-- **Post-game order by simulation.** An estimate from unit stats ranked boards badly, because it ignored Rot, summons and death scaling.
+- **Post-game order by simulation against a fixed yardstick.** An estimate from unit stats ranked boards badly, because it ignored Rot, summons and death scaling. A round-robin between the drawn boards fixed that, but its ranks only meant something within one draw, so they could not be used to choose which boards to draw.
 
 ## Balance state
 
