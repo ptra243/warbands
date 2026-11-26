@@ -35,7 +35,7 @@ const DEFS: Record<string, Omit<UnitDef, 'id'>> = {
     txt: () => 'Guard: takes 30% of the damage dealt to adjacent allies.',
   },
   archer: {
-    name: 'Militia Archer',
+    name: 'Militia Slinger',
     f: 'H',
     cost: 1,
     size: 1,
@@ -142,7 +142,7 @@ const DEFS: Record<string, Omit<UnitDef, 'id'>> = {
       }),
   },
   sharpshooter: {
-    name: 'Sharpshooter',
+    name: 'Falconer',
     f: 'H',
     cost: 4,
     size: 1,
@@ -151,7 +151,7 @@ const DEFS: Record<string, Omit<UnitDef, 'id'>> = {
     cd: 2.6,
     tribes: ['DPS'],
     snipe: 1,
-    txt: () => 'Always shoots the weakest enemy unit, wherever it stands.',
+    txt: () => 'Its hawk always strikes the weakest enemy unit, wherever it stands.',
   },
   paladin: {
     name: 'Paladin',
@@ -639,9 +639,11 @@ const DEFS: Record<string, Omit<UnitDef, 'id'>> = {
     atk: 22,
     cd: 1.6,
     tribes: ['DPS'],
-    txt: () => '+40% attack when it starts the battle with no ally beside it.',
-    onStart: (B, u) => {
-      if (!adj(B, u).length) u.atk *= 1.4;
+    txt: () => 'Each hit on the same enemy deals 15% more than the last, up to +90%. Changing target starts over.',
+    vs: (B, u, t, v) => {
+      u.duelN = u.duelT === t.bid ? Math.min((u.duelN || 0) + 1, 6) : 0;
+      u.duelT = t.bid;
+      return v * (1 + 0.15 * u.duelN);
     },
   },
   bishop: {

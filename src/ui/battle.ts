@@ -4,6 +4,7 @@ import { buHTML, foeMul, inspTarget, n } from './html.ts';
 import { saveLog } from './storage.ts';
 import { render } from './render.ts';
 import { S, root } from './state.ts';
+import { mountPixiBattle, stopPixiBattle } from './pixi/battle-view.ts';
 
 /* ---- attack lines ---- */
 export const NS = 'http://www.w3.org/2000/svg';
@@ -178,11 +179,7 @@ export function startBattle() {
   S.insp = null;
   S.result = null;
   S.msg = '';
-  render();
-  bind();
-  paint(S.B!);
-  last = performance.now();
-  raf = requestAnimationFrame(frame);
+  showBattle();
 }
 export function startCamp() {
   const run = S.run!;
@@ -203,9 +200,58 @@ export function startCamp() {
   S.insp = null;
   S.result = null;
   S.msg = '';
+  showBattle();
+}
+
+/* ---- which battle screen: the Pixi one, or the classic HTML one ---- */
+const VIEW_KEY = 'warband:battle-view';
+let choice: 'pixi' | 'classic' | null = null,
+  pixiFailed = false;
+/** true when the battle should be drawn with Pixi: the player's choice (Pixi by default), unless Pixi couldn't
+ *  start in this browser */
+export function usePixi(): boolean {
+  if (pixiFailed) return false;
+  if (!choice)
+    try {
+      choice = localStorage.getItem(VIEW_KEY) === 'classic' ? 'classic' : 'pixi';
+    } catch {
+      choice = 'pixi'; // storage blocked: the choice lasts until the page reloads
+    }
+  return choice === 'pixi';
+}
+export const pixiAvailable = (): boolean => !pixiFailed;
+/** switch battle screens; mid-battle, the fight carries on in the other view */
+export function setBattleView(view: 'pixi' | 'classic'): void {
+  choice = view;
+  try {
+    localStorage.setItem(VIEW_KEY, view);
+  } catch {
+    /* storage blocked: kept in memory only */
+  }
+  if (S.screen === 'battle' && S.B && !S.result) {
+    stopBattleLoop();
+    showBattle();
+  }
+}
+export const foeName = (): string => S.foeTitle || W.FACTIONS[S.foe].name;
+/* draw the battle screen and start the fight playing in whichever view is in use */
+function showBattle(): void {
   render();
+  const B = S.B!;
+  if (usePixi()) {
+    const stage = document.getElementById('pixi-stage'),
+      dock = document.getElementById('pixi-dock');
+    if (stage && dock) {
+      void mountPixiBattle(stage, dock, B, foeName(), endBattle).then((ok) => {
+        if (ok) return;
+        pixiFailed = true;
+        if (S.screen === 'battle' && S.B === B && !S.result) showBattle();
+      });
+      return;
+    }
+  }
   bind();
-  paint(S.B!);
+  paint(B);
   last = performance.now();
   raf = requestAnimationFrame(frame);
 }
@@ -251,4 +297,7 @@ export function endBattle() {
   S.screen = 'summary';
   render();
 }
-export const stopBattleLoop = (): void => cancelAnimationFrame(raf);
+export const stopBattleLoop = (): void => {
+  cancelAnimationFrame(raf);
+  stopPixiBattle();
+};

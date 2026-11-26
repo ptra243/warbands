@@ -30,6 +30,6 @@ export type Lock = typeof LOCK;
 export const r = (v: number): number => Math.round(v);
 export const pct = (v: number): string => Math.round(v * 100) + '%';
 /* BALANCE goes up with every rules change. Boards saved under rules older than GHOST_FROM are no longer used as post-game opponents. */
-export const BALANCE = 7,
+export const BALANCE = 8,
   GHOST_FROM = 1,
   POSTSTEP = 0.15;

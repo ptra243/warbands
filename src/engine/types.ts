@@ -408,6 +408,9 @@ export interface BattleUnit {
   waited?: number;
   /** one-off ability already used */
   done?: number;
+  /** Duelist: who it last hit, and how many hits in a row on them */
+  duelT?: number;
+  duelN?: number;
   dealt: number;
   heroDmg: number;
   taken: number;

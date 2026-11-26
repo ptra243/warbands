@@ -898,13 +898,19 @@ p.nums span:last-child {
 }
 .crest {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(var(--n, 3), 1fr);
   gap: 6px;
 }
 .crest .u {
   aspect-ratio: 1;
   padding: 4px;
   cursor: inherit;
+}
+/* two scenes fill the row of three icons: a landscape crop keeps the row the same height */
+.crest .u.scene {
+  aspect-ratio: 3 / 2;
+  padding: 0;
+  overflow: hidden;
 }
 .crest svg {
   width: 100%;
@@ -1874,4 +1880,380 @@ textarea {
   align-items: center;
   gap: 12px;
   margin-top: 6px;
+}
+
+/* ---- Pixi battle screen (src/ui/pixi): a compact header, an edge-to-edge field, and the dock under it ---- */
+.wrap.battle.pixi {
+  padding-bottom: 8px;
+}
+.pbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pbar .vs {
+  text-align: left;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.pbar .vs h2 {
+  font-size: 30px;
+}
+.pbar .vs p {
+  margin: 0;
+}
+.pixi-stage canvas {
+  display: block;
+}
+.pdock {
+  display: grid;
+  grid-template-columns: 1fr minmax(420px, 1.4fr) 1fr;
+  gap: 14px;
+  padding: 10px 16px;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, #14181b, #0e1012);
+  border-top: 1px solid #2c363c;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.pdock h3 {
+  margin: 0 0 4px;
+  font: 600 18px/1.2 var(--display);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.pdock ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pd-side {
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 4px;
+}
+.pd-s0 h3 {
+  color: #8fb8f0;
+}
+.pd-s1 h3 {
+  color: #f09aa8;
+}
+.pd-side p {
+  margin: 0 0 6px;
+  color: #b9b3a3;
+}
+.pd-lead b {
+  color: #e8e2d0;
+}
+.pd-relics li {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin-bottom: 3px;
+  color: #b9b3a3;
+}
+.pd-relics b {
+  color: #ffd27a;
+}
+.pd-seal {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  background: #2a2218;
+  border: 1.5px solid #e0b040;
+  color: #ffd27a;
+  font-family: var(--display);
+  font-size: 11px;
+}
+.pd-bonuses {
+  margin-top: 6px !important;
+}
+.pd-bonuses li {
+  display: grid;
+  grid-template-columns: 16px auto auto 1fr;
+  gap: 6px;
+  align-items: center;
+  color: #6a6458;
+  padding: 1px 0;
+}
+.pd-bonuses li.pd-on {
+  color: #e8e2d0;
+}
+.pd-n {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+.pd-t {
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pd-glyph svg {
+  width: 13px;
+  height: 13px;
+  display: block;
+  fill: currentColor;
+}
+.pd-none {
+  color: #6a6458 !important;
+}
+.pd-insp {
+  display: flex;
+  gap: 14px;
+  min-height: 0;
+  border-radius: 10px;
+  background: #161b1e;
+  border: 1px solid #2c363c;
+  padding: 8px;
+  box-sizing: border-box;
+}
+.pd-hint {
+  margin: auto;
+  color: #6a6458;
+}
+.pd-pic {
+  flex: none;
+  /* fills the dock's height, but never so big that it squeezes the text beside it */
+  height: min(100%, 170px);
+  aspect-ratio: 1;
+  border-radius: 7px;
+  overflow: hidden;
+  border: 2px solid var(--rare);
+  box-sizing: border-box;
+}
+.pd-pic svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.pd-icon {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+.pd-icon svg {
+  width: 75%;
+  height: 75%;
+}
+.pd-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+}
+.pd-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+.pd-why {
+  width: 100%;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6a6458;
+}
+.pd-title h3 {
+  margin: 0 4px 0 0;
+  font-size: 22px;
+}
+.pd-stars {
+  color: #ffd27a;
+  font-size: 15px;
+}
+.pd-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--c, #5a646c);
+  color: var(--c, #b9b3a3);
+  font-size: 12px;
+  font-weight: 700;
+}
+.pd-chip.pd-side0 {
+  --c: #8fb8f0;
+}
+.pd-chip.pd-side1 {
+  --c: #f09aa8;
+}
+.pd-ability {
+  margin: 0;
+  color: #e8e2d0;
+  font-size: 14px;
+}
+.pd-item {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #b9b3a3;
+}
+.pd-item b {
+  color: #e8e2d0;
+}
+.pd-isock {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #1e2428;
+  border: 1.5px solid #b9b3a3;
+  color: #e8e2d0;
+}
+.pd-isock svg {
+  width: 12px;
+  height: 12px;
+}
+.pd-live {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  margin-top: auto;
+  color: #8a8478;
+  font-weight: 700;
+}
+.pd-live b {
+  font-size: 16px;
+  color: #f4ecd9;
+  font-variant-numeric: tabular-nums;
+}
+.pd-atk b {
+  color: #f0b25a;
+}
+.pd-cdbar {
+  display: inline-block;
+  width: 70px;
+  height: 6px;
+  border-radius: 3px;
+  background: #000;
+  vertical-align: middle;
+  overflow: hidden;
+}
+.pd-cdbar i {
+  display: block;
+  height: 100%;
+  background: #e0b040;
+}
+.pd-status span {
+  margin-right: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.pd-sh {
+  background: #1d3a52;
+  color: #9fd8ff;
+}
+.pd-rot {
+  background: #24401c;
+  color: #9ee05a;
+}
+.pd-burn {
+  background: #4a2410;
+  color: #ff9a4a;
+}
+.pd-weak {
+  background: #2c3036;
+  color: #b0b8c4;
+}
+.pd-dead {
+  background: #4a1a1a;
+  color: #f4a0a0;
+}
+/* too little room: hide the sides, float the inspector while pointing at a unit */
+.pdock.pd-collapsed {
+  display: block;
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  width: min(460px, calc(100vw - 24px));
+  height: 150px;
+  padding: 0;
+  background: none;
+  border: 0;
+  pointer-events: none;
+  visibility: hidden;
+  z-index: 20;
+}
+.pdock.pd-collapsed .pd-side {
+  display: none;
+}
+.pdock.pd-collapsed .pd-insp {
+  height: 100%;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+.pdock.pd-collapsed.pd-pointing {
+  visibility: visible;
+}
+@media (max-width: 900px) {
+  .pdock {
+    grid-template-columns: 1fr;
+  }
+  .pdock .pd-side {
+    display: none;
+  }
+}
+
+/* ---- battle speed: a segmented control; the selected speed is filled ---- */
+.speed {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1a2226;
+}
+.speed .lbl {
+  padding: 0 8px 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a8478;
+}
+.speed button,
+.bar .speed button {
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  padding: 6px 12px;
+  font-weight: 800;
+  color: #b9b3a3;
+}
+.speed button:hover,
+.bar .speed button:hover {
+  background: #263136;
+  color: var(--ink);
+}
+.speed button.active,
+.bar .speed button.active {
+  background: var(--gold);
+  color: #1a1405;
+}
+/* the other buttons in the Pixi battle bar get the same look as the classic bar's */
+.pbar > button {
+  background: #263136;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 12px;
+}
+.pbar > button:hover {
+  border-color: var(--gold);
 }
