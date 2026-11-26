@@ -2,7 +2,7 @@
 
 How to draw a unit illustration that matches the ones already approved. Read this before adding or changing anything in `src/ui/card-art.ts`.
 
-The card art is a study. It is not wired into the game yet: the game still shows the small icons in `src/ui/art.ts`. Seven units are drawn so far.
+The card art is a study. It is not wired into the game yet: the game still shows the small icons in `src/ui/art.ts`. Four units are drawn so far, the Human mages. `card-art.ts` also still holds three earlier busts (Knight, Lich, Assassin) from a concept that was dropped: don't use them or build on them.
 
 ## Where things are
 
@@ -62,7 +62,7 @@ Within a group, let cost show as mastery. The 1-cost Apprentice barely controls 
 
 - **Head.** Use `face(skin)` from the kit, placed with `hd(cx, cy, scale, tilt, contents)`. A waist-up figure uses a scale near 0.6, a figure seen to the knee near 0.5, a full figure near 0.35.
 - **Neck.** The owner has flagged necks more than once (`art/reference/rejected-necks.png`). Make the neck short, narrower than the jaw and much darker than the face (`sh(skin, 0.45)` to `0.58`), because it sits in the chin's shadow. Set the head low so little neck shows, and wrap a collar, cowl or beard around its base. A light neck as wide as the head makes the head look perched on a post.
-- **Faces.** Scene figures have simple eyes and a mouth where the expression matters: wide eyes on the Apprentice, a grin on the Fire Mage. The owner approved this on the mages. Draw an eye as a small almond shape with a dark iris and a highlight, and lay a lighter skin tone over the kit's dark eye sockets first, or the sockets read as a mask. Glowing slits for eyes were rejected on the Fire Mage. The leader portraits and the three older busts have no drawn features. Whether to reconcile the two is not decided, so ask before changing either.
+- **Faces.** Scene figures have simple eyes and a mouth where the expression matters: wide eyes on the Apprentice, a grin on the Fire Mage. The owner approved this on the mages. Draw an eye as a small almond shape with a dark iris and a highlight, and lay a lighter skin tone over the kit's dark eye sockets first, or the sockets read as a mask. Glowing slits for eyes were rejected on the Fire Mage. The leader portraits have no drawn features. Whether to reconcile the two is not decided, so ask before changing either.
 - **Arms.** A bare arm drawn as one thick line reads as a stick. Give it a sleeve, a second tone, or a bend.
 - **Hands on effects.** Draw the effect over the hand, with a glow, so the join is hidden.
 
@@ -76,7 +76,7 @@ Every drawing must work in each frame the unit can appear in. `tools/cards.ts` r
 | One-slot tile   | 113 by 132     | The same square, with a little trimmed from each side.                         |
 | Two-slot tile   | 231 by 132     | A wider window set per unit in `WIDE`. The scene must be drawn out to fill it. |
 
-Units with `size: 2` need background and props beyond the 0 to 100 square on both sides. The Archmage's sky, moon and towers run from -45 to 145. The Knight and Lich are older busts that were never widened, and they crop badly in a two-slot tile (`art/reference/rejected-busts-in-wide-tiles.png`). Redraw them as scenes before using them.
+Units with `size: 2` need background and props beyond the 0 to 100 square on both sides. The Archmage's sky, moon and towers run from -45 to 145. A bust cannot do this: it crops badly in a two-slot tile (`art/reference/rejected-busts-in-wide-tiles.png`), which is one reason the bust concept was dropped. Two-slot units such as the Knight and Lich need wide scenes drawn from scratch.
 
 A wide unit should also look bigger than its neighbours. The Archmage does not yet: he is the same height as the one-slot mages with empty sky beside him. That is an open problem.
 
@@ -96,18 +96,28 @@ The owner may name a character from another game or show as a reference. Take th
 
 ## Drawn so far
 
-| Unit       | Kind  | Notes                                                                          |
-| ---------- | ----- | ------------------------------------------------------------------------------ |
-| Apprentice | Scene | Approved as a good start. The raised arm is thin.                              |
-| Fire Mage  | Scene | Approved as a good start. Reads less clearly as a woman than intended.         |
-| Storm Mage | Scene | Approved as a good start. Sleeves bunch around the head.                       |
-| Archmage   | Scene | Approved as a good start. Needs more presence in the two-slot tile.            |
-| Knight     | Bust  | First study, before the move to scenes. Two-slot unit: redraw as a wide scene. |
-| Lich       | Bust  | First study. Two-slot unit: redraw as a wide scene.                            |
-| Assassin   | Bust  | First study. Redraw as a scene.                                                |
+| Unit       | Notes                                                                  |
+| ---------- | ---------------------------------------------------------------------- |
+| Apprentice | Approved as a good start. The raised arm is thin.                      |
+| Fire Mage  | Approved as a good start. Reads less clearly as a woman than intended. |
+| Storm Mage | Approved as a good start. Sleeves bunch around the head.               |
+| Archmage   | Approved as a good start. Needs more presence in the two-slot tile.    |
+
+The Knight, Lich and Assassin busts in `card-art.ts` predate the move to scenes. The owner dropped the bust concept, so treat those units as not drawn: start their scenes fresh rather than adapting the busts.
+
+## Battle tiles
+
+The owner chose this frame for battle tiles (called B2 in the mockups), over full-bleed art and over an icon above a stat strip:
+
+- **Frame.** A thin bevelled border, 2 pixels at game size, in the unit's rarity colour by cost: grey Common, green Uncommon, blue Rare, purple Epic, gold Legendary. It is lit from the top left like the art. There is no separate rarity gem, because the frame already shows rarity. Faction is left to the art and to which side of the board the unit is on.
+- **Art window.** The scene fills the window above the stat plate, close to the square from 0,0 to 100,100. Only small markers sit on the art: tier stars in the bottom right and the Rot counter in the top right. Keep those corners free of faces and effects.
+- **Stat plate.** A dark strip under the art, about 23 pixels tall at game size. A health line runs along its top edge; attack sits on the left, the item socket in the middle and health on the right. A unit without an item shows an empty socket. Fine items get a gold rim and a star.
+- **Cooldown.** A dark shadow over the art whose edge sweeps left to right as the attack charges, with a thin light line on the edge. Not a ring or a bar.
+- **Status.** Rot shows as a small green counter, never as a tint over the whole picture. A shield is a light blue inner edge on the window.
+
+The tool's `tile()` in `tools/cards.ts` still renders the older full-bleed layout and should be brought in line before it is used to review tiles.
 
 ## Not decided yet
 
-- Where card art appears in the game: the hover card, the shop, the battle tiles, or all three.
-- Whether battle tiles become full-bleed art with the bars laid over it, as the tool renders them, or keep the current layout of an icon above a stat strip.
+- Where else card art appears: the hover card, the shop, or both. Battle tiles use it, as above.
 - Whether leader portraits gain facial features or scene figures lose them.

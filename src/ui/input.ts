@@ -5,7 +5,7 @@ import { setSave } from './status.ts';
 import { downloadRuns, keepGoing } from './storage.ts';
 import { hideTip, showTip } from './tooltip.ts';
 import { render } from './render.ts';
-import { drawPreview, endBattle, startBattle, startCamp, stopBattleLoop } from './battle.ts';
+import { drawPreview, endBattle, setBattleView, startBattle, startCamp, stopBattleLoop } from './battle.ts';
 import { S, root } from './state.ts';
 
 /* ---- input ---- */
@@ -166,6 +166,9 @@ export function command(c: string): void {
     document
       .querySelectorAll<HTMLElement>('[data-act^="speed:"]')
       .forEach((b) => b.classList.toggle('active', b.dataset.act === c));
+    return;
+  } else if (c === 'view:pixi' || c === 'view:classic') {
+    setBattleView(c === 'view:pixi' ? 'pixi' : 'classic');
     return;
   } else if (c === 'skip') {
     const B = S.B;

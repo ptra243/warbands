@@ -18,7 +18,7 @@ import {
 } from './html.ts';
 import { saveLog } from './storage.ts';
 import { afterRender } from './tooltip.ts';
-import { drawPreview } from './battle.ts';
+import { drawPreview, pixiAvailable, usePixi } from './battle.ts';
 import { S, root } from './state.ts';
 
 export function render() {
@@ -53,11 +53,30 @@ export function render0() {
   }
   if (S.screen === 'battle') {
     const B = S.B!,
-      foe = S.foeTitle || W.FACTIONS[S.foe].name;
+      foe = S.foeTitle || W.FACTIONS[S.foe].name,
+      pixi = usePixi();
+    const vs = `<div class="vs"><h2>${S.campFight ? 'Camp' : 'Round ' + B.round}</h2><p><b>${S.run!.leader ? W.LEADERS[S.run!.leader].name : 'Your warband'}</b> against <b>${foe}</b>${!S.campFight && S.foeTitle && S.foe !== 'N' ? ' (' + W.FACTIONS[S.foe].name + ')' : ''}</p></div>`;
+    const controls =
+      [1, 2, 4]
+        .map((x) => `<button data-act="speed:${x}" class="${S.speed === x ? 'active' : ''}">${x}×</button>`)
+        .join('') +
+      '<button data-act="skip">Skip to result</button>' +
+      (pixi
+        ? '<button data-act="view:classic" title="Use the plain HTML battle screen">Classic view</button>'
+        : pixiAvailable()
+          ? '<button data-act="view:pixi" title="Use the animated battle screen">Animated view</button>'
+          : '');
+    /* the Pixi field runs edge to edge below the header, with its dock taking the height left over */
+    if (pixi) {
+      root.innerHTML = `<div class="wrap battle pixi">${headHTML()}
+<div class="pbar">${vs}<span class="grow"></span>${controls}</div></div>
+<div id="pixi-stage" class="pixi-stage"></div><div id="pixi-dock" class="pdock"></div>`;
+      return;
+    }
     root.innerHTML = `<div class="wrap battle">${headHTML()}
-<div class="vs"><h2>${S.campFight ? 'Camp' : 'Round ' + B.round}</h2><p><b>${S.run!.leader ? W.LEADERS[S.run!.leader].name : 'Your warband'}</b> against <b>${foe}</b>${!S.campFight && S.foeTitle && S.foe !== 'N' ? ' (' + W.FACTIONS[S.foe].name + ')' : ''}</p></div>
+${vs}
 ${fieldHTML()}
-<section class="panel"><div class="bar"><h2>Battle</h2><span class="odds" id="clock">0s</span><span class="grow"></span>${[1, 2, 4].map((x) => `<button data-act="speed:${x}" class="${S.speed === x ? 'active' : ''}">${x}×</button>`).join('')}<button data-act="skip">Skip to result</button></div></section>
+<section class="panel"><div class="bar"><h2>Battle</h2><span class="odds" id="clock">0s</span><span class="grow"></span>${controls}</div></section>
 <div class="sides">${sideHTML(B, 0)}${sideHTML(B, 1)}</div></div>`;
     return;
   }
