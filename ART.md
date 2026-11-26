@@ -62,7 +62,7 @@ Within a group, let cost show as mastery. The 1-cost Apprentice barely controls 
 
 - **Head.** Use `face(skin)` from the kit, placed with `hd(cx, cy, scale, tilt, contents)`. A waist-up figure uses a scale near 0.6, a figure seen to the knee near 0.5, a full figure near 0.35.
 - **Neck.** The owner has flagged necks more than once (`art/reference/rejected-necks.png`). Make the neck short, narrower than the jaw and much darker than the face (`sh(skin, 0.45)` to `0.58`), because it sits in the chin's shadow. Set the head low so little neck shows, and wrap a collar, cowl or beard around its base. A light neck as wide as the head makes the head look perched on a post.
-- **Faces.** Scene figures have simple eyes and a mouth where the expression matters: wide eyes on the Apprentice, a grin on the Fire Mage. The owner approved this on the mages. The leader portraits and the three older busts have no drawn features. Whether to reconcile the two is not decided, so ask before changing either.
+- **Faces.** Scene figures have simple eyes and a mouth where the expression matters: wide eyes on the Apprentice, a grin on the Fire Mage. The owner approved this on the mages. Draw an eye as a small almond shape with a dark iris and a highlight, and lay a lighter skin tone over the kit's dark eye sockets first, or the sockets read as a mask. Glowing slits for eyes were rejected on the Fire Mage. The leader portraits and the three older busts have no drawn features. Whether to reconcile the two is not decided, so ask before changing either.
 - **Arms.** A bare arm drawn as one thick line reads as a stick. Give it a sleeve, a second tone, or a bend.
 - **Hands on effects.** Draw the effect over the hand, with a glow, so the join is hidden.
 
