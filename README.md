@@ -23,6 +23,7 @@ Run logs are saved automatically only when the page is hosted as a Claude artifa
 | `tools/` | Balance tools that run the engine in Node. |
 | `tests/` | Headless browser checks. |
 | `DESIGN.md` | Rules summary, the reasoning behind the main decisions, balance state and open threads. |
+| `runs/` | Run logs from real play, one file per run, with an index. |
 
 ## Building
 
