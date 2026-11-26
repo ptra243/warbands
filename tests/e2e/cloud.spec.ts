@@ -113,12 +113,14 @@ test('saves runs and boards and downloads them', async ({ page }) => {
 
   await ui(page, (S) => {
     S.run.lives = 1;
-    S.run.things.forEach((t) => {
-      if (t.kind === 'unit') t.gAtk = t.gHp = 0;
-    });
   });
   await page.click('[data-act="fight"]');
-  await page.click('[data-act="skip"]');
+  // lose this fight for certain: a weak board can still win against the saved boards. The battle ends by itself
+  // on its next step, so there is nothing to skip.
+  await ui(page, (S) => {
+    S.B!.hero[0].hp = -1e9;
+  });
+  await expect(page.locator('.result h2')).toHaveText('Defeat');
   await page.click('[data-act="continue"]');
   await expect.poll(() => savedRuns.length).toBe(2);
   expect(savedRuns[1].run_key).toBe(run.run_key); // the same run saved again, now complete
