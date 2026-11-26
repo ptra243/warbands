@@ -8,7 +8,14 @@ You pick one faction and a leader, buy units over a series of rounds, and try to
 
 Open `index.html` in a browser. Everything is in that one file; it needs no server and no install. Fonts load from Google Fonts and fall back to system fonts offline.
 
-Run logs are saved automatically only when the page is hosted as a Claude artifact with storage. There, **Download saved runs** on the start and end screens writes every saved run to one JSON file. Opened from disk, use **Copy run log** on the end screen instead. The post-game then uses generated opponents, since it has no saved boards to read.
+Run logs are saved automatically at the end of each run, and **Download saved runs** on the start and end screens writes them all to one JSON file.
+
+Where they are saved depends on where the page runs:
+
+- **As a Claude artifact:** in the artifact's own storage. That page cannot reach other hosts.
+- **Anywhere else** (GitHub Pages, or the file opened from disk): in a small Supabase database, set up by `db/schema.sql`. Winning boards also go into a shared `ghosts` table, which is where the post-game finds its opponents.
+
+The two stores do not see each other. The database key in `src/ui.js` is the publishable one, which is meant to be public; the database's rules allow reading and adding rows and nothing else.
 
 ## Layout
 
@@ -24,6 +31,7 @@ Run logs are saved automatically only when the page is hosted as a Claude artifa
 | `tests/` | Headless browser checks. |
 | `DESIGN.md` | Rules summary, the reasoning behind the main decisions, balance state and open threads. |
 | `runs/` | Run logs from real play, one file per run, with an index. |
+| `db/schema.sql` | The tables and access rules of the hosted database used outside Claude. |
 
 ## Building
 
@@ -58,6 +66,7 @@ These need Python with Playwright and a Chrome binary. Set `CHROME` if Chrome is
 python3 tests/browser_flow.py      # faction, leader, encounters, camps, a boss, to the end of a run, for all three factions
 python3 tests/browser_postgame.py  # win a run, keep going against stubbed saved boards, finish
 python3 tests/browser_drag.py      # drop preview and pushing units aside
+python3 tests/browser_cloud.py     # saving, post-game boards and the download outside Claude, against a stand-in database
 ```
 
 Each prints any page errors on its last line. Screenshots go to `tests/shots/`, which is not committed.
