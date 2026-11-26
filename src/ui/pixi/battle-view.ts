@@ -115,9 +115,24 @@ let particles: Particle[] = [];
 let app: Application | null = null,
   failed = false,
   stageEl: HTMLElement | null = null;
+/* true when WebGL is drawn on the CPU (SwiftShader, llvmpipe and the like). Not every browser reports that as
+   a performance caveat (headless Chromium doesn't), so look at the renderer's name too. */
+function softwareWebGL(): boolean {
+  try {
+    const gl = document.createElement('canvas').getContext('webgl');
+    if (!gl) return false;
+    const info = gl.getExtension('WEBGL_debug_renderer_info'),
+      name = String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+    return /swiftshader|llvmpipe|softpipe|software|basic render/i.test(name);
+  } catch {
+    return false;
+  }
+}
 async function ensureApp(): Promise<Application | null> {
   if (app || failed) return app;
   try {
+    if (softwareWebGL()) throw new Error('WebGL is drawn in software');
     const a = new Application();
     await a.init({
       width: WIDTH,
