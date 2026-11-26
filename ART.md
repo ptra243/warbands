@@ -2,7 +2,7 @@
 
 How to draw a unit illustration that matches the ones already approved. Read this before adding or changing anything in `src/ui/card-art.ts`.
 
-The card art is a study. It is not wired into the game yet: the game still shows the small icons in `src/ui/art.ts`. Eight units are drawn so far, the Human mages and the Human tanks. `card-art.ts` also still holds two earlier busts (Lich, Assassin) from a concept that was dropped: don't use them or build on them.
+The card art is in the game on the PixiJS battle screen, on the battle tiles and the inspect card. A unit with a scene in `card-art.ts` shows it there; every other unit still shows its small icon from `src/ui/art.ts`, as does the classic battle screen. Drawing a scene therefore puts it in the game, drafts included. Eight units are drawn so far, the Human mages and the Human tanks. `card-art.ts` also still holds two earlier busts (Lich, Assassin) from a concept that was dropped: `DROPPED` keeps them out of the game. Don't use them or build on them.
 
 ## Where things are
 
@@ -19,7 +19,7 @@ The card art is a study. It is not wired into the game yet: the game still shows
 
 Follow these steps in order. The owner reviews at steps 1 and 5.
 
-1. **Describe the scene in words first** and get it approved before drawing: setting, figure, action, colour. Four short lines are enough.
+1. **Describe the scene in words first** and get it approved before drawing: setting, figure, action, colour. Four short lines are enough. Ask for a pose reference at the same time (see "Pose references" below).
 2. **Draw it** as a function in `card-art.ts`, reusing the kit.
 3. **Render it:** `npm run cards -- <unit id>`. This needs Chromium (`npx playwright install chromium` or `CHROME=path`).
 4. **Open `art/out/large.png`, `cards.png` and `tiles.png` and look at them.** The SVG source will not show you a head that floats, an arm that reads as a stick, or a focal point hidden under the health bar. Fix what you see and render again.
@@ -118,18 +118,27 @@ Each unit has one signature colour for its clothing and one for its effect. Keep
 
 The owner may name a character from another game or show as a reference. Take the attitude, the energy or a general pose from it. Never draw the character itself, its costume or its signature features. The result must be Warband's own figure. A classic pose, such as a weapon raised overhead to catch lightning, is free to use.
 
+## Pose references
+
+Pose is the hardest part to get right from words alone. The Halberdier went through three drafts of guessing; two photos from the owner settled it in one. So ask for a reference along with the scene description, before drawing.
+
+- **What helps.** Photos of real people: martial arts, sport, historical reenactment, sculpture. A plain silhouette is best of all, because the outline is what must read at tile size.
+- **How many.** One or two per unit. When there are several, pick the one that gives the unit an outline its group does not already have, and say why. The Halberdier took the low, square polearm stance over a side-on spear thrust, because the Knight already charges side-on and a thrust reads as a spear, not a halberd's sweep.
+- **What to take.** The pose and the weight: where the feet are, how the knees bend, where each hand sits. Not clothing, faces or style. The rule in "Taking inspiration" still holds.
+- **Where they live.** Not in the repository: most images online are copyrighted. A link or a note in the conversation is enough.
+
 ## Drawn so far
 
-| Unit       | Notes                                                                                                                          |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Apprentice | Approved as a good start. The raised arm is thin.                                                                              |
-| Fire Mage  | Approved as a good start. Reads less clearly as a woman than intended.                                                         |
-| Storm Mage | Approved as a good start. Sleeves bunch around the head.                                                                       |
-| Archmage   | Approved as a good start. Needs more presence in the two-slot tile.                                                            |
-| Footman    | First draft, awaiting review. Stocky body; sword arm is crowded.                                                               |
-| Halberdier | First draft, awaiting review. Torso too upright for a lunge; thin legs. Arms redrawn in mail sleeves, far arm behind the body. |
-| Knight     | Second draft. Horse redrawn: nose tucked, chest and raised foreleg shown, sun rim on crest and head. Rider sits stiffly.       |
-| Paladin    | First draft, awaiting review. Mace head reads as a star.                                                                       |
+| Unit       | Notes                                                                                                                                  |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Apprentice | Approved as a good start. The raised arm is thin.                                                                                      |
+| Fire Mage  | Approved as a good start. Reads less clearly as a woman than intended.                                                                 |
+| Storm Mage | Approved as a good start. Sleeves bunch around the head.                                                                               |
+| Archmage   | Approved as a good start. Needs more presence in the two-slot tile.                                                                    |
+| Footman    | First draft, awaiting review. Stocky body; sword arm is crowded.                                                                       |
+| Halberdier | Third draft. Low, wide stance square to the viewer, pole rising across the frame. The blade is trimmed at the edge of a one-slot tile. |
+| Knight     | Second draft. Horse redrawn: nose tucked, chest and raised foreleg shown, sun rim on crest and head. Rider sits stiffly.               |
+| Paladin    | First draft, awaiting review. Mace head reads as a star.                                                                               |
 
 The Lich and Assassin busts in `card-art.ts` predate the move to scenes. The owner dropped the bust concept, so treat those units as not drawn: start their scenes fresh rather than adapting the busts.
 

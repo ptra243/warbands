@@ -928,67 +928,93 @@ const CARDS: Record<string, () => string> = {
       ) +
       C(x, y, 1.2, '#fff');
     s += flash(89, 22) + flash(89, 67);
-    // legs, lunging right
+    // a low, wide stance, square to the viewer: knees bent out over the feet
+    const pants = '#454d5c',
+      mail = '#7d858f',
+      glove = '#4a3020',
+      boot = '#2a2420';
     s +=
-      P('35,64 42,64 30,80 19,96 14,95 25,78', '#3a4250') +
-      P('25,78 30,80 19,96 14,95', sh('#3a4250', 0.8)) +
-      P('13,94 22,95 22,98 11,98', '#2a2420') +
-      P('44,63 51,64 58,78 63,95 57,96 52,80', '#4a5262') +
-      P('51,64 58,78 63,95 60,95 54,80', sh('#4a5262', 0.7)) +
-      P('56,94 66,94 67,98 55,98', '#2a2420');
-    // arms in mail sleeves, so they part from the blue body; each bends at a steel elbow
-    const mail = '#7d858f',
-      glove = '#4a3020';
+      P('33,63 43,64 28,79 19,76', pants) +
+      P('33,63 37,63.3 22,77.6 19,76', sh(pants, 1.25)) +
+      P('19,76 27,79 23,94 16,94', sh(pants, 0.85)) +
+      P('19,76 21.5,77 18,94 16,94', sh(pants, 1.1)) +
+      C(23, 77.5, 2.5, steel) +
+      P('21,76 23,75 24,77', '#fff', 0.5) +
+      P('11,93 24,93 25,98 10,98', boot) +
+      P('46,64 56,63 75,72 69,78', sh(pants, 0.9)) +
+      P('52,68 56,63 75,72 72,75', sh(pants, 0.65)) +
+      P('69,78 75,72 80,94 73,94', sh(pants, 0.7)) +
+      C(72, 75, 2.5, sh(steel, 0.85)) +
+      P('71,93 83,93 84,98 70,98', boot);
+    // gambeson: skirt, then a body with shoulders broader than the head
+    s +=
+      P('31,57 57,57 61,70 46,67 27,70', gam) +
+      P('31,57 37,57 33,68.5 27,70', sh(gam, 1.25)) +
+      P('50,57 57,57 61,70 48,67', sh(gam, 0.66)) +
+      P('27,68.5 46,65.5 61,68.5 61,71 46,68 27,71', trim) +
+      P('46,65.5 61,68.5 61,71 46,68', sh(trim, 0.7)) +
+      P('29,40 35,35.5 53,35.5 59,40 57,50 55,58 33,58 31,50', gam) +
+      P('29,40 35,35.5 38,36 36,58 33,58 31,50', sh(gam, 1.25)) +
+      P('50,35.5 53,35.5 59,40 57,50 55,58 51,58 52,48', sh(gam, 0.66)) +
+      P('38,36 50,36 50,47 37,49', sh(gam, 1.06)) +
+      [44, 49, 53].map((y) => L(`32,${y} 56,${y}`, sh(gam, 0.6), 0.4, 0.7)).join('') +
+      L('44,37 44,56', sh(gam, 0.6), 0.4, 0.6) +
+      P('32,55 56,55 56,58.5 32,58.5', '#2a1c14') +
+      C(44, 56.8, 1.2, '#c9a544');
+    // padded shoulder rolls and a mail collar
+    s +=
+      P('25,45 26,39 31,36 37.5,37 38,42 32.5,46.5', sh(gam, 1.15)) +
+      P('25,45 32.5,46.5 38,42 38.5,44.5 32.5,49 25.5,47.5', sh(gam, 0.7)) +
+      L('26,39 31,36 37.5,37', sh(gam, 1.5), 0.5, 0.7) +
+      L('25.2,46.4 32.5,47.8 38.3,43.3', trim, 1.1) +
+      P('63,45 62,39 57,36 50.5,37 50,42 55.5,46.5', sh(gam, 0.78)) +
+      P('63,45 55.5,46.5 50,42 49.5,44.5 55.5,49 62.5,47.5', sh(gam, 0.5)) +
+      L('49.7,43.3 55.5,47.8 62.8,46.4', sh(trim, 0.75), 1.1) +
+      P('37,36 51,36 52.5,40.5 35.5,40.5', mail) +
+      P('44,36 51,36 52.5,40.5 44,40.5', sh(mail, 0.7)) +
+      L('37,36 44,36', sh(mail, 1.5), 0.4, 0.7);
+    // arms in mail sleeves, bent at steel elbows: back hand low at the hip, lead arm reaching forward
     const arm = (pts: string, k: number) =>
-      L(pts, '#05080d', 6.2, 0.55) +
+      L(pts, '#05080d', 6.2, 0.5) +
       L(pts, sh(mail, 0.6 * k), 4.6) +
       L(pts, sh(mail, k), 3) +
       L(pts, sh(mail, 1.45 * k), 0.6, 0.7);
-    // far arm, from the hidden shoulder: passes behind the body, elbow dropped below the pole
     s +=
-      arm('45,42 56,52 60,45.6', 0.72) +
-      C(56, 52, 2.3, sh(steel, 0.72)) +
-      P('54.6,51 56,49.7 57.4,51', '#fff', 0.35) +
-      L('58,48.2 59.4,46.6', sh(trim, 0.8), 2.4);
-    // gambeson body, side-on
+      arm('30,43 24.5,54 30.5,64.5', 1) +
+      C(24.5, 54, 2.4, sh(steel, 1.05)) +
+      P('23,53 24.5,51.6 26,53', '#fff', 0.5) +
+      L('28.6,62.4 30.2,63.8', trim, 2.4) +
+      arm('58,43 62,50 65.5,45.6', 0.85) +
+      C(62, 50, 2.4, sh(steel, 0.9)) +
+      P('60.5,49 62,47.6 63.5,49', '#fff', 0.4) +
+      L('63.4,47.4 64.8,46.2', trim, 2.4);
+    // the halberd, rising across the frame; its head is drawn along the pole
     s +=
-      P('34,40 46,38 52,52 52,68 32,68 31,54', gam) +
-      P('45,39 52,52 52,68 44,68', sh(gam, 0.66)) +
-      P('34,40 38,39 34,68 32,68 31,54', sh(gam, 1.25)) +
-      [46, 52, 58, 63].map((y) => L(`33,${y} 51,${y}`, sh(gam, 0.6), 0.4, 0.7)).join('') +
-      P('31,66 53,66 54,70 30,70', trim) +
-      P('42,66 53,66 54,70 42,70', sh(trim, 0.7)) +
-      P('31,58 53,57 53,60 31,61', '#2a1c14');
-    // back arm, reaching down and behind to the butt of the pole
-    s +=
-      arm('37,42 31,50 28.5,57', 1) +
-      C(31, 50, 2.4, sh(steel, 1.05)) +
-      P('29.5,49 31,47.6 32.5,49', '#fff', 0.5) +
-      L('29.5,55 27.5,55.6', trim, 2.4) +
-      C(28.2, 58.2, 2.4, glove) +
-      C(27.6, 57.6, 0.8, sh(glove, 1.6));
-    // the halberd, a long rising diagonal
-    s +=
-      L('4,69 86,34', sh(pole, 0.6), 2.2) +
-      L('4,68.5 86,33.5', pole, 1.2) +
-      L('5,68 30,57.4', sh(pole, 1.5), 0.4, 0.6) +
-      P('80,35.5 87,32.5 90,45 85,50 78,46', steel) +
-      P('80,35.5 83,34.2 81,47 78,46', sh(steel, 1.3)) +
-      P('87,32.5 90,45 87,48', sh(steel, 0.65)) +
-      L('78,46 85,50 90,45', '#fff', 0.5, 0.7) +
-      P('85,33 99,28 86,36', '#d6dde6') +
-      P('86,36 99,28 92,33', sh(steel, 0.7)) +
-      P('82,33 80,24 85,31', steel) +
-      L('81.5,36 84,35', sh(steel, 0.5), 2.4) +
-      C(85, 40, 5, fire, 0.06);
-    // the far hand grips the pole over its shaft
-    s += C(60.4, 44.8, 2.5, glove) + C(59.7, 44.1, 0.9, sh(glove, 1.6));
+      L('8,80.8 84,33.9', sh(pole, 0.6), 2.2) +
+      L('8,80.3 84,33.4', pole, 1.2) +
+      L('9,79.6 30,66.6', sh(pole, 1.5), 0.4, 0.6) +
+      `<g transform="translate(84,33.9) rotate(-31.7)">` +
+      L('-6,0 4,0', sh(steel, 0.5), 2.6) +
+      P('3,-1.4 17,0 3,1.4', '#d6dde6') +
+      P('3,0 17,0 3,1.4', sh(steel, 0.7)) +
+      P('-3,1 5,1 8,12 2,14 -4,10', steel) +
+      P('-3,1 1,1 -1,12 -4,10', sh(steel, 1.3)) +
+      P('5,1 8,12 5.5,12.8', sh(steel, 0.65)) +
+      L('-4,10 2,14 8,12', '#fff', 0.5, 0.7) +
+      P('0,-1 -2.5,-8 4,-1', steel) +
+      P('1.5,-1 -2.5,-8 4,-1', sh(steel, 0.7)) +
+      `</g>` +
+      C(86, 40, 6, fire, 0.06) +
+      C(31.5, 65.8, 2.5, glove) +
+      C(30.8, 65.1, 0.8, sh(glove, 1.6)) +
+      C(65.8, 45.2, 2.5, glove) +
+      C(65.1, 44.5, 0.9, sh(glove, 1.6));
     // head: grey beard, nasal helm
     s += hd(
-      41,
-      29,
-      0.4,
-      4,
+      44,
+      27.5,
+      0.42,
+      6,
       face(skin) +
         P('34,52 40,60 51,66 56,60 62,64 64,56 66,66 58,78 46,80 36,72 32,60', beard) +
         P('51,66 56,60 62,64 64,56 66,66 58,78 50,80', sh(beard, 0.7)) +
@@ -1396,9 +1422,14 @@ const WIDE: Record<string, [number, number, number, number]> = {
   paladin: [-22, 0, 144, 82],
 };
 
+/* Busts from a dropped concept (see ART.md). The review tool still renders them; the game never shows them. */
+const DROPPED = new Set(['lich', 'assassin']);
+
 export const CARD_ART = {
   ids: Object.keys(CARDS),
   has: (id: string): boolean => id in CARDS,
+  /* true for every drawn scene: the game shows it in place of the unit's icon */
+  inGame: (id: string): boolean => id in CARDS && !DROPPED.has(id),
   /* `wide` picks the two-slot framing; `tag` keeps gradient ids unique when one scene appears twice on a page */
   svg: (id: string, label: string, wide?: boolean, tag?: string): string => {
     const vb = (wide && WIDE[id]) || [0, 0, 100, 100];
