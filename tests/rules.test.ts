@@ -206,3 +206,15 @@ describe('post-game', () => {
     expect(run.lives).toBe(3);
   });
 });
+
+describe('Duelist', () => {
+  it('hits the same enemy harder each time, up to +90%, and starts over on a new target', () => {
+    const vs = W.U.duelist.vs!;
+    const B = {} as W.Battle,
+      u = {} as W.BattleUnit,
+      a = { bid: 1 } as W.BattleUnit,
+      b = { bid: 2 } as W.BattleUnit;
+    const hits = [a, a, a, b, b, a, a, a, a, a, a, a, a].map((t) => +vs(B, u, t, 10).toFixed(2));
+    expect(hits).toEqual([10, 11.5, 13, 10, 11.5, 10, 11.5, 13, 14.5, 16, 17.5, 19, 19]);
+  });
+});

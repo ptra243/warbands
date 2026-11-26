@@ -639,9 +639,11 @@ const DEFS: Record<string, Omit<UnitDef, 'id'>> = {
     atk: 22,
     cd: 1.6,
     tribes: ['DPS'],
-    txt: () => '+40% attack when it starts the battle with no ally beside it.',
-    onStart: (B, u) => {
-      if (!adj(B, u).length) u.atk *= 1.4;
+    txt: () => 'Each hit on the same enemy deals 15% more than the last, up to +90%. Changing target starts over.',
+    vs: (B, u, t, v) => {
+      u.duelN = u.duelT === t.bid ? Math.min((u.duelN || 0) + 1, 6) : 0;
+      u.duelT = t.bid;
+      return v * (1 + 0.15 * u.duelN);
     },
   },
   bishop: {

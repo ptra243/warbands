@@ -77,6 +77,7 @@ Past boards come from the artifact's storage when the page runs inside Claude, a
 - **Summons do not count as deaths** for the Blood Priest, Soul Reaper or Champion. Each of them was found scaling off a stream of dying minions.
 - **A quarter of each boss attack carries through to the hero.** Before that, bosses never threatened a board that could stand in front of them.
 - **Hidden opponent.** Chosen after the game became too easy with full information. It removed the target preview from the shop, which is why the summary screen names what dealt the hero damage.
+- **The Duelist presses one target.** Each hit on the same enemy deals 15% more, up to +90%, and a new target starts over. It used to gain 40% attack when it started with no ally beside it, which rewarded gaps in the line and was settled before the fight began. The bot's Human win rate did not move (35% to 34% over 600 runs).
 - **Post-game order by simulation.** An estimate from unit stats ranked boards badly, because it ignored Rot, summons and death scaling.
 
 ## Balance state
