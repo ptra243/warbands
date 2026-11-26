@@ -158,7 +158,8 @@ function pickHTML() {
   const show = { H: ['footman', 'priest', 'archmage'], E: ['scout', 'sunspire', 'matriarch'], U: ['skeleton', 'necromancer', 'herald'] };
   return `<div class="wrap pick"><header class="intro"><h1>Warband</h1><p class="lede">Draft a single row of ten slots. Each unit strikes whatever stands opposite it, and anything left unblocked hits the enemy hero. Win ten battles before you lose five.</p></header>
 <div class="factions">${Object.keys(W.FACTIONS).filter(f => f !== 'N').map(f => `<button class="fac f${f}" data-act="pick:${f}"><span class="crest">${show[f].map(id => `<span class="u f${f}">${ART.unit(id)}</span>`).join('')}</span><h2>${W.FACTIONS[f].name}</h2><p>${W.FACTIONS[f].blurb}</p>
-<p class="chips">${Object.keys(W.TRIBES).filter(k => W.TRIBES[k].f === f && W.TRIBES[k].th.length && k !== 'Party').map(chip).join('')}</p><span class="go">Lead the ${W.FACTIONS[f].name}</span></button>`).join('')}</div></div>`;
+<p class="chips">${Object.keys(W.TRIBES).filter(k => W.TRIBES[k].f === f && W.TRIBES[k].th.length && k !== 'Party').map(chip).join('')}</p><span class="go">Lead the ${W.FACTIONS[f].name}</span></button>`).join('')}</div>
+<p class="dlrow"><button class="ghost" data-act="dlruns">Download saved runs</button><span class="odds dlmsg" role="status">${S.dlmsg || ''}</span></p></div>`;
 }
 function logRows() {
   return S.run.log.map(L => {
@@ -171,27 +172,85 @@ function endHTML() {
   const run = S.run, won = run.over === 'won';
   return `<div class="wrap pick"><header class="intro withport">${port(run.leader, 'mid')}<div><h1>${won ? 'The realm is yours' : 'Your warband has fallen'}</h1>${run.post ? `<p class="lede"><b>After the crown: ${run.post.n} past warband${run.post.n === 1 ? '' : 's'} beaten.</b></p>` : ''}<p class="lede">${run.wins} win${run.wins === 1 ? '' : 's'} over ${run.log.length} round${run.log.length === 1 ? '' : 's'} leading the ${W.FACTIONS[run.faction].name}${run.leader ? ' under ' + W.LEADERS[run.leader].name.replace('The ', 'the ') : ''}${run.relics.length ? ', carrying ' + run.relics.map(k => W.RELICS[k].name).join(', ') : ''}.</p></div></header>
 <section class="field"><div class="scroll"><div class="rows"><div class="row p">${cells(1, W.openArr(W.openCount(run.level)))}${W.boardUnits(run).map(o => card(o, `${span(o.slot, W.U[o.id].size)} data-insp="own:${o.uid}"`)).join('')}</div></div></div></section>
-<section class="panel"><div class="bar"><h2>Run log</h2><span class="odds" id="save" role="status">${S.save || ''}</span><span class="grow"></span><button data-act="copylog">Copy run log</button>${won && !run.post ? `<button data-act="newrun">Start a new run</button><button class="primary" data-act="keepgoing" title="Keep this warband and fight the boards of your past winning runs, each stronger than the last, until your lives run out.">Keep going</button>` : `<button class="primary" data-act="newrun">Start a new run</button>`}</div>
+<section class="panel"><div class="bar"><h2>Run log</h2><span class="odds" id="save" role="status">${S.save || ''}</span><span class="grow"></span><button data-act="copylog">Copy run log</button><button data-act="dlruns">Download saved runs</button>${won && !run.post ? `<button data-act="newrun">Start a new run</button><button class="primary" data-act="keepgoing" title="Keep this warband and fight the boards of your past winning runs, each stronger than the last, until your lives run out.">Keep going</button>` : `<button class="primary" data-act="newrun">Start a new run</button>`}</div>
 <div class="scroll"><table class="log"><thead><tr><th>Round</th><th>Opponent</th><th>Result</th><th>Your hero</th><th>Enemy hero</th><th>Length</th><th>Your top damage</th></tr></thead><tbody>${logRows()}</tbody></table></div>
-<details id="rawlog"><summary>Show the full log as text</summary><textarea id="rawtext" readonly rows="8" aria-label="Full run log"></textarea></details></section></div>`;
+<p class="odds dlmsg" role="status">${S.dlmsg || ''}</p><details id="rawlog"><summary>Show the full log as text</summary><textarea id="rawtext" readonly rows="8" aria-label="Full run log"></textarea></details></section></div>`;
 }
 function setSave(t) { S.save = t; const e = document.getElementById('save'); if (e) e.textContent = t; }
+/* Where runs and post-game boards are kept. Inside Claude the page uses the artifact's own storage and cannot reach other hosts.
+   Anywhere else (GitHub Pages, a file on disk) it uses a small hosted database. The key below is the publishable one:
+   it is meant to be public, and the database's own rules allow reading and adding only. */
+const CLOUD = { url: 'https://tuotzykmnxmmksabdlsy.supabase.co/rest/v1/', key: 'sb_publishable_dTHHsosk7xWlduOS9iYvZA_WO7MDPJ1' };
+const inClaude = () => !!(window.claude && window.claude.use);
+async function cloud(path, opt) {
+  const o = opt || {}, ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 15000);
+  try {
+    const r = await fetch(CLOUD.url + path, { method: o.method || 'GET', body: o.body ? JSON.stringify(o.body) : undefined, signal: ctl.signal, headers: Object.assign({ apikey: CLOUD.key, Authorization: 'Bearer ' + CLOUD.key, 'Content-Type': 'application/json' }, o.prefer ? { Prefer: o.prefer } : {}) });
+    if (!r.ok) throw { code: 'http', status: r.status };
+    const t = await r.text(); return t ? JSON.parse(t) : null;
+  } finally { clearTimeout(timer); }
+}
+function playerId() { try { let p = localStorage.getItem('wb-player'); if (!p) { p = 'p-' + Math.random().toString(36).slice(2, 10); localStorage.setItem('wb-player', p); } return p; } catch (err) { return null; } }
+const ghostRow = (g, x) => ({ run_key: g.key, balance: x.bal || 1, faction: g.faction, leader: g.leader, relics: g.relics, slots: g.open, round: g.round || null, player: playerId(),
+  units: g.units.map(u => { const o = { id: u.id, slot: u.slot }; if (u.tier > 1) o.tier = u.tier; if (u.item) o.item = u.item; if (u.gAtk) o.gAtk = u.gAtk; if (u.gHp) o.gHp = u.gHp; return o; }) });
+const ghostOf = r => W.ghostFrom({ game: 'warband', outcome: 'won', faction: r.faction, leader: r.leader, relics: r.relics, bal: r.balance, log: [{ result: 'win', slots: r.slots, round: r.round, board: r.units }] }, r.run_key);
 async function saveLog() {
   const run = S.run; if (!run || run.saved) return;
   run.saved = true; setSave('Saving the run log…');
   try {
-    const db = window.claude && window.claude.use ? await window.claude.use('db') : null;
-    if (!db) { run.saved = false; setSave("Couldn't reach storage. Use Copy run log and paste it into the chat."); return; }
     const x = W.exportLog(run);
-    run.docId = run.docId || 'run-' + Date.now();
+    run.docId = run.docId || 'run-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+    if (!inClaude()) {
+      await cloud('runs', { method: 'POST', prefer: 'return=minimal', body: { run_key: run.docId, ended: x.ended, balance: x.bal || 1, faction: x.faction, leader: x.leader || null, outcome: x.outcome, wins: x.wins, rounds: x.rounds, post: x.post == null ? null : x.post, player: playerId(), log: x } });
+      const g = x.outcome === 'won' ? W.ghostFrom(x, run.docId) : null;
+      if (g) await cloud('ghosts?on_conflict=run_key', { method: 'POST', prefer: 'resolution=ignore-duplicates,return=minimal', body: ghostRow(g, x) });
+      setSave(g ? 'Run saved. Your final board joins the post-game pool.' : 'Run saved.'); return;
+    }
+    const db = await window.claude.use('db');
+    if (!db) { run.saved = false; setSave("Couldn't reach storage. Use Copy run log and paste it into the chat."); return; }
     await db.collection('runs').doc(run.docId).set({ ended: x.ended, faction: x.faction, outcome: x.outcome, wins: x.wins, rounds: x.rounds, bal: x.bal, post: x.post == null ? -1 : x.post, json: JSON.stringify(x) });
     setSave('Run log saved. Ask Claude to look at your last run.');
   } catch (err) { run.saved = false; setSave("Couldn't save the run log. Use Copy run log and paste it into the chat."); }
 }
+/* every saved run in one JSON file, to hand over for analysis or keep in the repository */
+const useCap = async name => { try { return window.claude && window.claude.use ? await window.claude.use(name) : null; } catch (err) { return null; } };
+function setDl(t) { S.dlmsg = t; document.querySelectorAll('.dlmsg').forEach(e => { e.textContent = t; }); }
+async function downloadRuns() {
+  if (S.dling) return; S.dling = true; setDl('Gathering your saved runs…');
+  try {
+    const runs = [], name = `warband-runs-${new Date().toISOString().slice(0, 10)}.json`, pack = () => JSON.stringify({ game: 'warband', exported: new Date().toISOString(), count: runs.length, runs });
+    if (!inClaude()) { // a run that went into the post-game is saved twice; the later row is the complete one
+      const rows = await cloud('runs?select=run_key,log&order=created_at.asc&limit=1000'), last = {};
+      for (const r of rows || []) if (r.log && typeof r.log === 'object') last[r.run_key] = Object.assign({ id: r.run_key }, r.log);
+      for (const k in last) runs.push(last[k]);
+      if (!runs.length) { setDl('There are no saved runs yet.'); return; }
+      runs.sort((a, b) => String(a.ended).localeCompare(String(b.ended)));
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([pack()], { type: 'application/json' })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+      setDl(`Downloaded ${runs.length} run${runs.length === 1 ? '' : 's'}.`); return;
+    }
+    const db = await useCap('db'); if (!db) { setDl("Saved runs can't be reached from here."); return; }
+    const snap = await Promise.race([db.collection('runs').limit(1000).get(), new Promise((_, no) => setTimeout(() => no({ code: 'timeout' }), 15000))]);
+    for (const d of snap.docs) { let x = null; try { x = JSON.parse(d.data().json); } catch (err) { continue; } if (x && typeof x === 'object') runs.push(Object.assign({ id: d.id }, x)); }
+    if (!runs.length) { setDl('There are no saved runs yet.'); return; }
+    runs.sort((a, b) => String(a.ended).localeCompare(String(b.ended)));
+    const dl = await useCap('downloads'); if (!dl) { setDl("Downloads aren't available in this view."); return; }
+    await dl.save({ filename: name, data: pack() });
+    setDl(`Downloaded ${runs.length} run${runs.length === 1 ? '' : 's'}.`);
+  } catch (err) {
+    const c = err && err.code;
+    setDl(c === 'declined' ? 'Download cancelled.' : c === 'rate_limited' ? 'A download prompt is already open. Try again in a moment.' : c === 'timeout' ? "Your saved runs didn't load in time. Try again." : "Couldn't download the runs. Try again.");
+  } finally { S.dling = false; }
+}
 /* the final boards of past winning runs, for the post-game. Any failure just means generated opponents. */
 async function loadGhosts(skip) {
   try {
-    const db = window.claude && window.claude.use ? await window.claude.use('db') : null; if (!db) return [];
+    if (!inClaude()) { // the newest boards from the shared pool, at most 16 so ranking them stays quick
+      const rows = await cloud('ghosts?select=run_key,balance,faction,leader,relics,slots,round,units&order=created_at.desc&limit=60');
+      const all = (rows || []).filter(r => r.run_key !== skip).map(ghostOf).filter(Boolean);
+      for (let i = all.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [all[i], all[j]] = [all[j], all[i]]; }
+      return all.slice(0, 16);
+    }
+    const db = await window.claude.use('db'); if (!db) return [];
     const snap = await Promise.race([db.collection('runs').where('outcome', '==', 'won').get(), new Promise((_, no) => setTimeout(() => no(new Error('timeout')), 10000))]);
     const out = [];
     for (const d of snap.docs) { if (d.id === skip) continue; let x = null; try { x = JSON.parse(d.data().json); } catch (err) { continue; } const g = W.ghostFrom(x, d.id); if (g) out.push(g); }
@@ -419,7 +478,8 @@ function command(c) {
   else if (c.startsWith('leader:')) { S.save = ''; S.run = W.newRun(S.pickF, c.slice(7)); S.screen = 'shop'; S.sel = null; }
   else if (c.startsWith('enc:')) { const r = W.chooseOffer(run, +c.slice(4)); if (!r) return; if (r.fight) { startCamp(); return; } S.msg = r.msg || ''; S.screen = 'shop'; }
   else if (c === 'keepgoing') { keepGoing(); return; }
-  else if (c === 'newrun') { S.run = null; S.save = ''; S.screen = 'pick'; }
+  else if (c === 'dlruns') { downloadRuns(); return; }
+  else if (c === 'newrun') { S.run = null; S.save = ''; S.dlmsg = ''; S.screen = 'pick'; }
   else if (c === 'copylog') {
     const text = JSON.stringify(W.exportLog(run)), fail = () => { const d = document.getElementById('rawlog'), t = document.getElementById('rawtext'); if (d) d.open = true; if (t) { t.focus(); t.select(); } setSave('Copy was blocked. The full log is selected below: press Ctrl+C.'); };
     try { navigator.clipboard.writeText(text).then(() => setSave('Run log copied. Paste it into the chat.'), fail); } catch (err) { fail(); }

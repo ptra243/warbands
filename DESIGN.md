@@ -61,6 +61,8 @@ Leaders: Gravecaller (summon shields), Blood Priest (attack on death), Plaguefat
 
 After the tenth win, "Keep going" keeps the board, gold and at least 3 lives. Opponents are the final boards of your saved winning runs with their leader and relics. They are ordered by a quick round-robin between themselves under current rules, weakest first, and each win makes the next opponent 15% stronger. The score is the number beaten.
 
+Past boards come from the artifact's storage when the page runs inside Claude, and from the shared `ghosts` table in the hosted database everywhere else, where at most 16 of the newest 60 are drawn each time. Every board is checked against the current units and items as it loads, so a row with an unknown unit is skipped.
+
 `BALANCE` in the engine goes up with every rules change and is stamped on each saved run. `GHOST_FROM` is the oldest balance version whose boards are still used. Raise it to retire boards; nothing is deleted.
 
 ## Decisions worth remembering

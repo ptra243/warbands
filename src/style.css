@@ -331,3 +331,5 @@ textarea { width: 100%; margin-top: 8px; background: #0e1315; color: var(--dim);
 .dbar .du + .dh { border-left: 2px solid var(--felt); }
 .key { display: flex; align-items: center; gap: 6px; color: var(--dim); font-size: 13px; } .key i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; margin-left: 8px; }
 @media (max-width: 760px) { .tiles { grid-template-columns: 1fr 1fr; } .result h2 { font-size: 36px; } .result { flex-wrap: wrap; } }
+
+.dlrow { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
