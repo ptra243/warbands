@@ -18,10 +18,5 @@ export function boardFight(a: SavedBoard, b: SavedBoard): number | null {
     b.open,
     { leader: a.leader, relics: a.relics, foeLeader: b.leader, foeRelics: b.relics },
   );
-  let n = 0;
-  while (!B.over && n++ < 4000) {
-    W.step(B, 0.05);
-    B.ev.length = 0;
-  }
-  return B.winner;
+  return W.runToEnd(B).winner;
 }

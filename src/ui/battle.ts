@@ -1,10 +1,11 @@
-/* Attack lines, shop previews and battle playback. */
+/* Attack lines, shop previews, and the playback driver behind both battle screens. */
 import * as W from '../engine/index.ts';
-import { buHTML, foeMul, inspTarget, n } from './html.ts';
+import { foeMul, inspTarget } from './html.ts';
 import { saveLog } from './storage.ts';
 import { render } from './render.ts';
 import { S, root } from './state.ts';
-import { mountPixiBattle, stopPixiBattle } from './pixi/battle-view.ts';
+import { pixiScreen } from './pixi/battle-view.ts';
+import { classicScreen } from './classic-battle.ts';
 
 /* ---- attack lines ---- */
 export const NS = 'http://www.w3.org/2000/svg';
@@ -53,114 +54,79 @@ export function drawPreview() {
   }
 }
 
-/* ---- battle playback ---- */
+/* ---- battle playback ----
+   One driver: each animation frame it advances the battle's playback and hands the frame to whichever battle
+   screen is showing. The screens only draw; they never step the battle or decide when it ends. */
+
+/** what the driver needs from a battle screen */
+export interface BattleScreen {
+  /** draw battle B's screen into the markup render() just put on the page. Resolves false if this screen can't
+   *  run here. Playback waits until it resolves. */
+  mount(B: W.Battle, foeName: string): boolean | Promise<boolean>;
+  /** draw one frame (`real`: real seconds since the last one). True once the end has been shown and the summary
+   *  can take over. */
+  frame(f: W.PlaybackFrame, real: number): boolean;
+  unmount(): void;
+}
+
 let raf = 0,
   last = 0,
-  els: Record<number, HTMLElement> = {};
-export function bind() {
-  els = {};
-  for (const u of S.B!.units) {
-    const e = document.getElementById('bu' + u.bid);
-    if (e) els[u.bid] = e;
-  }
+  /* bumped whenever the loop stops, so a mount still loading for an older showing is ignored */
+  showing = 0,
+  screen: BattleScreen | null = null,
+  play: W.Playback | null = null,
+  reported = false;
+
+/* the playback of the battle being fought; it outlives a switch between battle screens */
+function playback(B: W.Battle): W.Playback {
+  if (!play || play.battle !== B) play = W.createPlayback(B, S.speed);
+  return play;
 }
-export function float(el: HTMLElement | undefined, text: string, cls: string): void {
-  if (!el || el.querySelectorAll('.fl').length > 3) return;
-  const s = document.createElement('span');
-  s.className = 'fl ' + cls;
-  s.textContent = text;
-  s.style.left = 30 + Math.random() * 40 + '%';
-  el.appendChild(s);
-  setTimeout(() => s.remove(), 700);
-}
-export function drain(B: W.Battle): void {
-  for (const e of B.ev) {
-    const el = els[e.b!];
-    if (e.t === 'summon') {
-      const u = B.units.find((x) => x.bid === e.b);
-      if (u && u.alive) {
-        document.getElementById('row' + u.side)!.insertAdjacentHTML('beforeend', buHTML(u));
-        const ne = document.getElementById('bu' + u.bid)!;
-        ne.classList.add('spawn');
-        els[u.bid] = ne;
-      }
-    } else if (e.t === 'die') {
-      if (el) {
-        el.classList.add('dead');
-        el.removeAttribute('id');
-        setTimeout(() => el.remove(), 350);
-        delete els[e.b!];
-      }
-    } else if (e.t === 'hit') {
-      if (e.v! >= 1) float(el, (e.flank ? 'Flank ' : '') + '-' + n(e.v!), e.crit ? 'crit' : e.flank ? 'flank' : 'dmg');
-    } else if (e.t === 'heal') {
-      if (e.v! >= 1) float(el, '+' + n(e.v!), 'heal');
-    } else if (e.t === 'revive') float(el, 'Rises', 'heal');
-    else if (e.t === 'buff') float(el, '+' + n(e.a!) + '/+' + n(e.h!), 'heal');
-    else if (e.t === 'atk') {
-      if (el) {
-        el.classList.remove('lunge');
-        void el.offsetWidth;
-        el.classList.add('lunge');
-      }
-    } else if (e.t === 'hero') {
-      const h = document.getElementById('hero' + e.side);
-      if (h) {
-        h.classList.remove('flash');
-        void h.offsetWidth;
-        h.classList.add('flash');
-      }
-    }
-  }
-  B.ev.length = 0;
-}
-export function paint(B: W.Battle): void {
-  const q = (el: ParentNode, sel: string) => el.querySelector<HTMLElement>(sel)!;
-  for (const u of B.units) {
-    const el = els[u.bid];
-    if (!el || !u.alive) continue;
-    q(el, '.hpb i').style.width = Math.max(0, (u.hp / u.maxhp) * 100) + '%';
-    q(el, '.hpb u').style.width = Math.min(100, (u.shield / u.maxhp) * 100) + '%';
-    q(el, '.cdb i').style.width =
-      (u.d.building ? (u.d.every ? u.at / u.d.every : 0) : Math.min(1, u.t / u.cd)) * 100 + '%';
-    q(el, '.h').textContent = String(Math.max(1, n(u.hp)));
-    if (!u.d.building) q(el, '.a').textContent = String(n(W.effAtk(u)));
-    const rb = q(el, '.rotb');
-    if (u.rot > 0) {
-      rb.hidden = false;
-      rb.textContent = String(u.rot);
-    } else rb.hidden = true;
-    const ac = el.querySelector<HTMLElement>('.aimc'),
-      dir = W.aimDir(B, u);
-    if (ac && ac.dataset.aim !== dir) ac.dataset.aim = dir;
-    el.classList.toggle('weak', u.weak > 0 || u.rot > 0);
-    el.classList.toggle('rot', u.rot > 0);
-    el.classList.toggle('burn', u.burnT > 0);
-  }
-  for (const s of [0, 1]) {
-    const h = document.getElementById('hero' + s);
-    if (!h) continue;
-    q(h, 'i').style.width = Math.max(0, (B.hero[s].hp / B.hero[s].max) * 100) + '%';
-    q(h, 'b').textContent = String(n(B.hero[s].hp));
-  }
-  const c = document.getElementById('clock');
-  if (c) c.textContent = Math.floor(B.time) + 's' + (B.sudden ? ' · Sudden death: both heroes are taking damage' : '');
-}
-export function frame(ts: number): void {
+
+function loop(ts: number): void {
   const B = S.B;
-  if (!B || S.screen !== 'battle' || S.result) return;
-  let acc = Math.min(0.1, (ts - last) / 1000) * S.speed;
+  if (!B || !screen || S.screen !== 'battle' || S.result) return;
+  const real = Math.max(0, (ts - last) / 1000);
   last = ts;
-  while (acc > 1e-6 && !B.over) {
-    const d = Math.min(0.05, acc);
-    W.step(B, d);
-    acc -= d;
+  const p = playback(B);
+  p.speed = S.speed;
+  const f = p.advance(real);
+  let done: boolean;
+  try {
+    done = screen.frame(f, Math.min(0.1, real));
+  } catch (e) {
+    /* a drawing error must not freeze the fight: report it once and carry on */
+    if (!reported) console.error('Battle screen error', e);
+    reported = true;
+    done = f.over;
   }
-  drain(B);
-  paint(B);
-  if (B.over) endBattle();
-  else raf = requestAnimationFrame(frame);
+  if (done) endBattle();
+  else raf = requestAnimationFrame(loop);
 }
+
+/* mount the battle screen in use and start playback once it is ready */
+async function mountScreen(B: W.Battle): Promise<void> {
+  const id = ++showing,
+    s = usePixi() ? pixiScreen : classicScreen;
+  let ok: boolean;
+  try {
+    ok = await s.mount(B, foeName());
+  } catch (e) {
+    console.warn('The battle screen failed to start.', e);
+    ok = false;
+  }
+  /* remember a Pixi failure even when this mount was overtaken, so the next battle goes straight to classic */
+  if (!ok && s === pixiScreen) pixiFailed = true;
+  if (id !== showing || S.B !== B || S.screen !== 'battle' || S.result) return;
+  if (!ok) {
+    if (s === pixiScreen) showBattle(); // redraw with the classic screen's markup
+    return;
+  }
+  screen = s;
+  last = performance.now();
+  raf = requestAnimationFrame(loop);
+}
+
 export function startBattle() {
   const run = S.run!;
   if (!W.boardUnits(run).length) {
@@ -236,29 +202,9 @@ export function setBattleView(view: 'pixi' | 'classic'): void {
 export const foeName = (): string => S.foeTitle || W.FACTIONS[S.foe].name;
 /* draw the battle screen and start the fight playing in whichever view is in use */
 function showBattle(): void {
+  stopBattleLoop();
   render();
-  const B = S.B!;
-  if (usePixi()) {
-    const stage = document.getElementById('pixi-stage'),
-      dock = document.getElementById('pixi-dock');
-    if (stage && dock) {
-      void mountPixiBattle(stage, dock, B, foeName(), endBattle)
-        .catch((e: unknown) => {
-          console.warn('The Pixi battle screen failed to start; using the classic one.', e);
-          return false;
-        })
-        .then((ok) => {
-          if (ok) return;
-          pixiFailed = true;
-          if (S.screen === 'battle' && S.B === B && !S.result) showBattle();
-        });
-      return;
-    }
-  }
-  bind();
-  paint(B);
-  last = performance.now();
-  raf = requestAnimationFrame(frame);
+  void mountScreen(S.B!);
 }
 export function endBattle() {
   const B = S.B!;
@@ -302,7 +248,13 @@ export function endBattle() {
   S.screen = 'summary';
   render();
 }
-export const stopBattleLoop = (): void => {
+/** stop playback and take down the battle screen (on skip, quit, the end, or a switch of screens). The playback
+ *  itself is kept, so a fight switched to the other screen carries on where it was. */
+export function stopBattleLoop(): void {
   cancelAnimationFrame(raf);
-  stopPixiBattle();
-};
+  showing++;
+  screen?.unmount();
+  screen = null;
+  /* a Pixi mount still loading is abandoned too */
+  pixiScreen.unmount();
+}

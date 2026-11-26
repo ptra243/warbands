@@ -36,5 +36,7 @@ export { ghostFrom, yardstick, spreadGhosts, nextFoe, continueRun } from './post
 export { startBattle, battleReport, exportLog, finishBattle } from './round.ts';
 export { EVENTS, genCamp, genOffer, chooseOffer, startCamp, finishCamp, restore } from './encounters.ts';
 export { preview, aimDir, previewAll } from './preview.ts';
+export { createPlayback, runToEnd, unitSnapshot, isRanged } from './playback.ts';
+export type { Playback, PlaybackFrame, UnitSnapshot, HeroSnapshot } from './playback.ts';
 export { setRandom, seeded } from './rng.ts';
 export { YARDSTICK } from './data/yardstick.ts';

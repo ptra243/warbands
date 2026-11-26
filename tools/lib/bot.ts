@@ -134,14 +134,7 @@ export function bot(run: W.Run, smart = true): void {
 }
 
 /** run a battle to the end without playback */
-export function fight(B: W.Battle, limit = 5000): W.Battle {
-  let n = 0;
-  while (!B.over && n++ < limit) {
-    W.step(B, 0.05);
-    B.ev.length = 0;
-  }
-  return B;
-}
+export const fight = (B: W.Battle): W.Battle => W.runToEnd(B);
 
 /** the three leaders of a faction, in order */
 export const leadersOf = (f: W.PlayerFaction): string[] => Object.keys(W.LEADERS).filter((k) => W.LEADERS[k].f === f);

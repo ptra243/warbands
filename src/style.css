@@ -473,6 +473,12 @@ button.primary:hover {
 .fl.heal {
   color: var(--good);
 }
+.fl.blight {
+  color: #9ed26a;
+}
+.fl.smite {
+  color: #fff1a8;
+}
 @keyframes rise {
   to {
     top: -22%;

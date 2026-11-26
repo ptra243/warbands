@@ -1,15 +1,14 @@
-/* The battle screen drawn with PixiJS. It only replays the fight: the engine steps the battle and emits events
-   (B.ev), and this turns them into animation. No rules live here, and Math.random below only jitters effects.
-   Pixi starts on first use. If it can't (no WebGL), mountPixiBattle() returns false and the caller falls back
-   to the classic HTML battle screen. */
+/* The battle screen drawn with PixiJS: one of the two battle screens the playback driver in ../battle.ts draws
+   through. Each frame it is handed the frame's battle events and unit snapshots and turns them into animation.
+   No rules live here, and Math.random below only jitters effects. Pixi starts on first use. If it can't (no
+   WebGL, or WebGL with no GPU), mount() resolves false and the driver falls back to the classic screen. */
 import { Application, Container, FillGradient, Graphics, Sprite, Text, Texture } from 'pixi.js';
-import type { Ticker } from 'pixi.js';
 import * as W from '../../engine/index.ts';
-import type { Battle, BattleEvent, BattleUnit } from '../../engine/index.ts';
+import type { Battle, BattleEvent, BattleUnit, PlaybackFrame, UnitSnapshot } from '../../engine/index.ts';
+import type { BattleScreen } from '../battle.ts';
 import { ART } from '../art.ts';
 import { CARD_ART } from '../card-art.ts';
 import { PORTRAIT } from '../portraits.ts';
-import { S } from '../state.ts';
 import { initDock, inspect, layoutDock, monogram, setPointing, setSides } from './dock.ts';
 
 /* what the inspector under the field shows: the unit under the pointer, or else a notable one */
@@ -31,7 +30,6 @@ const WIDTH = 1030,
 const FACTION: Record<string, number> = { H: 0x3b6ea8, E: 0x3c8a5a, U: 0x6b4a8a, N: 0x8a6a3a };
 /* frame B2: the frame is the rarity colour, by cost */
 const RARITY = [0xa9b0ae, 0xa9b0ae, 0x6cc070, 0x5aa4e6, 0xb77be8, 0xf0b23a];
-const RANGED = ['DPS', 'Mage', 'Cleric', 'Necromancer'];
 
 /* ---- textures from the existing SVG art ---- */
 const textures: Record<string, Texture> = {};
@@ -136,8 +134,13 @@ function softwareGl(): boolean {
     return false;
   }
 }
-async function ensureApp(): Promise<Application | null> {
-  if (app || failed) return app;
+/* the start-up under way, shared so that two mounts during the first load can't make two applications */
+let starting: Promise<Application | null> | null = null;
+function ensureApp(): Promise<Application | null> {
+  if (app || failed) return Promise.resolve(app);
+  return (starting ??= startApp().finally(() => (starting = null)));
+}
+async function startApp(): Promise<Application | null> {
   if (softwareGl()) {
     failed = true;
     console.info('No GPU for WebGL; using the classic battle screen.');
@@ -158,7 +161,7 @@ async function ensureApp(): Promise<Application | null> {
       failIfMajorPerformanceCaveat: true,
     });
     a.stage.addChild(world, vignette, hud);
-    a.ticker.add(tick);
+    /* the playback driver draws each frame, so Pixi's own ticker never runs */
     a.ticker.stop();
     app = a;
   } catch (e) {
@@ -463,7 +466,7 @@ async function makeView(B: Battle, u: BattleUnit, pop: boolean): Promise<void> {
     phase: Math.random() * Math.PI * 2,
   };
   views.set(u.bid, v);
-  paintView(B, v);
+  paintView(v, W.unitSnapshot(B, u));
   if (pop) {
     root.scale.set(0);
     tween(0.45, (k) => {
@@ -474,11 +477,11 @@ async function makeView(B: Battle, u: BattleUnit, pop: boolean): Promise<void> {
   }
 }
 
-function paintView(B: Battle, v: View) {
+function paintView(v: View, s: UnitSnapshot) {
   const u = v.u,
     w = v.w,
     { winW, winH } = v;
-  const hpK = Math.max(0, Math.min(1, u.hp / u.maxhp)),
+  const hpK = s.hpK,
     plateY = CARD_H / 2 - PLATE;
   v.hpLine
     .clear()
@@ -486,9 +489,9 @@ function paintView(B: Battle, v: View) {
     .fill(0x000000)
     .rect(-w / 2, plateY, w * hpK, 3)
     .fill(hpK > 0.5 ? 0x5fc46a : hpK > 0.25 ? 0xe0b040 : 0xd9534f);
-  if (u.shield > 0) v.hpLine.rect(-w / 2, plateY, w * Math.min(1, u.shield / u.maxhp), 1.5).fill(0x9fd8ff);
+  if (s.shielded) v.hpLine.rect(-w / 2, plateY, w * s.shieldK, 1.5).fill(0x9fd8ff);
   /* cooldown: a shadow over the art whose left edge sweeps right as the attack charges */
-  const cdK = u.d.building ? (u.d.every ? u.at / u.d.every : 0) : Math.min(1, u.t / u.cd);
+  const cdK = s.cdK;
   const edge = winW * cdK;
   v.shade.clear();
   if (cdK < 1)
@@ -497,15 +500,15 @@ function paintView(B: Battle, v: View) {
       .fill({ color: 0x000000, alpha: 0.55 })
       .rect(edge - 1, 0, 2, winH)
       .fill({ color: 0xffffff, alpha: 0.25 + 0.45 * cdK });
-  v.atkT.text = u.d.building ? '–' : String(Math.round(W.effAtk(u)));
-  v.hpT.text = String(Math.max(1, Math.round(u.hp)));
+  v.atkT.text = s.atk == null ? '–' : String(s.atk);
+  v.hpT.text = String(s.hp);
   /* the heart sits just left of the health number, which changes width */
   v.heart.position.set(v.hpT.x - v.hpT.width - 3, v.hpT.y);
-  v.bubble.visible = u.shield > 0;
-  v.rotT.visible = u.rot > 0;
-  v.rotT.text = '● ' + u.rot;
-  v.art.tint = u.weak > 0 ? 0xb0b8c4 : 0xffffff;
-  const dir = u.alive ? W.aimDir(B, u) : '';
+  v.bubble.visible = s.shielded;
+  v.rotT.visible = s.rot > 0;
+  v.rotT.text = '● ' + s.rot;
+  v.art.tint = s.weak ? 0xb0b8c4 : 0xffffff;
+  const dir = s.aim;
   if (dir !== v.aimDir) {
     v.aimDir = dir;
     drawAim(v.aim, dir, u.side);
@@ -697,9 +700,9 @@ banner.anchor.set(0.5);
 banner.position.set(WIDTH / 2, HEIGHT / 2);
 hud.addChild(clock, banner);
 
-function paintHud(B: Battle, dt = 0) {
+function paintHud(f: Pick<PlaybackFrame, 'heroes' | 'sudden' | 'time' | 'speed'>, dt = 0) {
   for (const s of [0, 1]) {
-    const k = Math.max(0, Math.min(1, B.hero[s].hp / B.hero[s].max)),
+    const k = f.heroes[s].k,
       h = heroes[s],
       L = LANE[s];
     h.trail = Math.max(k, h.trail - dt * 0.35);
@@ -713,11 +716,11 @@ function paintHud(B: Battle, dt = 0) {
       .fill({ color: L.fill, alpha: 0.85 });
     if (h.trail > k) h.hp.rect(trail[0], 0, trail[1] - trail[0], HEIGHT).fill({ color: L.edge, alpha: 0.35 });
     if (k > 0 && k < 1) h.hp.rect(edge - 1.5, 0, 3, HEIGHT).fill({ color: L.edge, alpha: 0.9 });
-    h.t.text = `${Math.max(0, Math.round(B.hero[s].hp))} / ${B.hero[s].max}`;
+    h.t.text = `${f.heroes[s].hp} / ${f.heroes[s].max}`;
   }
   /* the playback speed shows beside the timer, so it reads without looking up at the buttons */
   clock.text =
-    (B.sudden ? 'Sudden death · ' : '') + Math.floor(B.time) + 's' + (S.speed !== 1 ? `  ▶ ${S.speed}×` : '');
+    (f.sudden ? 'Sudden death · ' : '') + Math.floor(f.time) + 's' + (f.speed !== 1 ? `  ▶ ${f.speed}×` : '');
 }
 
 /* ---- events -> animation ---- */
@@ -741,10 +744,11 @@ function projectile(from: { x: number; y: number }, to: { x: number; y: number }
   );
 }
 
-function onEvent(B: Battle, e: BattleEvent) {
+function onEvent(f: PlaybackFrame, e: BattleEvent) {
   const v = e.b != null ? views.get(e.b) : undefined;
   if (e.t === 'atk' && v) {
-    const ranged = v.u.d.tribes.some((t) => RANGED.includes(t)) || !!v.u.d.reach;
+    /* the attacker may already have died later in the same frame, so it may have no snapshot */
+    const ranged = f.units.get(v.u.bid)?.ranged ?? W.isRanged(v.u);
     const from = center(v.u),
       dir = v.u.side === 0 ? -1 : 1;
     const targets = (e.to || []).map((id) => views.get(id)).filter((x): x is View => !!x);
@@ -888,9 +892,9 @@ function onEvent(B: Battle, e: BattleEvent) {
       },
       0.2,
     );
-  } else if (e.t === 'summon') {
-    const u = B.units.find((x) => x.bid === e.b);
-    if (u && u.alive && !views.has(u.bid)) void makeView(B, u, true);
+  } else if (e.t === 'summon' && B) {
+    const u = f.units.get(e.b!)?.unit;
+    if (u && !views.has(u.bid)) void makeView(B, u, true);
   }
 }
 
@@ -898,8 +902,7 @@ function onEvent(B: Battle, e: BattleEvent) {
 let B: Battle | null = null,
   endT = 0,
   /* seconds since the battle ended: the result banner shows briefly before the summary screen */
-  overFor = 0,
-  onEnd: (() => void) | null = null;
+  overFor = 0;
 
 /* lanes: each side's row sits on a band in its own colour, so the frames are free to show rarity */
 const LANE = [
@@ -974,68 +977,52 @@ async function setUp(b: Battle, foeName: string): Promise<boolean> {
   drawFloor(b.open);
   await Promise.all(b.units.filter((u) => u.alive).map((u) => makeView(b, u, false)));
   if (gen !== generation) return false;
-  b.ev.length = 0;
-  paintHud(b);
   return true;
 }
 
-/* Pixi asks for the next frame only after this one returns, so one error would freeze the battle for good.
-   Report it once and keep going. */
+/* one bad event must not stop the rest of the frame: report it once and keep going */
 let reported = false;
 function report(e: unknown) {
   if (reported) return;
   reported = true;
   console.error('Battle view error', e);
 }
-function tick(tk: Ticker) {
-  try {
-    frame(tk);
-  } catch (e) {
-    report(e);
-  }
-}
-function frame(tk: Ticker) {
-  const real = Math.min(0.1, tk.deltaMS / 1000),
-    dt = real * S.speed;
-  if (B && !B.over) {
-    let acc = dt;
-    while (acc > 1e-6 && !B.over) {
-      const d = Math.min(0.05, acc);
-      W.step(B, d);
-      acc -= d;
-    }
+/** draw one frame of playback; true once the result has shown and the summary can take over */
+function frame(f: PlaybackFrame, real: number): boolean {
+  const dt = real * f.speed;
+  let done = false;
+  if (B) {
     hitDelay.clear();
-    for (const e of B.ev.splice(0))
+    for (const e of f.events)
       try {
-        onEvent(B, e);
+        onEvent(f, e);
       } catch (err) {
         report(err);
       }
-  }
-  if (B) {
     for (const v of views.values()) {
-      if (!v.u.alive) continue;
-      paintView(B, v);
+      const s = f.units.get(v.u.bid);
+      if (!s) continue;
+      paintView(v, s);
       if (v.dmg.life > 0) {
         v.dmg.life -= dt;
         v.dmg.c.alpha = Math.min(1, v.dmg.life * 4);
         if (v.dmg.life <= 0) v.dmg.c.visible = false;
       }
-      const bob = Math.sin(B.time * 3 + v.phase) * 2;
+      const bob = Math.sin(f.time * 3 + v.phase) * 2;
       v.body.position.set(v.lunge.x + v.kick.x, v.lunge.y + v.kick.y + bob);
       const c = center(v.u);
-      if (v.u.burnT > 0 && Math.random() < dt * 14) {
+      if (s.burning && Math.random() < dt * 14) {
         const g = new Graphics().circle(0, 0, 2 + Math.random() * 2).fill(Math.random() < 0.5 ? 0xff8a3a : 0xffd04a);
         g.position.set(c.x + (Math.random() - 0.5) * v.w * 0.8, c.y + 30);
         addParticle(g, { vx: (Math.random() - 0.5) * 20, vy: -60, life: 0.7, grav: -30, spin: 0, shrink: true });
       }
-      if (v.u.rot > 0 && Math.random() < dt * 6) {
+      if (s.rot > 0 && Math.random() < dt * 6) {
         const g = new Graphics().ellipse(0, 0, 2.5, 4).fill(0x8ad04a);
         g.position.set(c.x + (Math.random() - 0.5) * v.w * 0.7, c.y + 20);
         addParticle(g, { vx: 0, vy: 30, life: 0.7, grav: 200, spin: 0, shrink: true });
       }
     }
-    paintHud(B, dt);
+    paintHud(f, dt);
     /* refresh the inspector about ten times a second */
     dockT -= real;
     if (dockT <= 0) {
@@ -1045,29 +1032,24 @@ function frame(tk: Ticker) {
       inspect(u, hovered != null ? 'Pointing at' : notableWhy);
     }
     vignette.clear();
-    if (B.sudden) {
+    if (f.sudden) {
       const a = 0.25 + 0.15 * Math.sin(performance.now() / 250);
       for (let i = 0; i < 6; i++)
         vignette
           .rect(i * 6, i * 6, WIDTH - i * 12, HEIGHT - i * 12)
           .stroke({ width: 6, color: 0xc02020, alpha: a / (i + 1) });
     }
-    if (B.over && !endT) {
+    if (f.over && !endT) {
       endT = 1;
-      banner.text = B.winner === 0 ? 'Victory' : B.winner === 1 ? 'Defeat' : 'Draw';
-      banner.style.fill = B.winner === 0 ? 0xffd27a : B.winner === 1 ? 0xd9534f : 0xe8e2d0;
+      banner.text = f.winner === 0 ? 'Victory' : f.winner === 1 ? 'Defeat' : 'Draw';
+      banner.style.fill = f.winner === 0 ? 0xffd27a : f.winner === 1 ? 0xd9534f : 0xe8e2d0;
       banner.scale.set(0);
       tween(0.5, (k) => banner.scale.set(1 + 2.7 * Math.pow(k - 1, 3) + 1.7 * Math.pow(k - 1, 2)), undefined, 0.6);
     }
     /* let the last blows and the banner land, then hand over to the summary screen */
-    if (B.over) {
+    if (f.over) {
       overFor += real;
-      if (overFor > 1.4 && onEnd) {
-        const done = onEnd;
-        onEnd = null;
-        done();
-        return;
-      }
+      done = overFor > 1.4;
     }
   }
   /* tweens run on game time so 4x speeds up the effects too */
@@ -1107,40 +1089,36 @@ function frame(tk: Ticker) {
       world.position.set(0, 0);
     }
   }
+  app?.render();
+  return done;
 }
 
-/* ---- the screen's API ---- */
+/* ---- the screen's interface ---- */
 
-/** Show battle B in `stage`, with its dock in `dock`, and call `end` once the fight is over and the result has
- *  shown. Resolves false when Pixi can't run here, so the caller can fall back to the classic screen. */
-export async function mountPixiBattle(
-  stage: HTMLElement,
-  dock: HTMLElement,
-  b: Battle,
-  foeName: string,
-  end: () => void,
-): Promise<boolean> {
-  const a = await ensureApp();
-  if (!a) return false;
-  /* the player may have skipped or left while Pixi was starting */
-  const current = () => S.B === b && S.screen === 'battle' && !S.result && stage.isConnected;
-  if (!current()) return true;
-  stageEl = stage;
-  stage.appendChild(a.canvas);
-  initDock(dock);
-  fit();
-  if (!(await setUp(b, foeName)) || !current()) return true;
-  B = b;
-  onEnd = end;
-  a.ticker.start();
-  return true;
-}
-
-/** Stop animating and stepping the battle (on skip, quit, or leaving the screen). */
-export function stopPixiBattle(): void {
-  onEnd = null;
-  B = null;
-  hovered = null;
-  generation++;
-  if (app) app.ticker.stop();
-}
+/** The Pixi battle screen. mount resolves false when Pixi can't run here. */
+export const pixiScreen: BattleScreen = {
+  async mount(b, foeName) {
+    const stage = document.getElementById('pixi-stage'),
+      dock = document.getElementById('pixi-dock');
+    if (!stage || !dock) return false;
+    const gen = generation;
+    const a = await ensureApp();
+    if (!a) return false;
+    /* superseded while Pixi was starting: leave the page alone, the driver ignores this mount */
+    if (gen !== generation || !stage.isConnected) return true;
+    stageEl = stage;
+    stage.appendChild(a.canvas);
+    initDock(dock);
+    fit();
+    /* superseded while the art loaded: the driver ignores this mount */
+    if (!(await setUp(b, foeName))) return true;
+    B = b;
+    return true;
+  },
+  frame,
+  unmount() {
+    B = null;
+    hovered = null;
+    generation++;
+  },
+};
