@@ -1,0 +1,1989 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Warband Autobattler</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700;800&family=Grenze+Gotisch:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* War table: dark slate board, parchment ink, one gold accent. Blackletter display over a humanist sans. */
+  --table: #12171a; --felt: #1b2327; --line: #313c42; --ink: #ebe3d1; --dim: #9aa5a1; --gold: #e0a93f;
+  --hp: #d9534a; --atk: #f0b25a; --good: #6cc070;
+  --H: #5b8fd1; --E: #58b37a; --U: #a174d6;
+  --r1: #a9b0ae; --r2: #6cc070; --r3: #5aa4e6; --r4: #b77be8; --r5: #f0b23a;
+  --display: 'Grenze Gotisch', 'Old English Text MT', Georgia, serif;
+  --body: 'Alegreya Sans', 'Segoe UI', system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: radial-gradient(1200px 600px at 50% -10%, #1f2a2e, var(--table) 70%) var(--table); color: var(--ink); font: 16px/1.4 var(--body); min-height: 100vh; }
+h1, h2, h3, p, ul { margin: 0; }
+h1 { font: 700 40px/1 var(--display); letter-spacing: .5px; color: var(--gold); }
+h2 { font: 800 13px/1.2 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+h3 { font: 700 24px/1.05 var(--display); text-wrap: balance; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 16px 16px 40px; display: flex; flex-direction: column; gap: 10px; }
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px; }
+.stats { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; margin-left: auto; font-variant-numeric: tabular-nums; }
+.stats b { font-weight: 800; }
+.gold b, .g { color: var(--gold); }
+.lives { display: inline-flex; gap: 4px; }
+.lives i { width: 12px; height: 12px; transform: rotate(45deg); border: 1.5px solid var(--hp); border-radius: 2px; }
+.lives i.on { background: var(--hp); }
+.msg { min-height: 1.4em; color: var(--gold); font-weight: 500; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 14px; align-items: start; }
+main, aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.panel { background: var(--felt); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.grow { flex: 1; }
+.odds { color: var(--dim); font-size: 14px; font-variant-numeric: tabular-nums; }
+.odds i { font-style: normal; font-weight: 700; margin-left: 6px; }
+.bar button, .ghost { background: #263136; border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font-weight: 700; }
+.bar button:hover, .ghost:hover { border-color: var(--gold); }
+.bar button.active { border-color: var(--gold); color: var(--gold); }
+.bar button:disabled { opacity: .45; cursor: default; }
+button.primary { background: var(--gold); color: #1a1408; border: 1px solid var(--gold); border-radius: 8px; padding: 7px 22px; font-weight: 800; letter-spacing: .04em; }
+button.primary:hover { filter: brightness(1.1); }
+.ghost { background: none; font-weight: 500; color: var(--dim); font-size: 14px; }
+
+/* battlefield */
+.field { position: relative; background: #0e1315; border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px; box-shadow: inset 0 0 40px #000a; }
+.hero { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--dim); }
+.hero b { color: var(--ink); min-width: 3.5ch; text-align: right; font-variant-numeric: tabular-nums; }
+.hbar { flex: 1; height: 10px; background: #000a; border-radius: 5px; overflow: hidden; }
+.hbar i { display: block; width: 100%; height: 100%; background: var(--hp); }
+.hero.flash .hbar { animation: flash .25s; }
+.scroll { overflow-x: auto; }
+.rows { padding-top: 12px; min-width: 620px; display: flex; flex-direction: column; gap: 6px; }
+.row { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); grid-auto-rows: 104px; gap: 5px; }
+.row > * { grid-row: 1; }
+.mid { display: flex; align-items: center; gap: 10px; color: var(--dim); font: 600 15px var(--display); letter-spacing: .08em; }
+.mid::before, .mid::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--line), transparent); }
+.cell { border: 1px dashed #2a343a; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #2f3b41; font: 600 20px var(--display); }
+.row.p .cell[data-slot] { cursor: pointer; }
+.row.p .cell[data-slot]:hover { border-color: var(--gold); }
+
+/* unit tokens */
+.u { --fc: var(--line); --tier: #6d5c45; position: relative; z-index: 1; display: flex; flex-direction: column; min-width: 0; border: 2px solid var(--tier); border-radius: 8px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--fc) 42%, #14191c), #14191c 85%); cursor: pointer; user-select: none; transition: opacity .3s, transform .3s; }
+.fH { --fc: var(--H); } .fE { --fc: var(--E); } .fU { --fc: var(--U); }
+.u.t2 { --tier: #cfd6da; } .u.t3 { --tier: var(--gold); box-shadow: 0 0 10px #e0a93f66; }
+.u.item { --fc: #8a7a55; }
+.u.tok { border-style: dashed; }
+.u.sel { outline: 3px solid var(--gold); outline-offset: 1px; }
+.u .art { flex: 1; min-height: 0; padding: 3px 2px 0; }
+.u .art svg { width: 100%; height: 100%; display: block; }
+.u .st { display: flex; justify-content: space-between; gap: 4px; padding: 0 5px 1px; background: #0009; border-radius: 0 0 6px 6px; font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.a { color: var(--atk); } .h { color: #f08377; }
+.u .st .h { margin-left: auto; }
+.u .lbl { color: var(--dim); font-weight: 500; font-size: 12px; }
+.stars { color: var(--gold); font-size: 11px; letter-spacing: -1px; }
+.u > .stars { position: absolute; top: 1px; left: 4px; text-shadow: 0 1px 2px #000; }
+.u .it { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; background: #000a; border: 1px solid var(--gold); border-radius: 5px; padding: 1px; }
+.u .it svg { width: 100%; height: 100%; display: block; }
+.bars { padding: 0 3px 2px; display: flex; flex-direction: column; gap: 2px; }
+.hpb, .cdb { position: relative; height: 5px; background: #000b; border-radius: 3px; overflow: hidden; }
+.cdb { height: 3px; }
+.hpb i, .hpb u, .cdb i { position: absolute; left: 0; top: 0; bottom: 0; }
+.hpb i { background: var(--hp); } .hpb u { background: #8fd0ff; bottom: auto; height: 2px; } .cdb i { background: var(--gold); }
+.u.burn .hpb i { background: #ff8a2e; }
+.u.weak .a { color: #c59bff; }
+.u.dead { opacity: 0; transform: scale(.7); }
+.u.spawn { animation: pop .3s; }
+.row.p .u.lunge { animation: up .18s; } .row.e .u.lunge { animation: down .18s; }
+.fl { position: absolute; top: 18%; transform: translateX(-50%); z-index: 5; pointer-events: none; white-space: nowrap; font-weight: 800; font-size: 15px; text-shadow: 0 1px 3px #000, 0 0 2px #000; animation: rise .7s forwards; }
+.fl.dmg { color: #ff8f84; } .fl.flank { color: #d7a6ff; } .fl.crit { color: var(--gold); font-size: 19px; } .fl.heal { color: var(--good); }
+@keyframes rise { to { top: -22%; opacity: 0; } }
+@keyframes up { 50% { transform: translateY(-9px); } }
+@keyframes down { 50% { transform: translateY(9px); } }
+@keyframes pop { from { transform: scale(.4); opacity: 0; } }
+@keyframes flash { 50% { background: #fff8; } }
+.overlay { position: absolute; inset: 0; z-index: 10; border-radius: 14px; background: #0b0f11d9; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 16px; }
+.overlay h2 { font: 700 56px/1 var(--display); letter-spacing: 1px; text-transform: none; color: var(--gold); }
+.overlay.loss h2 { color: var(--hp); } .overlay.draw h2 { color: var(--ink); }
+
+/* bench and shop */
+.bench { display: grid; grid-template-columns: repeat(6, minmax(0, 84px)); grid-auto-rows: 96px; gap: 6px; }
+.bcell { display: flex; border: 1px dashed #2f3a40; border-radius: 8px; cursor: pointer; }
+.bcell .u { flex: 1; }
+.shop { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.card { --rc: var(--r1); position: relative; display: flex; flex-direction: column; gap: 3px; min-height: 216px; padding: 8px 9px 10px; text-align: left; background: #20292e; border: 1px solid var(--line); border-top: 3px solid var(--rc); border-radius: 10px; }
+.card:hover { border-color: var(--rc); background: #253036; }
+.card.r2 { --rc: var(--r2); } .card.r3 { --rc: var(--r3); } .card.r4 { --rc: var(--r4); } .card.r5 { --rc: var(--r5); } .card.item { --rc: #8a7a55; }
+.card b { font-weight: 800; line-height: 1.15; color: var(--rc); }
+.card small { font-size: 13.5px; line-height: 1.25; color: var(--ink); }
+.card small.tribes { color: var(--dim); font-size: 12.5px; }
+.card .cart { width: 68px; height: 68px; align-self: center; }
+.card .cart svg { width: 100%; height: 100%; display: block; }
+.card .cost { position: absolute; top: 6px; right: 7px; min-width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: #0008; border: 1.5px solid var(--gold); color: var(--gold); font-weight: 800; font-size: 14px; }
+.card .nums { display: flex; gap: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.card .nums i { font-style: normal; }
+.card .nums .a::after { content: ' atk'; font-weight: 500; font-size: 12px; opacity: .8; } .card .nums .h::after { content: ' hp'; font-weight: 500; font-size: 12px; opacity: .8; }
+.card em { margin-top: auto; font-style: normal; font-size: 12.5px; font-weight: 700; color: var(--dim); }
+.card.up { box-shadow: 0 0 0 2px var(--gold); } .card.up em { color: var(--gold); }
+.card.poor .cost { border-color: var(--hp); color: var(--hp); }
+.card.sold { align-items: center; justify-content: center; color: #3b474d; border-style: dashed; border-top-width: 1px; background: none; font: 600 22px var(--display); }
+.r1 { color: var(--r1); } .r2 { color: var(--r2); } .r3 { color: var(--r3); } .r4 { color: var(--r4); } .r5 { color: var(--r5); }
+
+/* side panels */
+.tip { position: fixed; z-index: 60; width: 292px; max-width: calc(100vw - 16px); pointer-events: none; display: flex; flex-direction: column; gap: 8px; padding: 12px; background: #1b2429; border: 1px solid #3a4850; border-radius: 12px; box-shadow: 0 14px 34px rgba(0, 0, 0, .6); color: var(--ink); }
+.tip[hidden] { display: none; }
+.tip p { margin: 0; }
+.dhead { display: flex; gap: 10px; align-items: center; }
+.dart { width: 76px; height: 76px; flex: none; padding: 3px; cursor: default; }
+.dart svg { width: 100%; height: 100%; display: block; }
+.dart.item { border: 2px solid #8a7a55; border-radius: 8px; background: #2a2a22; }
+.sub { color: var(--dim); font-size: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.tb { --c: var(--dim); display: inline-block; padding: 0 7px; border-radius: 999px; border: 1px solid var(--c); color: var(--c); font-size: 12.5px; font-weight: 700; line-height: 1.5; }
+.tb-Tank { --c: #8fb0dd; } .tb-DPS { --c: #f0906a; } .tb-Mage { --c: #b79bf0; } .tb-Cleric { --c: #f0dc8a; } .tb-Party { --c: var(--gold); }
+.tb-Grove { --c: #6cc070; } .tb-Sun { --c: #f0b23a; } .tb-Drow { --c: #c58ae6; } .tb-Moon { --c: #a9c4f0; } .tb-Building { --c: #b0a58a; }
+.tb-Reborn { --c: #d9d3bd; } .tb-Necromancer { --c: #7ddfa8; } .tb-Cultist { --c: #e86a6a; } .tb-Demon { --c: #f08a4d; } .tb-Minion { --c: #9aa5a1; }
+p.nums { display: flex; flex-wrap: wrap; gap: 4px 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+p.nums span:last-child { color: var(--dim); font-weight: 500; }
+.hint { color: var(--dim); font-size: 14.5px; }
+.help { padding-left: 18px; display: flex; flex-direction: column; gap: 6px; color: var(--dim); font-size: 15px; }
+.syn { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.syn li { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: center; opacity: .6; }
+.syn li.on { opacity: 1; }
+.syn li.on .tb { background: var(--c); color: #14191c; }
+.syn .ct { justify-self: end; font-weight: 800; font-variant-numeric: tabular-nums; }
+.syn small { grid-column: 1 / -1; font-size: 13.5px; color: var(--ink); }
+
+/* faction pick and end screens */
+.pick { gap: 22px; padding-top: 36px; }
+.intro { display: flex; flex-direction: column; gap: 10px; }
+.intro h1 { font-size: clamp(48px, 9vw, 84px); }
+.lede { max-width: 62ch; font-size: 19px; color: var(--ink); }
+.factions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.fac { --fc: var(--H); display: flex; flex-direction: column; gap: 10px; text-align: left; padding: 16px; background: linear-gradient(180deg, color-mix(in srgb, var(--fc) 16%, var(--felt)), var(--felt) 60%); border: 1px solid var(--line); border-top: 4px solid var(--fc); border-radius: 14px; }
+.fac:hover { border-color: var(--fc); }
+.fac h2 { font: 700 36px/1 var(--display); letter-spacing: 0; text-transform: none; color: var(--fc); }
+.fac p { color: var(--ink); }
+.crest { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.crest .u { aspect-ratio: 1; padding: 4px; cursor: inherit; }
+.crest svg { width: 100%; height: 100%; display: block; }
+.go { margin-top: auto; align-self: flex-start; padding: 6px 14px; border-radius: 8px; background: var(--fc); color: #10151a; font-weight: 800; }
+
+@media (max-width: 920px) { .cols { grid-template-columns: minmax(0, 1fr); } .shop { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } .factions { grid-template-columns: minmax(0, 1fr); } .crest { max-width: 300px; } }
+@media (max-width: 560px) { .bench { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: 78px; } h1 { font-size: 32px; } }
+@media (prefers-reduced-motion: reduce) { .u, .fl, .hero.flash .hbar { animation: none !important; transition: none; } .fl { top: -10%; } }
+
+.syn .ct i { font-style: normal; font-weight: 500; color: var(--dim); }
+
+.log { width: 100%; min-width: 620px; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 15px; }
+.log th { text-align: left; color: var(--dim); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; padding: 4px 10px 6px 0; border-bottom: 1px solid var(--line); }
+.log td { padding: 5px 10px 5px 0; border-bottom: 1px solid #262f34; }
+.log tr.win b { color: var(--good); } .log tr.loss b { color: var(--hp); }
+details summary { cursor: pointer; color: var(--dim); }
+textarea { width: 100%; margin-top: 8px; background: #0e1315; color: var(--dim); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; resize: vertical; }
+
+.log { width: 100%; min-width: 620px; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 15px; }
+.log th { text-align: left; font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); font-weight: 700; }
+.log th, .log td { padding: 5px 10px 5px 0; border-bottom: 1px solid var(--line); }
+.log tr.win b { color: var(--good); } .log tr.loss b { color: var(--hp); }
+details summary { cursor: pointer; color: var(--dim); font-size: 14px; }
+textarea { width: 100%; margin-top: 8px; background: #0e1315; color: var(--dim); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: 12px/1.4 ui-monospace, Consolas, monospace; }
+
+.cell.locked { border-style: solid; border-color: #20282c; background: repeating-linear-gradient(135deg, #0000 0 7px, #1a2125 7px 9px); color: #3b474d; font: 700 12px var(--body); cursor: not-allowed; }
+.purse { font-size: 18px; font-variant-numeric: tabular-nums; }
+.purse b { color: var(--gold); font-size: 24px; font-weight: 800; }
+.purse small { color: var(--dim); font-size: 13px; margin-left: 4px; }
+.card.frozen { border-color: #8fd8ff; box-shadow: 0 0 0 2px #8fd8ff, inset 0 0 22px #8fd8ff33; }
+.card em.ice { color: #8fd8ff; margin-top: 0; }
+.card em + em.ice { margin-top: 0; }
+.card em.ice:first-of-type { margin-top: auto; }
+.ctx { position: fixed; z-index: 50; background: #263136; border: 1px solid var(--gold); border-radius: 10px; padding: 4px; box-shadow: 0 8px 24px #000a; }
+.ctx button { background: none; border: 0; border-radius: 7px; padding: 8px 12px; font-weight: 700; white-space: nowrap; }
+.ctx button:hover, .ctx button:focus-visible { background: #33424a; }
+.rotb { position: absolute; top: 20px; left: 3px; min-width: 17px; height: 17px; padding: 0 3px; display: grid; place-items: center; border-radius: 9px; background: #7fae2e; color: #10160a; font-size: 12px; font-weight: 800; z-index: 2; }
+.rotb[hidden] { display: none; }
+.u.rot .hpb i { background: #a9c94a; }
+.syn small.note { color: var(--dim); }
+
+.tis { position: absolute; top: 3px; left: 3px; display: flex; flex-direction: column; gap: 2px; z-index: 2; }
+.ti { width: 17px; height: 17px; display: grid; place-items: center; border-radius: 50%; background: var(--c); color: #12171a; box-shadow: 0 0 0 1.5px #0009; }
+.ti svg { width: 11px; height: 11px; display: block; }
+.tb svg { width: 11px; height: 11px; vertical-align: -1px; margin-right: 4px; }
+.u > .stars { left: auto; right: 4px; }
+.u .it { top: 16px; }
+.rotb { top: auto; bottom: 34px; left: auto; right: 3px; }
+.card .chips { margin-top: 0; }
+
+.bar.acts { flex-wrap: nowrap; align-items: flex-start; }
+.bar.acts .purse { line-height: 36px; }
+.bar.acts .econ { padding-top: 2px; }
+.bar.acts button { flex: none; }
+.purse { flex: none; min-width: 5.2em; }
+.purse b { display: inline-block; min-width: 2ch; text-align: right; }
+.econ { flex: 1 1 0; min-width: 0; color: var(--dim); font-size: 13.5px; line-height: 1.25; font-variant-numeric: tabular-nums; }
+@media (max-width: 620px) { .bar.acts { flex-wrap: wrap; } .econ { order: 5; flex-basis: 100%; } }
+
+.rows { position: relative; }
+.fx { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 6; }
+.tr { stroke-linecap: round; fill: none; }
+.tr.s0 { stroke: #f4c860; } .tr.s1 { stroke: #ff9488; }
+.tr.faint { stroke-width: 1.5; opacity: .28; }
+.tr.bright { stroke-width: 3; opacity: .95; }
+.tr.pv { stroke-width: 3; opacity: .95; stroke-dasharray: 7 5; }
+.u.aimed { outline: 3px solid #f4c860; outline-offset: 1px; }
+.hero.aimed .hbar { outline: 2px solid #f4c860; outline-offset: 2px; }
+.aimline b { color: var(--ink); }
+
+/* aim markers: a small caret on the edge facing the enemy */
+.aimc { position: absolute; width: 0; height: 0; z-index: 4; pointer-events: none; --ac: #f4c860; }
+.aimc[data-aim=""], .bcell .aimc, .dart .aimc, .crest .aimc { display: none; }
+.row.e .aimc { --ac: #ff9488; }
+.aimc[data-aim="h"] { --ac: #fff; }
+.row.p .aimc[data-aim="c"], .row.p .aimc[data-aim="h"] { top: -8px; left: 50%; margin-left: -6px; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 7px solid var(--ac); }
+.row.p .aimc[data-aim="l"] { top: -4px; left: -4px; border-top: 10px solid var(--ac); border-right: 10px solid transparent; }
+.row.p .aimc[data-aim="r"] { top: -4px; right: -4px; border-top: 10px solid var(--ac); border-left: 10px solid transparent; }
+.row.e .aimc[data-aim="c"], .row.e .aimc[data-aim="h"] { bottom: -8px; left: 50%; margin-left: -6px; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 7px solid var(--ac); }
+.row.e .aimc[data-aim="l"] { bottom: -4px; left: -4px; border-bottom: 10px solid var(--ac); border-right: 10px solid transparent; }
+.row.e .aimc[data-aim="r"] { bottom: -4px; right: -4px; border-bottom: 10px solid var(--ac); border-left: 10px solid transparent; }
+.u.aimed { outline-width: 2px; }
+
+.fN { --fc: #b07a3c; }
+.tb-Beast { --c: #c9a06a; } .tb-Boss { --c: #ff6a5e; }
+.hero.boss span { color: #ff8a7e; font-weight: 700; }
+.intro h1.h1s { font-size: clamp(30px, 4.5vw, 46px); }
+.pick .ghost { align-self: flex-start; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; }
+.crest.one { grid-template-columns: 96px; }
+.enc { --fc: #8a94a0; }
+.enc.event { --fc: #6cc070; } .enc.camp { --fc: #c9a06a; } .enc.camp.hard { --fc: #ff8a5e; } .enc.shrine { --fc: #d9534a; } .enc.relic { --fc: var(--gold); }
+.enc h2 { font-size: 30px; }
+.tag { align-self: flex-start; font-size: 12.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--fc); }
+.row.mini { grid-auto-rows: 78px; max-width: 100%; }
+.row.mini .u { cursor: inherit; }
+.relics { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14.5px; }
+.relics b, .lname { color: var(--gold); }
+
+.helpbox { gap: 0; }
+.helpbox summary { cursor: pointer; font: 800 13px/1.2 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.helpbox[open] summary { margin-bottom: 10px; }
+
+.iup { position: absolute; right: -3px; bottom: -5px; font-style: normal; font-size: 10px; color: var(--gold); text-shadow: 0 0 2px #000, 0 0 2px #000; }
+.u .it { overflow: visible; }
+.u.item .art, .dart.item, .card .cart { position: relative; }
+.syn .ct i { margin-left: 1px; }
+
+/* drop preview */
+.dropmark { grid-row: 1; z-index: 3; pointer-events: none; border: 3px solid var(--gold); border-radius: 10px; background: rgba(226, 169, 59, .14); box-shadow: 0 0 14px rgba(226, 169, 59, .35); }
+.dropmark.bad { border-color: var(--hp); background: rgba(220, 80, 70, .16); box-shadow: none; }
+.u[data-push] { transition: transform .12s; outline: 2px dashed var(--gold); outline-offset: 1px; }
+.u[data-push="r"] { transform: translateX(10px); } .u[data-push="l"] { transform: translateX(-10px); } .u[data-push="b"] { transform: translateY(10px); opacity: .7; }
+.u[data-push]::before { content: '\203A'; position: absolute; z-index: 4; top: 50%; right: -4px; transform: translateY(-50%); width: 20px; height: 20px; border-radius: 50%; background: var(--gold); color: #1a1408; font: 700 18px/18px var(--body); text-align: center; }
+.u[data-push="l"]::before { content: '\2039'; right: auto; left: -4px; } .u[data-push="b"]::before { content: '\2193'; font-size: 14px; right: 50%; margin-right: -10px; top: auto; bottom: -6px; transform: none; }
+@media (prefers-reduced-motion: reduce) { .u[data-push] { transition: none; } }
+
+/* leader portraits */
+.port { display: block; flex: none; width: 150px; aspect-ratio: 100 / 120; border-radius: 10px; overflow: hidden; border: 2px solid var(--line); box-shadow: 0 6px 18px rgba(0, 0, 0, .45); background: #10161a; }
+.port svg, .hport svg { display: block; width: 100%; height: 100%; }
+.port.big { width: 100%; max-width: 220px; align-self: center; border-color: color-mix(in srgb, var(--fc) 55%, var(--line)); }
+.port.sm { width: 86px; }
+.port.mid { width: 120px; }
+.lead { display: flex; gap: 12px; align-items: flex-start; }
+.lead p { margin: 0; }
+.hport { flex: none; width: 38px; height: 38px; border-radius: 50%; overflow: hidden; border: 2px solid var(--gold); background: #10161a; }
+.hero.e .hport { border-color: var(--hp); }
+.intro.withport { display: flex; gap: 20px; align-items: center; }
+.intro.withport > div { min-width: 0; }
+@media (max-width: 620px) { .intro.withport { flex-direction: column; align-items: flex-start; } }
+
+/* side column on the left on wide screens; the board stays first on narrow ones */
+@media (min-width: 921px) { .cols { grid-template-columns: 290px minmax(0, 1fr); } .cols > aside { order: -1; } }
+
+/* shop view: your board alone, taller, in the space the opponent used to take */
+.row.tall { grid-auto-rows: 168px; }
+.shopfield .hero .ftitle { color: var(--ink); font: 600 17px var(--display); letter-spacing: .06em; }
+.shopfield .hid { font-size: 13px; opacity: .75; }
+.rtag { padding: 2px 9px; border-radius: 999px; border: 1px solid var(--gold); color: var(--gold); font-size: 12.5px; font-weight: 700; }
+.rtag.boss { border-color: var(--hp); color: #ff8a7e; }
+/* battle screen */
+.wrap.battle { max-width: 1240px; }
+.vs { text-align: center; }
+.vs h2 { font: 700 44px/1 var(--display); letter-spacing: 1px; text-transform: none; color: var(--gold); }
+.vs p { color: var(--dim); margin-top: 4px; } .vs b { color: var(--ink); }
+.battle .row { grid-auto-rows: 132px; }
+.battle .field { padding: 16px; gap: 10px; }
+.sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.side.s1 h2 { color: #ff9488; }
+@media (max-width: 760px) { .sides { grid-template-columns: minmax(0, 1fr); } .row.tall { grid-auto-rows: 120px; } .battle .row { grid-auto-rows: 104px; } .shopfield .hid { display: none; } .vs h2 { font-size: 32px; } }
+
+/* battle summary */
+.result { display: flex; align-items: center; gap: 16px; padding: 14px 18px; border: 1px solid var(--line); border-left: 6px solid var(--gold); border-radius: 12px; background: var(--felt); }
+.result h2 { font: 700 52px/1 var(--display); letter-spacing: 1px; text-transform: none; color: var(--gold); }
+.result.loss { border-left-color: var(--hp); } .result.loss h2 { color: var(--hp); } .result.draw h2 { color: var(--ink); }
+.result p { margin-top: 4px; }
+.tiles { display: grid; grid-template-columns: 1.6fr 1fr 1fr .6fr; gap: 10px; }
+.tile { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--felt); min-width: 0; }
+.tile small { color: var(--dim); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; }
+.tile b { font-size: 19px; font-variant-numeric: tabular-nums; } .tile b i { font-style: normal; font-weight: 500; color: var(--dim); font-size: 15px; }
+.tile .hpb { display: block; height: 8px; border-radius: 4px; background: #2a1c1c; overflow: hidden; } .tile .hpb i { display: block; height: 100%; background: var(--hp); }
+.notes { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.bstat { width: 100%; min-width: 640px; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 15px; }
+.bstat th { text-align: right; color: var(--dim); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; padding: 4px 10px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.bstat th:first-child, .bstat td:first-child, .bstat th.bcol, .bstat th:last-child { text-align: left; }
+.bstat td { text-align: right; padding: 5px 10px; border-bottom: 1px solid #262f34; white-space: nowrap; }
+.bstat td:first-child, .bstat th:first-child { padding-left: 0; } .bstat td.fate { text-align: left; color: var(--dim); }
+.bstat tr.gone .un { opacity: .6; }
+.bstat tfoot td { font-weight: 800; border-bottom: 0; border-top: 1px solid var(--line); }
+.bstat .un { display: flex; align-items: center; gap: 8px; } .bstat .un small { display: block; color: var(--dim); font-size: 12px; }
+.bstat .ic { width: 34px; height: 34px; flex: none; padding: 1px; border-width: 1px; cursor: default; } .bstat .ic svg { width: 100%; height: 100%; display: block; }
+.bstat .bcol { width: 34%; min-width: 150px; }
+.dbar { display: flex; height: 12px; border-radius: 3px; background: #161c1f; overflow: hidden; }
+.du { background: var(--atk); } .dh { background: var(--hp); } .dbar i { display: block; height: 100%; }
+.dbar .du + .dh { border-left: 2px solid var(--felt); }
+.key { display: flex; align-items: center; gap: 6px; color: var(--dim); font-size: 13px; } .key i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; margin-left: 8px; }
+@media (max-width: 760px) { .tiles { grid-template-columns: 1fr 1fr; } .result h2 { font-size: 36px; } .result { flex-wrap: wrap; } }
+
+</style></head><body><div id="app"></div>
+<script>
+/* Warband engine: data, battle sim, shop and run logic. No DOM. */
+(function (root) {
+'use strict';
+const SLOTS = 10, BENCH = 6, SUDDEN = 35, MAXWINS = 10, LIVES = 5;
+const ODDS = [[80,20,0,0,0],[70,27,3,0,0],[55,33,12,0,0],[42,33,20,5,0],[33,32,25,9,1],[24,30,30,13,3],[17,25,33,20,5],[14,20,30,28,8],[10,15,27,33,15]];
+const XPNEED = [2,2,4,6,10,14,24,36];
+const ORDER = [4, 5, 3, 6, 2, 7, 1, 8, 0, 9]; // slots open from the centre outward
+const openCount = level => Math.min(SLOTS, level + 3);
+const openArr = n => { const a = Array(SLOTS).fill(false); ORDER.slice(0, n == null ? SLOTS : n).forEach(i => { a[i] = true; }); return a; };
+const LOCK = { lock: true };
+const r = v => Math.round(v);
+const pct = v => Math.round(v * 100) + '%';
+
+const FACTIONS = {
+  H: { name: 'Humans', blurb: 'A balanced party. Tanks guard, clerics heal, mages burn the line and archers pick targets. Units carry items that add stats or a second class.' },
+  E: { name: 'Elves', blurb: 'Strong individuals that buff their neighbours and grow permanently after every battle. Buildings empower the whole board.' },
+  N: { name: 'Monsters', blurb: '' },
+  U: { name: 'Undead', blurb: 'Fill empty slots with summons, profit when your own units die, and weaken whatever stands opposite.' }
+};
+
+const TRIBES = {
+  Tank:   { f: 'H', th: [2,4,6], text: ['Tanks +20% health', 'Tanks +40% health', 'Tanks +70% health'] },
+  DPS:    { f: 'H', th: [2,4,6], text: ['DPS +15% attack, 10% crit', 'DPS +30% attack, 20% crit', 'DPS +55% attack, 35% crit'] },
+  Mage:   { f: 'H', th: [2,4,6], text: ['Mages attack 15% faster and burn', 'Mages attack 30% faster and burn', 'Mages attack 50% faster, stronger burn'] },
+  Cleric: { f: 'H', th: [2,4,6], text: ['Allies regenerate 1%/s. Clerics smite every 4s', 'Allies regenerate 1.5%/s. Clerics smite every 4s', 'Allies regenerate 2.5%/s. Stronger smite'] },
+  Party:  { f: 'H', th: [4], text: ['One of each class: all allies +15% health and attack'] },
+  Grove:   { f: 'E', th: [2,4], text: ['Allies regenerate 1% health/s', 'Allies regenerate 2.5% health/s'] },
+  Sun:    { f: 'E', th: [2,4], text: ['Allies +15% attack', 'Allies +35% attack'] },
+  Drow:   { f: 'E', th: [2,4], note: 'Flanking: extra damage against any enemy that is not attacking that unit. Put Drow opposite an empty slot to strike sideways.', text: ['Drow 20% crit, 10% faster, +25% flanking damage', 'Drow 45% crit, 25% faster, +50% flanking damage'] },
+  Moon:   { f: 'E', th: [2,4], text: ['Allies start with a 10% health shield', 'Allies start with a 25% health shield'] },
+  Reborn: { f: 'U', th: [2,4], text: ['Reborn rise once at 40% health', 'Reborn rise once at full health'] },
+  Blight: { f: 'U', th: [2,4], note: 'Rot stacks up to 5. Each stack lowers attack by 6% and deals damage every second. A stack fades every 12s, or every 6s once the unit that applied it is dead.', text: ['When a rotting enemy dies, half its Rot spreads to its neighbours', 'All of a dying enemy\'s Rot spreads to its neighbours. Rot stacks up to 6'] },
+  Necromancer: { f: 'U', th: [2,4], text: ['Summons +30% stats and soak 25% of the damage dealt to their summoner', 'Summons +80% stats and soak 50% of the damage dealt to their summoner. Start with 1 Bone Minion that guards all your Necromancers'] },
+  Cultist: { f: 'U', th: [2,4], text: ['When an ally dies, Cultists and Demons gain 10% attack', 'When an ally dies, Cultists and Demons gain 20% attack'] },
+  Beast: { f: 'N', th: [], text: [] }, Boss: { f: 'N', th: [], text: [] },
+  Demon: { f: 'U', th: [], text: [] }, Minion: { f: 'U', th: [], text: [] }, Building: { f: 'E', th: [], text: [] }
+};
+
+const ITEMS = {
+  sword:  { name: 'Iron Sword', cost: 2, atk: .4, text: '+40% attack.' },
+  shield: { name: 'Tower Shield', cost: 2, hp: .4, cls: 'Tank', text: '+40% health. Gains the Tank class.' },
+  tome:   { name: 'Spellbook', cost: 3, cls: 'Mage', splash: .5, text: 'Gains the Mage class. Attacks splash to neighbours for 50%.' },
+  symbol: { name: 'Holy Symbol', cost: 3, hp: .2, cls: 'Cleric', healHit: .4, text: '+20% health. Gains the Cleric class. Each attack heals the weakest ally.' },
+  bow:    { name: 'Longbow', cost: 3, haste: .2, cls: 'DPS', text: 'Attacks 20% faster. Gains the DPS class.' }
+};
+
+const BASE_ITEMS = Object.keys(ITEMS);
+Object.assign(ITEMS, {
+  'sword+':  { base: 'sword', name: 'Fine Iron Sword', cost: 6, atk: .6, text: '+60% attack.' },
+  'shield+': { base: 'shield', name: 'Fine Tower Shield', cost: 6, hp: .6, cls: 'Tank', text: '+60% health. Gains the Tank class.' },
+  'tome+':   { base: 'tome', name: 'Fine Spellbook', cost: 9, cls: 'Mage', splash: .75, text: 'Gains the Mage class. Attacks splash to neighbours for 75%.' },
+  'symbol+': { base: 'symbol', name: 'Fine Holy Symbol', cost: 9, hp: .3, cls: 'Cleric', healHit: .6, text: '+30% health. Gains the Cleric class. Each attack heals the weakest ally, for half as much again.' },
+  'bow+':    { base: 'bow', name: 'Fine Longbow', cost: 9, haste: .3, cls: 'DPS', text: 'Attacks 30% faster. Gains the DPS class.' }
+});
+/* ---- battle helpers ---- */
+const foes = (B, side) => B.units.filter(x => x.alive && x.side !== side);
+const friends = (B, side) => B.units.filter(x => x.alive && x.side === side);
+/* Who a unit attacks: everything opposite it; failing that, the weaker enemy one slot to either side; a side with two or fewer units left reaches the nearest enemy anywhere; failing that, the hero. */
+function aim(B, u) {
+  if (u.d.snipe) { const w = weakest(foes(B, u.side)); return { ts: w ? [w] : [], diag: false }; }
+  let ts = fronts(B, u);
+  if (ts.length) return { ts: u.size === 1 ? [ts[0]] : ts, diag: false };
+  const l = u.slot - 1, r = u.slot + u.size;
+  const c = B.units.filter(x => x.alive && x.side !== u.side && ((x.slot <= l && x.slot + x.size > l) || (x.slot <= r && x.slot + x.size > r)));
+  if (c.length) { c.sort((p, q) => p.hp - q.hp); return { ts: [c[0]], diag: true }; }
+  if (friends(B, u.side).length <= 2 || B.units.some(x => x.alive && x.side !== u.side && x.d.boss)) { // boss fight, or a side down to its last two units: go for the nearest enemy at any distance
+    const dist = x => Math.max(0, x.slot - (u.slot + u.size - 1), u.slot - (x.slot + x.size - 1));
+    const n = foes(B, u.side).sort((p, q) => dist(p) - dist(q) || p.hp - q.hp)[0];
+    if (n) return { ts: [n], diag: true };
+  }
+  return { ts: [], diag: false };
+}
+const front = (B, u) => aim(B, u).ts[0] || null;
+const fronts = (B, u) => B.units.filter(x => x.alive && x.side !== u.side && x.slot < u.slot + u.size && x.slot + x.size > u.slot);
+const adj = (B, u) => B.units.filter(x => x.alive && x !== u && x.side === u.side && (x.slot + x.size === u.slot || x.slot === u.slot + u.size));
+const weakest = list => list.reduce((a, b) => (!a || b.hp / b.maxhp < a.hp / a.maxhp ? b : a), null);
+function heal(B, t, v) { if (!t || !t.alive) return; const h0 = t.hp; t.hp = Math.min(t.maxhp, t.hp + v); if (B.src) B.src.healed += t.hp - h0; B.ev.push({ t: 'heal', b: t.bid, v }); }
+function hitHero(B, side, v) { if (B.rel[side].aegis) v *= .8; if (!B.units.some(x => x.alive && x.side === side)) v *= 3; /* rout: an undefended hero takes triple damage */ B.hero[side].hp -= v; if (B.src) B.src.heroDmg += v; B.ev.push({ t: 'hero', side, v }); }
+function weaken(t, v) { if (t) t.weak = Math.min(.6, t.weak + v); }
+function addRot(B, t, n, dps) { if (!t || !t.alive) return; const cap = B.syn[1 - t.side].Blight === 2 ? 6 : 5; t.rot = Math.min(cap, t.rot + n); t.rotDps = Math.max(t.rotDps, dps); t.rotBy = B.src && B.src.side !== t.side ? B.src : t.rotBy || null; t.rotT = 0; B.ev.push({ t: 'rot', b: t.bid }); }
+/* auras scale 1x / 1.5x / 2x by tier, and identical auras do not stack: only the strongest applies */
+const aur = m => m === 1 ? 1 : m === 2 ? 1.5 : 2;
+function aura(a, key, val) { a.au = a.au || {}; const old = a.au[key] || 0; if (val <= old) return null; a.au[key] = val; return old; }
+const ROTFADE = 12;
+const DROW = [[0, 0, 0], [.2, .1, .25], [.45, .25, .5]]; // crit, attack speed, flanking damage by Drow level
+const effAtk = u => u.atk * (1 - Math.min(.6, u.weak + .06 * u.rot));
+function dmg(B, t, v, o) {
+  if (!t.alive || v <= 0) return;
+  o = o || {};
+  if (!o.redir) { const g = adj(B, t).find(x => x.d.guard); if (g) { dmg(B, g, v * .3, { redir: 1 }); v *= .7; } }
+  const nl = B.syn[t.side].Necromancer;
+  if (nl && !o.soak) { // summons soak part of the damage dealt to their summoner
+    const ss = B.units.filter(x => x.alive && x !== t && (x.owner === t || (x.guards && x.side === t.side && !t.summoned && t.tribes.includes(x.guards))));
+    if (ss.length) { const share = v * (nl === 2 ? .5 : .25); v -= share; for (const x of ss) dmg(B, x, share / ss.length, { redir: 1, soak: 1 }); }
+  }
+  if (B.src && B.src.side !== t.side) B.src.dealt += v;
+  t.taken += v;
+  if (t.shield > 0) { const a = Math.min(t.shield, v); t.shield -= a; v -= a; }
+  t.hp -= v;
+  B.ev.push({ t: 'hit', b: t.bid, v, crit: o.crit, flank: o.flank });
+  if (t.d.thorns && B.src && B.src.alive && B.src.side !== t.side && !o.redir && !o.soak) { const a = B.src; B.src = t; dmg(B, a, t.d.thorns * t.m, { redir: 1, soak: 1 }); B.src = a; }
+  if (t.hp <= 0) die(B, t);
+}
+function die(B, u) {
+  if (!u.alive) return;
+  if (u.lives > 0) { u.lives--; u.hp = u.maxhp * u.revFrac; u.weak = 0; u.burnT = 0; u.rot = 0; B.ev.push({ t: 'revive', b: u.bid }); if (u.d.onRevive) u.d.onRevive(B, u); return; }
+  u.alive = false; u.hp = 0; u.died = Math.round(B.time * 10) / 10; B.deaths[u.side]++; B.ev.push({ t: 'die', b: u.bid });
+  if (u.d.onDeath) { const ps = B.src; B.src = u; u.d.onDeath(B, u); B.src = ps; }
+  const bl = B.syn[1 - u.side].Blight;
+  if (bl && u.rot > 0) for (const a of adj(B, u)) addRot(B, a, bl === 2 ? u.rot : Math.ceil(u.rot / 2), u.rotDps);
+  if (!u.summoned && B.lead[u.side] === 'bloodpriest') for (const a of B.units) if (a.alive && a.side === u.side) a.atk += a.baseAtk * .08;
+  const ps0 = B.src;
+  for (const a of B.units) if (a.alive && a.side !== u.side && a.d.onFoeDeath) { B.src = a; a.d.onFoeDeath(B, a, u); }
+  const c = B.syn[u.side].Cultist;
+  for (const a of B.units) if (a.alive && a.side === u.side) {
+    if (a.d.onAllyDeath) { B.src = a; a.d.onAllyDeath(B, a, u); }
+    if (c && (a.tribes.includes('Cultist') || a.tribes.includes('Demon'))) a.atk += a.baseAtk * (c === 2 ? .2 : .1);
+  }
+  B.src = ps0;
+  release(B, u.side, u.slot);
+}
+function freeSlot(B, side, size, pref) {
+  const occ = Array(SLOTS).fill(0);
+  for (const x of B.units) if (x.alive && x.side === side) for (let i = 0; i < x.size; i++) occ[x.slot + i] = 1;
+  for (let i = 0; i < SLOTS; i++) if (!B.open[side][i]) occ[i] = 1;
+  let best = -1, bd = 99;
+  for (let s = 0; s + size <= SLOTS; s++) {
+    let ok = 1; for (let i = 0; i < size; i++) if (occ[s + i]) ok = 0;
+    if (ok) { const d = Math.abs(s - (pref == null ? 4 : pref)); if (d < bd) { bd = d; best = s; } }
+  }
+  return best;
+}
+function summon(B, side, id, m, pref, by, guards) {
+  const d = U[id]; let k = 1; const n = B.syn[side].Necromancer;
+  if (n) k += n === 2 ? .8 : .3;
+  if (B.units.some(x => x.alive && x.side === side && x.d.aura)) k += .5;
+  if (side === 1) k *= B.mul;
+  const s = freeSlot(B, side, d.size, pref);
+  if (s < 0) { // board full: fold the new summon into the nearest existing copy
+    const at = pref == null ? 4 : pref;
+    const t = B.units.filter(x => x.alive && x.side === side && x.summoned && x.d.id === id).sort((a, b) => Math.abs(a.slot - at) - Math.abs(b.slot - at))[0];
+    if (!t) { // nowhere to stand and nothing to join: Bone Minions wait and arrive together when a slot opens
+      if (id === 'minion') { const w = B.bank[side] || (B.bank[side] = { hp: 0, atk: 0, n: 0, by: by || null, guards: null }); w.hp += d.hp * m * k; w.atk += d.atk * m * k; w.n++; if (guards) w.guards = guards; }
+      return null;
+    }
+    const h = d.hp * m * k, a = d.atk * m * k;
+    t.maxhp += h; t.hp += h; t.atk += a; t.baseAtk += a; t.merged = (t.merged || 0) + 1;
+    B.ev.push({ t: 'buff', b: t.bid, a, h });
+    return t;
+  }
+  const u = mkBU(B, { id, tier: 1 }, side, s, m);
+  u.maxhp *= k; u.atk *= k; u.baseAtk = u.atk; u.hp = u.maxhp; u.summoned = true; u.revFrac = .4; u.owner = by || null; if (guards) u.guards = guards;
+  if (B.lead[side] === 'gravecaller') u.shield = u.maxhp * .75;
+  B.units.push(u); B.ev.push({ t: 'summon', b: u.bid });
+  return u;
+}
+
+function release(B, side, pref) {
+  const w = B.bank[side]; if (!w) return;
+  const s = freeSlot(B, side, 1, pref); if (s < 0) return;
+  B.bank[side] = null;
+  const u = mkBU(B, { id: 'minion', tier: 1 }, side, s, 1);
+  u.maxhp = w.hp; u.hp = w.hp; u.atk = w.atk; u.baseAtk = w.atk; u.summoned = true; u.revFrac = .4; u.owner = w.by && w.by.alive ? w.by : null; u.guards = w.guards; u.waited = w.n; if (w.n > 1) u.merged = w.n - 1;
+  if (B.lead[side] === 'gravecaller') u.shield = u.maxhp * .75;
+  B.units.push(u); B.ev.push({ t: 'summon', b: u.bid });
+}
+/* ---- units. m = 1/2/4 for tier 1/2/3 ---- */
+const U = {
+  // Humans
+  footman:  { name: 'Footman', f: 'H', cost: 1, size: 1, hp: 80, atk: 6, cd: 2.0, tribes: ['Tank'], guard: 1, txt: () => 'Guard: takes 30% of the damage dealt to adjacent allies.' },
+  archer:   { name: 'Militia Archer', f: 'H', cost: 1, size: 1, hp: 40, atk: 9, cd: 1.7, tribes: ['DPS'], txt: () => 'Every third shot deals double damage.', mod: (B, u, v) => u.n % 3 === 0 ? v * 2 : v },
+  apprentice: { name: 'Apprentice', f: 'H', cost: 1, size: 1, hp: 38, atk: 6, cd: 2.2, tribes: ['Mage'], splash: .5, txt: () => 'Attacks also hit enemies beside the target for 50%.' },
+  acolyte:  { name: 'Acolyte', f: 'H', cost: 1, size: 1, hp: 44, atk: 4, cd: 2.2, tribes: ['Cleric'], every: 4, txt: m => `Every 4s heals the weakest ally for ${9 * m}.`, tick: (B, u) => heal(B, weakest(friends(B, u.side)), 9 * u.m) },
+  knight:   { name: 'Knight', f: 'H', cost: 2, size: 2, hp: 170, atk: 13, cd: 2.4, tribes: ['Tank'], guard: 1, txt: m => `Guard. Starts with a ${30 * m} shield.`, onStart: (B, u) => { u.shield += 30 * u.m; } },
+  crossbow: { name: 'Crossbowman', f: 'H', cost: 2, size: 1, hp: 50, atk: 20, cd: 2.3, tribes: ['DPS'], crit: .25, txt: () => '25% chance to crit for double damage.' },
+  firemage: { name: 'Fire Mage', f: 'H', cost: 3, size: 1, hp: 60, atk: 10, cd: 2.4, tribes: ['Mage'], splash: 1, burn: 4, txt: m => `Attacks hit neighbours for full damage and burn for ${4 * m}/s.` },
+  priest:   { name: 'Priest', f: 'H', cost: 3, size: 1, hp: 70, atk: 5, cd: 2.4, tribes: ['Cleric'], every: 5, txt: m => `Every 5s heals all allies for ${8 * m}.`, tick: (B, u) => friends(B, u.side).forEach(a => heal(B, a, 8 * u.m)) },
+  captain:  { name: 'Captain', f: 'H', cost: 3, size: 1, hp: 110, atk: 18, cd: 2.0, tribes: ['DPS'], txt: m => `Adjacent allies attack ${pct(.2 * aur(m))} faster. Does not stack with another Captain.`, onStart: (B, u) => adj(B, u).forEach(a => { const v = .2 * aur(u.m), o = aura(a, 'captain', v); if (o != null) a.haste += v - o; }) },
+  sharpshooter: { name: 'Sharpshooter', f: 'H', cost: 4, size: 1, hp: 90, atk: 42, cd: 2.6, tribes: ['DPS'], snipe: 1, txt: () => 'Always shoots the weakest enemy unit, wherever it stands.' },
+  paladin:  { name: 'Paladin', f: 'H', cost: 4, size: 2, hp: 300, atk: 21, cd: 2.4, tribes: ['Tank', 'Cleric'], guard: 1, every: 5, txt: m => `Guard. Every 5s heals itself and adjacent allies for ${20 * m}.`, tick: (B, u) => [u, ...adj(B, u)].forEach(a => heal(B, a, 20 * u.m)) },
+  archmage: { name: 'Archmage', f: 'H', cost: 5, size: 2, hp: 150, atk: 14, cd: 3.0, tribes: ['Mage'], all: 1, txt: () => 'Attacks strike every enemy unit at once.' },
+  // Elves (grow = [attack, health] gained after each battle)
+  scout:    { name: 'Grove Scout', f: 'E', cost: 1, size: 1, flat: 8, hp: 44, atk: 7, cd: 1.8, tribes: ['Grove'], grow: [1, 3], txt: () => 'A sturdy opener.' },
+  sunaco:   { name: 'Sun Acolyte', f: 'E', cost: 1, size: 1, flat: 8, hp: 42, atk: 6, cd: 2.0, tribes: ['Sun'], grow: [0, 3], txt: m => `Adjacent allies +${pct(.15 * aur(m))} attack. Does not stack with another Sun Acolyte.`, onStart: (B, u) => adj(B, u).forEach(a => { const v = .15 * aur(u.m), o = aura(a, 'sunaco', v); if (o != null) a.atk *= (1 + v) / (1 + o); }) },
+  drowblade: { name: 'Drow Blade', f: 'E', cost: 1, size: 1, flat: 8, hp: 36, atk: 10, cd: 1.5, tribes: ['Drow'], grow: [1, 1], txt: () => 'Fast, fragile striker.' },
+  altar:    { name: 'Dark Altar', f: 'E', cost: 3, size: 1, hp: 110, atk: 0, cd: 9, tribes: ['Drow', 'Building'], building: 1, lend: .5, txt: () => 'Building. Counts as a Drow. Adjacent allies that are not Drow gain half of your Drow bonus. Does not stack with another altar.' },
+  sentinel: { name: 'Moon Sentinel', f: 'E', cost: 2, size: 1, hp: 95, atk: 8, cd: 2.2, tribes: ['Moon'], grow: [0, 6], txt: m => `Adjacent allies start with a ${20 * m} shield.`, onStart: (B, u) => adj(B, u).forEach(a => { a.shield += 20 * u.m; }) },
+  treant:   { name: 'Ancient Treant', f: 'E', cost: 2, size: 2, hp: 150, atk: 10, cd: 2.6, tribes: ['Grove'], grow: [2, 12], txt: () => 'Slow to start, grows quickly.' },
+  moonwell: { name: 'Moonwell', f: 'E', cost: 2, size: 1, hp: 70, atk: 0, cd: 9, tribes: ['Moon', 'Building'], building: 1, every: 3, txt: m => `Building. Every 3s heals adjacent allies for ${8 * m}.`, tick: (B, u) => adj(B, u).forEach(a => heal(B, a, 8 * u.m)) },
+  sunspire: { name: 'Sunspire', f: 'E', cost: 3, size: 2, hp: 120, atk: 0, cd: 9, tribes: ['Sun', 'Building'], building: 1, txt: m => `Building. All allies attack ${pct(.15 * aur(m))} faster. Does not stack with another Sunspire.`, onStart: (B, u) => friends(B, u.side).forEach(a => { const v = .15 * aur(u.m), o = aura(a, 'sunspire', v); if (o != null) a.haste += v - o; }) },
+  assassin: { name: 'Drow Assassin', f: 'E', cost: 3, size: 1, hp: 75, atk: 24, cd: 1.6, tribes: ['Drow'], grow: [3, 3], opener: 2, txt: () => 'Its first attack each battle deals double damage. That strike cannot crit.' },
+  priestess: { name: 'Moon Priestess', f: 'E', cost: 3, size: 1, hp: 95, atk: 10, cd: 2.2, tribes: ['Moon'], grow: [1, 4], mentor: [2, 6], txt: m => `After each battle, adjacent allies gain an extra +${2 * m} attack and +${6 * m} health.` },
+  sunchamp: { name: 'Sun Champion', f: 'E', cost: 4, size: 2, hp: 240, atk: 22, cd: 2.2, tribes: ['Sun'], grow: [3, 10], txt: () => 'Gains 10% attack every time it attacks.', after: (B, u) => { u.atk += u.baseAtk * .1; } },
+  matriarch: { name: 'Drow Matriarch', f: 'E', cost: 4, size: 1, hp: 160, atk: 26, cd: 1.9, tribes: ['Drow'], grow: [2, 6], txt: () => 'Attacks weaken the target by 15% attack.', onHit: (B, u, t) => weaken(t, .15) },
+  worldtree: { name: 'World Tree', f: 'E', cost: 5, size: 3, hp: 350, atk: 0, cd: 9, tribes: ['Grove', 'Building'], building: 1, every: 3, doubleGrow: 1, txt: m => `Building. Every 3s heals all allies for ${6 * m}. Allies grow 50% more after battle.`, tick: (B, u) => friends(B, u.side).forEach(a => heal(B, a, 6 * u.m)) },
+  // Undead
+  skeleton: { name: 'Skeleton', f: 'U', cost: 1, size: 1, hp: 34, atk: 7, cd: 1.8, tribes: ['Reborn'], lives: 1, txt: () => 'Rises once after dying, even without the Reborn bonus.' },
+  ghoul:    { name: 'Ghoul', f: 'U', cost: 1, size: 1, hp: 48, atk: 5, cd: 2.0, tribes: ['Blight'], txt: () => 'On death: applies 3 Rot to the enemy in front.', onDeath: (B, u) => addRot(B, front(B, u), 3, 2 * u.m) },
+  gravedigger: { name: 'Gravedigger', f: 'U', cost: 1, size: 1, hp: 52, atk: 5, cd: 2.4, tribes: ['Necromancer'], every: 4, txt: () => 'Starts each battle with a Bone Minion and raises another every 4s. With no room, an existing minion grows instead, or the new one waits for a slot.', onStart: (B, u) => summon(B, u.side, 'minion', u.m, u.slot, u), tick: (B, u) => summon(B, u.side, 'minion', u.m, u.slot, u) },
+  initiate: { name: 'Cult Initiate', f: 'U', cost: 1, size: 1, hp: 30, atk: 7, cd: 2.0, tribes: ['Cultist'], txt: () => 'On death: an Imp takes its place.', onDeath: (B, u) => summon(B, u.side, 'imp', u.m, u.slot, u) },
+  plague:   { name: 'Plague Bearer', f: 'U', cost: 2, size: 1, hp: 75, atk: 8, cd: 2.0, tribes: ['Blight'], txt: m => `Attacks apply 1 Rot. On death: ${12 * m} damage to all enemy units.`, onHit: (B, u, t) => addRot(B, t, 1, 2 * u.m), onDeath: (B, u) => foes(B, u.side).forEach(t => dmg(B, t, 12 * u.m, { redir: 1 })) },
+  necromancer: { name: 'Necromancer', f: 'U', cost: 2, size: 1, hp: 88, atk: 8, cd: 2.4, tribes: ['Necromancer'], txt: () => 'Starts each battle with a Bone Minion. When an ally dies, raises a Bone Minion in its place.', onStart: (B, u) => summon(B, u.side, 'minion', u.m, u.slot, u), onAllyDeath: (B, u, dead) => { if (!dead.summoned) summon(B, u.side, 'minion', u.m, dead.slot, u); } },
+  bloodcultist: { name: 'Blood Cultist', f: 'U', cost: 2, size: 1, hp: 60, atk: 8, cd: 2.2, tribes: ['Cultist'], every: 6, txt: () => 'Every 6s sacrifices your weakest other unit and summons a Demon.',
+    tick: (B, u) => { const v = friends(B, u.side).filter(x => x !== u && !x.tribes.includes('Demon') && !x.d.big).sort((a, b) => a.hp - b.hp)[0]; if (!v) return; const s = v.slot; die(B, v); summon(B, u.side, 'demon', u.m, s, u); } },
+  banshee:  { name: 'Banshee', f: 'U', cost: 3, size: 1, hp: 65, atk: 9, cd: 2.2, tribes: ['Blight'], txt: m => `Battle start: applies ${Math.round(2 * aur(m))} Rot to every enemy. Does not stack with another Banshee.`, onStart: (B, u) => foes(B, u.side).forEach(t => { const n = Math.round(2 * aur(u.m)), o = aura(t, 'banshee', n); if (o != null) addRot(B, t, n - o, 2 * u.m); }) },
+  revenant: { name: 'Revenant', f: 'U', cost: 2, size: 1, hp: 80, atk: 9, cd: 2.0, tribes: ['Reborn'], lives: 1, txt: () => 'Rises once on its own. Each time it rises, it gains 50% attack.', onRevive: (B, u) => { u.atk += u.baseAtk * .5; } },
+  deathknight: { name: 'Death Knight', f: 'U', cost: 4, size: 1, hp: 230, atk: 22, cd: 2.3, tribes: ['Reborn'], big: 1, txt: () => 'When it rises, it returns at full health and all allies gain 15% attack.', onRevive: (B, u) => { u.hp = u.maxhp; friends(B, u.side).forEach(a => { a.atk += a.baseAtk * .15; }); } },
+  plaguelord: { name: 'Plaguelord', f: 'U', cost: 5, size: 2, hp: 240, atk: 25, cd: 2.4, tribes: ['Blight'], big: 1, splash: 1, txt: () => 'Attacks hit the target and its neighbours, applying 2 Rot to each.', onHit: (B, u, t) => addRot(B, t, 2, 2 * u.m) },
+  colossus: { name: 'Bone Colossus', f: 'U', cost: 3, size: 2, hp: 210, atk: 19, cd: 2.8, tribes: ['Reborn'], big: 1, txt: () => 'On death: breaks into two Bone Warriors.', onDeath: (B, u) => { summon(B, u.side, 'warrior', u.m, u.slot, u); summon(B, u.side, 'warrior', u.m, u.slot + 1, u); } },
+  lich:     { name: 'Lich', f: 'U', cost: 4, size: 2, hp: 190, atk: 20, cd: 2.6, tribes: ['Necromancer'], aura: 1, big: 1, every: 6, counts: 2, txt: () => 'Counts as 2 Necromancers. Your summons have +50% stats. Every 6s raises two Bone Minions.', tick: (B, u) => { summon(B, u.side, 'minion', u.m, u.slot, u); summon(B, u.side, 'minion', u.m, u.slot, u); } },
+  pitlord:  { name: 'Pit Summoner', f: 'U', cost: 4, size: 1, hp: 110, atk: 11, cd: 2.2, tribes: ['Cultist'], big: 1, txt: m => `Battle start: summons a Demon into each adjacent empty slot, or absorbs its strength if the slot is taken. Gains ${3 * m} attack when an ally dies.`,
+    onStart: (B, u) => { for (const s of [u.slot - 1, u.slot + 1]) { if (s >= 0 && s < SLOTS && B.open[u.side][s] && !friends(B, u.side).some(x => x.slot <= s && x.slot + x.size > s)) summon(B, u.side, 'demon', u.m, s, u); else { u.maxhp += 70 * u.m; u.atk += 15 * u.m; } } }, onAllyDeath: (B, u) => { u.atk += 3 * u.m; } },
+  herald:   { name: "Archfiend's Herald", f: 'U', cost: 5, size: 2, hp: 260, atk: 33, cd: 2.4, tribes: ['Cultist'], big: 1, txt: () => 'After three of your units have died, summons an Archdemon.', onAllyDeath: (B, u) => { if (!u.done && B.deaths[u.side] >= 3) { if (summon(B, u.side, 'archdemon', u.m, u.slot, u)) u.done = 1; } } },
+  // --- second wave ---
+  halberdier: { name: 'Halberdier', f: 'H', cost: 2, size: 1, hp: 120, atk: 10, cd: 2.2, tribes: ['Tank'], reach: .5, txt: () => 'Its attacks also hit the enemies diagonal to it for 50%.' },
+  duelist:  { name: 'Duelist', f: 'H', cost: 3, size: 1, hp: 100, atk: 22, cd: 1.6, tribes: ['DPS'], txt: () => '+40% attack when it starts the battle with no ally beside it.', onStart: (B, u) => { if (!adj(B, u).length) u.atk *= 1.4; } },
+  bishop:   { name: 'Bishop', f: 'H', cost: 4, size: 1, hp: 150, atk: 8, cd: 2.4, tribes: ['Cleric'], every: 5, txt: m => `Every 5s shields the weakest ally for ${40 * m} and cleanses its Rot, burn and weakness.`, tick: (B, u) => { const t = weakest(friends(B, u.side)); if (t) { t.shield += 40 * u.m; t.rot = 0; t.burnT = 0; t.weak = 0; B.ev.push({ t: 'heal', b: t.bid, v: 40 * u.m }); } } },
+  stormmage: { name: 'Storm Mage', f: 'H', cost: 4, size: 1, hp: 110, atk: 26, cd: 2.8, tribes: ['Mage'], txt: () => 'Each attack also arcs to two random enemies for 60%.', after: (B, u) => { const fs = foes(B, u.side); for (let i = 0; i < 2 && fs.length; i++) dmg(B, fs.splice(Math.floor(Math.random() * fs.length), 1)[0], effAtk(u) * .6); } },
+  champion: { name: 'Champion', f: 'H', cost: 5, size: 1, hp: 240, atk: 38, cd: 1.8, tribes: ['DPS'], txt: () => 'Gains 20% attack each time an enemy dies. Summons do not count.', onFoeDeath: (B, u, dead) => { if (!dead.summoned) u.atk += u.baseAtk * .2; } },
+  venom:    { name: 'Venom Stalker', f: 'E', cost: 2, size: 1, hp: 55, atk: 13, cd: 1.7, tribes: ['Drow'], grow: [1, 2], txt: () => 'Deals 50% more damage to enemies below half health.', vs: (B, u, t, v) => t.hp < t.maxhp / 2 ? v * 1.5 : v },
+  briar:    { name: 'Briar Warden', f: 'E', cost: 3, size: 1, hp: 130, atk: 12, cd: 2.2, tribes: ['Grove'], grow: [1, 8], thorns: 6, txt: m => `Thorns: enemies that attack it take ${6 * m} damage.` },
+  sunfire:  { name: 'Sunfire Archer', f: 'E', cost: 3, size: 1, hp: 80, atk: 20, cd: 2.0, tribes: ['Sun'], grow: [2, 3], burn: 4, txt: m => `Attacks burn for ${4 * m}/s.` },
+  archon:   { name: 'Moon Archon', f: 'E', cost: 4, size: 2, hp: 260, atk: 20, cd: 2.4, tribes: ['Moon'], grow: [2, 8], every: 5, txt: m => `Every 5s gives all allies a ${25 * m} shield.`, tick: (B, u) => friends(B, u.side).forEach(a => { a.shield += 25 * u.m; }) },
+  archdruid: { name: 'Archdruid', f: 'E', cost: 5, size: 1, hp: 220, atk: 18, cd: 2.6, tribes: ['Grove'], grow: [1, 6], bless: [4, 12], txt: m => `After each battle, a random ally permanently gains +${4 * m} attack and +${12 * m} health.` },
+  boneshaper: { name: 'Bone Shaper', f: 'U', cost: 3, size: 1, hp: 144, atk: 8, cd: 2.2, tribes: ['Necromancer'], every: 5, txt: m => `Every 5s your summons gain 20% attack and heal ${10 * m}.`, tick: (B, u) => friends(B, u.side).filter(a => a.summoned).forEach(a => { a.atk += a.baseAtk * .2; heal(B, a, 10 * u.m); }) },
+  soulreaper: { name: 'Soul Reaper', f: 'U', cost: 3, size: 1, hp: 100, atk: 16, cd: 2.0, tribes: ['Cultist'], txt: m => `Whenever a unit dies, heals 30% of its health and gains ${4 * m} attack. Summons do not count.`, onAllyDeath: (B, u, dead) => { if (dead.summoned) return; heal(B, u, u.maxhp * .3); u.atk += 4 * u.m; }, onFoeDeath: (B, u, dead) => { if (dead.summoned) return; heal(B, u, u.maxhp * .3); u.atk += 4 * u.m; } },
+  collector: { name: 'Bone Collector', f: 'U', cost: 2, size: 1, hp: 85, atk: 8, cd: 2.2, tribes: ['Necromancer'], txt: m => `Whenever one of your summons dies, your strongest summon gains ${4 * m} attack and ${14 * m} health.`,
+    onAllyDeath: (B, u, dead) => { if (!dead.summoned) return; const t = friends(B, u.side).filter(a => a.summoned).sort((a, b) => b.atk - a.atk)[0]; if (!t) return; const a = 4 * u.m, h = 14 * u.m; t.atk += a; t.baseAtk += a; t.maxhp += h; t.hp += h; B.ev.push({ t: 'buff', b: t.bid, a, h }); } },
+  rothound: { name: 'Rot Hound', f: 'U', cost: 3, size: 1, hp: 110, atk: 14, cd: 1.5, tribes: ['Blight'], txt: () => 'Deals 15% more damage for each Rot stack on its target.', vs: (B, u, t, v) => v * (1 + .15 * t.rot) },
+  // Neutral monsters and bosses (never in the shop)
+  wolf:     { name: 'Dire Wolf', f: 'N', token: 1, cost: 0, size: 1, hp: 40, atk: 9, cd: 1.4, tribes: ['Beast'], txt: () => 'Fast attacker.' },
+  bandit:   { name: 'Bandit', f: 'N', token: 1, cost: 0, size: 1, hp: 60, atk: 10, cd: 1.9, tribes: ['Beast'], crit: .25, txt: () => '25% chance to crit.' },
+  shaman:   { name: 'Hedge Shaman', f: 'N', token: 1, cost: 0, size: 1, hp: 45, atk: 4, cd: 2.2, tribes: ['Beast'], every: 4, txt: () => 'Every 4s heals the weakest ally.', tick: (B, u) => { const t = weakest(friends(B, u.side)); if (t) heal(B, t, 14 * (u.o.scale || 1)); } },
+  ogre:     { name: 'Ogre', f: 'N', token: 1, cost: 0, size: 2, hp: 180, atk: 16, cd: 2.6, tribes: ['Beast'], txt: () => 'Big and slow.' },
+  ogrelord: { name: 'Ogre Warlord', f: 'N', token: 1, boss: 1, cost: 0, size: 3, hp: 1100, atk: 38, cd: 2.4, tribes: ['Boss'], noSplit: 1, txt: () => 'Boss. Hits every enemy opposite it for full damage and gains 5% attack with each swing. A quarter of each blow carries through to your hero.', after: (B, u) => { u.atk += u.baseAtk * .05; } },
+  bonedragon: { name: 'Bone Dragon', f: 'N', token: 1, boss: 1, cost: 0, size: 3, hp: 2800, atk: 34, cd: 3.0, tribes: ['Boss'], all: 1, burn: 5, txt: () => 'Boss. Its breath hits every enemy unit and sets them burning. A quarter of it carries through to your hero.' },
+  titan:    { name: 'Stone Titan', f: 'N', token: 1, boss: 1, cost: 0, size: 3, hp: 4400, atk: 85, cd: 2.8, tribes: ['Boss'], noSplit: 1, every: 6, txt: () => 'Boss. Hits every enemy opposite it for full damage. Every 6s it gains a shield worth 10% of its health. A quarter of each blow carries through to your hero.', tick: (B, u) => { u.shield += u.maxhp * .1; } },
+  // Tokens (never in the shop)
+  minion:   { name: 'Bone Minion', f: 'U', token: 1, cost: 0, size: 1, hp: 24, atk: 6, cd: 1.8, tribes: ['Minion'], txt: () => 'Summoned.' },
+  warrior:  { name: 'Bone Warrior', f: 'U', token: 1, cost: 0, size: 1, hp: 45, atk: 10, cd: 2.0, tribes: ['Minion'], txt: () => 'Summoned.' },
+  imp:      { name: 'Imp', f: 'U', token: 1, cost: 0, size: 1, hp: 30, atk: 9, cd: 1.5, tribes: ['Demon'], txt: () => 'Summoned.' },
+  demon:    { name: 'Demon', f: 'U', token: 1, cost: 0, size: 1, hp: 70, atk: 15, cd: 2.0, tribes: ['Demon'], txt: () => 'Summoned.' },
+  archdemon: { name: 'Archdemon', f: 'U', token: 1, cost: 0, size: 2, hp: 320, atk: 55, cd: 2.2, tribes: ['Demon'], txt: () => 'Summoned.' }
+};
+for (const k in U) U[k].id = k;
+const POOL = {}; // faction -> cost -> [ids]
+for (const k in U) { const d = U[k]; if (d.token) continue; ((POOL[d.f] = POOL[d.f] || {})[d.cost] = POOL[d.f][d.cost] || []).push(k); }
+
+/* stats of an owned unit outside battle */
+function stats(o) {
+  const d = U[o.id], m = Math.pow(2, (o.tier || 1) - 1), it = o.item ? ITEMS[o.item] : null;
+  const sc = o.scale || 1;
+  let hp = d.hp * m * sc + (d.flat || 0) + (o.gHp || 0), atk = d.atk * m * sc + (o.gAtk || 0);
+  if (it) { hp *= 1 + (it.hp || 0); atk *= 1 + (it.atk || 0); }
+  const tribes = d.tribes.slice(); if (it && it.cls && !tribes.includes(it.cls)) tribes.push(it.cls);
+  return { hp, atk, m, tribes, cd: d.cd };
+}
+let BID = 1;
+function mkBU(B, o, side, slot, mOver) {
+  const d = U[o.id], s = stats(o), it = o.item ? ITEMS[o.item] : null, m = mOver || s.m;
+  const hp = mOver ? d.hp * m : s.hp, atk = mOver ? d.atk * m : s.atk;
+  return { bid: BID++, o, d, m, side, slot, size: d.size, maxhp: hp, hp, atk, baseAtk: atk, cd: d.cd, t: slot * .03, at: 0, rot: 0, rotDps: 0, st: 0, n: 0,
+    shield: 0, weak: 0, burn: 0, burnT: 0, regen: 0, smite: 0, haste: it && it.haste || 0, crit: d.crit || 0, splash: Math.max(d.splash || 0, it && it.splash || 0),
+    healHit: it && it.healHit || 0, burnHit: d.burn ? d.burn * m * (o.scale || 1) : 0, lives: d.lives || 0, revFrac: .4, alive: true, tribes: s.tribes, item: o.item || null, summoned: false, owner: null, dealt: 0, heroDmg: 0, taken: 0, healed: 0, died: null };
+}
+
+/* synergy levels from a list of owned units (unique unit types count once) */
+function synergy(list) {
+  const seen = {}, cnt = {};
+  for (const o of list) for (const t of stats(o).tribes) { const k = t + ':' + o.id; if (!seen[k]) { seen[k] = 1; cnt[t] = (cnt[t] || 0) + (U[o.id].counts && U[o.id].tribes[0] === t ? U[o.id].counts : 1); } }
+  const lv = {};
+  for (const t in cnt) { const th = TRIBES[t] ? TRIBES[t].th : []; lv[t] = th.filter(x => cnt[t] >= x).length; }
+  if (cnt.Tank && cnt.DPS && cnt.Mage && cnt.Cleric) lv.Party = 1;
+  cnt.Party = ['Tank', 'DPS', 'Mage', 'Cleric'].filter(t => cnt[t]).length;
+  return { cnt, lv };
+}
+const heroHp = round => Math.round(150 * Math.pow(1.2, round - 1));
+
+function createBattle(mine, theirs, round, n0, n1, opt) {
+  opt = opt || {};
+  const rl0 = {}, rl1 = {}; (opt.relics || []).forEach(k => { rl0[k] = 1; }); (opt.foeRelics || []).forEach(k => { rl1[k] = 1; });
+  const B = { lead: [opt.leader || null, opt.foeLeader || null], rel: [rl0, rl1], mul: opt.foeMul || 1, rotBoost: [1, 1], bank: [null, null], fx: [{ rot: 0, burn: 0 }, { rot: 0, burn: 0 }], open: [openArr(n0), openArr(n1)], time: 0, units: [], ev: [], over: false, winner: null, deaths: [0, 0], round,
+    hero: [{ hp: heroHp(round), max: heroHp(round) }, { hp: heroHp(round), max: heroHp(round) }], syn: [synergy(mine).lv, synergy(theirs).lv] };
+  mine.forEach(o => B.units.push(mkBU(B, o, 0, o.slot)));
+  theirs.forEach(o => B.units.push(mkBU(B, o, 1, o.slot)));
+  for (const side of [0, 1]) {
+    const s = B.syn[side], us = friends(B, side), rl = B.rel[side], ld = B.lead[side];
+    for (const u of us) {
+      const has = t => u.tribes.includes(t);
+      if (side === 1 && B.mul !== 1) { u.maxhp *= B.mul; u.atk *= B.mul; }
+      if (s.Tank && has('Tank')) u.maxhp *= [1, 1.2, 1.4, 1.7][s.Tank];
+      if (s.DPS && has('DPS')) { u.atk *= [1, 1.15, 1.3, 1.55][s.DPS]; u.crit += [0, .1, .2, .35][s.DPS]; }
+      if (s.Mage && has('Mage')) { u.haste += [0, .15, .3, .5][s.Mage]; u.burnHit = Math.max(u.burnHit, [0, 2, 2, 4][s.Mage] * u.m); }
+      if (s.Cleric) { u.regen += [0, .01, .015, .025][s.Cleric]; if (has('Cleric')) u.smite = [0, 2, 2, 4][s.Cleric]; }
+      if (s.Party) { const pm = ld === 'marshal' ? 1.3 : 1.15; u.maxhp *= pm; u.atk *= pm; }
+      {
+        if (ld === 'architect' && u.d.building) u.maxhp *= 2;
+        if (rl.wardrum) u.atk *= 1.1;
+        if (rl.belt && u.size > 1) { u.maxhp *= 1.25; u.atk *= 1.25; }
+        if (rl.font) u.regen += .01;
+        if (rl.armoury && !u.item) u.maxhp *= 1.15;
+      }
+      if (s.Grove) u.regen += s.Grove === 2 ? .025 : .01;
+      if (s.Sun) u.atk *= s.Sun === 2 ? 1.35 : 1.15;
+      if (s.Drow && has('Drow')) { u.crit += DROW[s.Drow][0]; u.haste += DROW[s.Drow][1]; u.flank = DROW[s.Drow][2]; }
+      if (s.Reborn && has('Reborn')) u.lives++;
+      u.revFrac = s.Reborn === 2 ? 1 : .4;
+    }
+  }
+  for (const side of [0, 1]) {
+    const s = B.syn[side], us = friends(B, side), rl = B.rel[side], ld = B.lead[side];
+    for (const u of us) if (u.d.onStart) { B.src = u; u.d.onStart(B, u); }
+    B.src = null;
+    if (s.Drow) for (const al of us) if (al.d.lend) for (const a of adj(B, al)) { // a Dark Altar lends its neighbours part of the Drow bonus; two altars do not stack
+      if (a.d.building || a.tribes.includes('Drow') || aura(a, 'altar', al.d.lend) == null) continue;
+      const k = al.d.lend; a.crit += DROW[s.Drow][0] * k; a.haste += DROW[s.Drow][1] * k; a.flank = Math.max(a.flank || 0, DROW[s.Drow][2] * k);
+    }
+    if (us.length) {
+      const byslot = us.slice().sort((p, q) => p.slot - q.slot), L = byslot[0], R = byslot[byslot.length - 1], fighters = us.filter(u => !u.d.building && u.atk > 0);
+      if (ld === 'warden') { L.maxhp *= 1.5; if (R !== L) R.maxhp *= 1.5; }
+      if (ld === 'architect') for (const u of us) if (!u.d.building && adj(B, u).some(a => a.d.building)) u.atk *= 1.2;
+      if (ld === 'bladesinger' && fighters.length) fighters.reduce((p, q) => (q.atk > p.atk ? q : p)).haste += .3;
+      if (ld === 'plaguefather') { B.rotBoost[side] = 1.25; foes(B, side).forEach(t => addRot(B, t, 1, .5 + round * .1)); }
+      if (rl.whetstone) L.haste += .5;
+      if (rl.bulwark) R.maxhp *= 1.5;
+      if (rl.banner) for (const u of us) u.t = u.cd * .5;
+      if (rl.bell) summon(B, side, 'minion', round >= 9 ? 4 : round >= 5 ? 2 : 1, null);
+    }
+    for (const u of us) { u.baseAtk = u.atk; u.hp = u.maxhp; if (s.Moon) u.shield += u.maxhp * (s.Moon === 2 ? .25 : .1); }
+    if (s.Necromancer) { const m = Math.max(1, ...us.filter(u => u.tribes.includes('Necromancer')).map(u => u.m)); for (let i = 0; i < s.Necromancer - 1; i++) { summon(B, side, 'minion', m, null, null, 'Necromancer'); } }
+  }
+  B.ev = [];
+  return B;
+}
+
+function attack(B, u) {
+  u.n++;
+  const A = aim(B, u), f = A.ts[0] || null;
+  let v = effAtk(u), crit = false;
+  if (u.d.opener && u.n === 1) v *= u.d.opener;
+  else if (u.crit && Math.random() < u.crit) { v *= 2; crit = true; }
+  if (u.d.mod) v = u.d.mod(B, u, v);
+  B.ev.push({ t: 'atk', b: u.bid, to: (u.d.all ? foes(B, u.side) : A.ts).map(x => x.bid), hero: !f, diag: A.diag });
+  const hit = (t, val, c) => { if (u.burnHit) { t.burn = Math.max(t.burn, u.burnHit); t.burnT = 3; } if (u.d.onHit) u.d.onHit(B, u, t); if (u.d.vs) val = u.d.vs(B, u, t, val); let fl = false; if (u.flank && !(t.atk > 0 && !t.d.building && (t.d.all || aim(B, t).ts.includes(u)))) { val *= 1 + u.flank; fl = true; u.flanks = (u.flanks || 0) + 1; } dmg(B, t, val, { crit: c, flank: fl }); };
+  if (u.d.all) { const fs = foes(B, u.side); fs.forEach(t => hit(t, v, crit)); if (!f) hitHero(B, 1 - u.side, v); }
+  else if (f) {
+    // a wide unit strikes every enemy opposite any of its slots, splitting its damage evenly
+    const ts = A.ts, each = u.d.noSplit ? v : v / ts.length, near = [];
+    if (u.splash) for (const t of ts) for (const x of adj(B, t)) if (!ts.includes(x) && !near.includes(x)) near.push(x);
+    ts.forEach(t => hit(t, each, crit)); near.forEach(t => hit(t, each * u.splash, false));
+    if (u.d.reach && !A.diag) { const l = u.slot - 1, r2 = u.slot + u.size; B.units.filter(x => x.alive && x.side !== u.side && !ts.includes(x) && ((x.slot <= l && x.slot + x.size > l) || (x.slot <= r2 && x.slot + x.size > r2))).forEach(t => hit(t, v * u.d.reach, false)); }
+  }
+  else hitHero(B, 1 - u.side, v);
+  if (u.d.boss && f) hitHero(B, 1 - u.side, v * .25);
+  if (u.d.after) u.d.after(B, u);
+  if (u.healHit) heal(B, weakest(friends(B, u.side)), v * u.healHit);
+}
+
+function step(B, dt) {
+  if (B.over) return;
+  B.time += dt;
+  for (const u of B.units.slice()) {
+    if (!u.alive) continue;
+    B.src = u;
+    if (u.regen && u.hp < u.maxhp) u.hp = Math.min(u.maxhp, u.hp + u.maxhp * u.regen * dt);
+    if (u.burnT > 0) { u.burnT -= dt; u.hp -= u.burn * dt; u.taken += u.burn * dt; B.fx[1 - u.side].burn += u.burn * dt; if (u.hp <= 0) { die(B, u); if (!u.alive) continue; } }
+    if (u.rot > 0) { const r0 = u.rot * u.rotDps * dt * B.rotBoost[1 - u.side]; u.hp -= r0; u.taken += r0; B.fx[1 - u.side].rot += r0;
+      /* a stack fades every ROTFADE seconds, twice as fast once whoever applied it is dead (leader Rot: once no enemy unit is left) */
+      u.rotT = (u.rotT || 0) + dt * ((u.rotBy ? !u.rotBy.alive : !B.units.some(x => x.alive && x.side !== u.side)) ? 2 : 1); if (u.rotT >= ROTFADE) { u.rotT = 0; u.rot--; } if (u.hp <= 0) { die(B, u); if (!u.alive) continue; } }
+    if (u.d.every) { u.at += dt; if (u.at >= u.d.every) { u.at = 0; u.d.tick(B, u); if (!u.alive) continue; } }
+    if (u.smite) { u.st += dt; if (u.st >= 4) { u.st = 0; const t = front(B, u), v = effAtk(u) * u.smite; B.ev.push({ t: 'smite', b: u.bid }); if (t) dmg(B, t, v); else hitHero(B, 1 - u.side, v); } }
+    if (u.atk > 0 && !u.d.building) { u.t += dt * (1 + u.haste); if (u.t >= u.cd) { u.t -= u.cd; attack(B, u); } }
+  }
+  B.src = null;
+  if (B.sdAt == null && !B.units.some(x => x.alive)) B.sdAt = B.time; // nobody left on either side: sudden death starts now
+  const sd0 = B.sdAt != null ? Math.min(B.sdAt, SUDDEN) : SUDDEN;
+  if (B.time > sd0) { B.sudden = true; for (const h of B.hero) h.hp -= h.max * (.03 + .015 * (B.time - sd0)) * dt; }
+  const a = B.hero[0].hp <= 0, b = B.hero[1].hp <= 0;
+  if (a || b) { B.over = true; B.winner = a && b ? (B.hero[0].hp > B.hero[1].hp ? 0 : B.hero[1].hp > B.hero[0].hp ? 1 : -1) : a ? 1 : 0; }
+}
+
+/* ---- run / shop ---- */
+let UID = 1;
+const rnd = a => a[Math.floor(Math.random() * a.length)];
+function rollCost(level) { const o = ODDS[Math.min(level, 9) - 1]; let x = Math.random() * 100; for (let i = 0; i < 5; i++) { if (x < o[i]) return i + 1; x -= o[i]; } return 1; }
+function rollUnit(f, level) { let c = rollCost(level); while (!POOL[f][c]) c--; return rnd(POOL[f][c]); }
+function rollShop(run) {
+  const old = run.shop || []; run.shop = [];
+  for (let i = 0; i < 5; i++) run.shop.push(old[i] && old[i].frozen ? old[i] : run.faction === 'H' && Math.random() < (run.leader === 'quartermaster' ? .35 : .18) ? { kind: 'item', id: rnd(BASE_ITEMS) } : { kind: 'unit', id: rollUnit(run.faction, run.level) });
+}
+function toggleFreeze(run, i) { const s = run.shop[i]; if (!s) return false; s.frozen = !s.frozen; run.acts.push((s.frozen ? 'freeze ' : 'unfreeze ') + s.id); return true; }
+const budget = round => 5 + 5 * (round - 1) + .32 * (round - 1) * (round - 1) + Math.max(0, round - 7) * 4;
+const enemyLevel = round => Math.min(9, 1 + Math.floor(round * .7));
+/* the earliest round an enemy may field a unit of this cost at tier 2 / tier 3: roughly what a player could own */
+const T2FROM = [0, 2, 4, 7, 10, 13], T3FROM = [0, 6, 9, 12, 99, 99];
+const ARCH = [
+  { name: 'Shield wall', f: 'H', tribes: ['Tank', 'Cleric'] }, { name: 'Firing line', f: 'H', tribes: ['DPS', 'Mage'] },
+  { name: 'Grave swarm', f: 'U', tribes: ['Necromancer', 'Reborn'] }, { name: 'Blood cult', f: 'U', tribes: ['Cultist', 'Reborn'] }, { name: 'Plague host', f: 'U', tribes: ['Blight'] },
+  { name: 'Moonlit grove', f: 'E', tribes: ['Grove', 'Moon'] }, { name: 'Drow raid', f: 'E', tribes: ['Drow', 'Sun'] }
+];
+const BOSSES = [['ogrelord', 5], ['bonedragon', 10], ['titan', 15]];
+function monster(id, slot, scale) { return { uid: UID++, kind: 'unit', id, tier: 1, slot, item: null, gAtk: 0, gHp: 0, scale }; }
+function genBoss(round, maxSlots) {
+  const n = Math.max(4, Math.min(SLOTS, maxSlots || SLOTS)), open = openArr(n), k = (Math.floor(round / 5) - 1) % 3, [id, base] = BOSSES[k];
+  const lo = open.indexOf(true), hi = open.lastIndexOf(true), s = Math.max(lo, Math.min(3, hi - 2)), units = [monster(id, s, Math.pow(1.2, round - base))];
+  const free = []; for (let i = lo; i <= hi; i++) if (i < s || i > s + 2) free.push(i);
+  const esc = 1 + .3 * (round - 1);
+  for (const i of free.slice(0, Math.min(free.length, 2 + Math.floor(round / 5)))) units.push(monster(rnd(['wolf', 'bandit', 'wolf', 'shaman']), i, esc));
+  return { faction: 'N', units, open: n, boss: true, title: 'Boss: ' + U[id].name };
+}
+function genEnemy(round, maxSlots, noBoss) {
+  if (round % 5 === 0 && !noBoss) return genBoss(round, maxSlots);
+  const arch = round >= 3 && Math.random() < .5 ? rnd(ARCH) : null;
+  const pick = (f0, lv) => { let id = rollUnit(f0, lv); if (arch) for (let i = 0; i < 8 && !U[id].tribes.some(t => arch.tribes.includes(t)); i++) id = rollUnit(f0, lv); return id; };
+  const f = arch ? arch.f : rnd(['H', 'E', 'U']), level = enemyLevel(round), n = Math.min(openCount(level), maxSlots || SLOTS), open = openArr(n), out = [], occ = Array(SLOTS).fill(0);
+  let gold = budget(round), tries = 0;
+  const cap = f === 'U' ? Math.max(3, n - 2) : n;
+  while (gold >= 1 && tries++ < 80) {
+    if (occ.filter(Boolean).length >= cap) break;
+    const id = pick(f, level), d = U[id];
+    let tier = 1; const x = Math.random();
+    if (round >= T3FROM[d.cost] && x < .15 && !d.building) tier = 3; else if (round >= T2FROM[d.cost] && x < Math.min(.6, .08 * round)) tier = 2;
+    let cost = d.cost * Math.pow(3, tier - 1);
+    if (cost > gold && tier === 3) { tier = 2; cost = d.cost * 3; }
+    if (cost > gold) { tier = 1; cost = d.cost; }
+    if (cost > gold) continue;
+    const s = ORDER.find(s0 => { if (s0 + d.size > SLOTS) return false; for (let i = 0; i < d.size; i++) if (occ[s0 + i] || !open[s0 + i]) return false; return true; });
+    if (s === undefined) continue;
+    for (let i = 0; i < d.size; i++) occ[s + i] = 1;
+    const o = { uid: UID++, kind: 'unit', id, tier, slot: s, item: null, gAtk: 0, gHp: 0 };
+    if (d.grow) { const k = (round - 1) * .35 * tier; o.gAtk = Math.round(d.grow[0] * k); o.gHp = Math.round(d.grow[1] * k); }
+    out.push(o); gold -= cost;
+  }
+  // spend what is left on upgrades the round allows, cheapest first
+  for (const o of out.slice().sort((a, b) => (U[a.id].building ? 1 : 0) - (U[b.id].building ? 1 : 0) || U[a.id].cost - U[b.id].cost)) {
+    if (U[o.id].building && o.tier >= 2) continue;
+    const c = U[o.id].cost, up = c * Math.pow(3, o.tier) - c * Math.pow(3, o.tier - 1);
+    if (o.tier < 3 && gold >= up && round >= (o.tier === 1 ? T2FROM : T3FROM)[c]) { o.tier++; gold -= up; if (U[o.id].grow) { o.gAtk = Math.round(o.gAtk * o.tier / (o.tier - 1)); o.gHp = Math.round(o.gHp * o.tier / (o.tier - 1)); } }
+  }
+  if (f === 'H') for (const o of out) if (gold >= 2 && Math.random() < .5) { o.item = rnd(BASE_ITEMS); gold -= ITEMS[o.item].cost; }
+  return { faction: f, units: out, open: n, title: arch ? arch.name : null };
+}
+const interest = run => Math.min(3, Math.floor(run.gold / 10));
+const income = run => Math.min(4 + run.round, 9) + Math.min(3, Math.floor(run.gold / 10)) + (has(run, 'coin') ? 1 : 0);
+const has = (run, k) => (run.relics || []).includes(k);
+function newRun(f, leader) {
+  const run = { leader: leader || null, relics: [], offer: null, camp: null, freeRoll: false, faction: f, round: 1, gold: 6, lives: LIVES, wins: 0, level: 1, xp: 0, things: [], shop: [], over: null, log: [], acts: [] };
+  rollShop(run); run.enemy = genEnemy(1, openCount(1));
+  return run;
+}
+const boardUnits = run => run.things.filter(t => t.kind === 'unit' && t.slot != null);
+function occOf(run, ignore) {
+  const o = Array(SLOTS).fill(null), open = openArr(openCount(run.level));
+  for (let i = 0; i < SLOTS; i++) if (!open[i]) o[i] = LOCK;
+  for (const t of run.things) if (t.slot != null && !(ignore || []).includes(t)) for (let i = 0; i < U[t.id].size; i++) o[t.slot + i] = t;
+  return o;
+}
+function boardFit(run, size, ignore) {
+  const o = occOf(run, ignore);
+  for (const s of ORDER) { if (s + size > SLOTS) continue; let ok = true; for (let i = 0; i < size; i++) if (o[s + i]) ok = false; if (ok) return s; }
+  return -1;
+}
+function benchFree(run) { for (let i = 0; i < BENCH; i++) if (!run.things.some(t => t.bench === i)) return i; return -1; }
+function mergeAll(run) {
+  const made = [];
+  for (let again = true; again;) {
+    again = false;
+    const groups = {};
+    for (const t of run.things) if (t.kind === 'unit' && t.tier < 3) (groups[t.id + t.tier] = groups[t.id + t.tier] || []).push(t);
+    for (const k in groups) {
+      const g = groups[k]; if (g.length < 3) continue;
+      g.sort((a, b) => (b.slot != null) - (a.slot != null) || (b.bench != null) - (a.bench != null));
+      const keep = g[0], gone = g.slice(-2);
+      keep.gAtk = Math.max(...g.map(x => x.gAtk)) * 2; keep.gHp = Math.max(...g.map(x => x.gHp)) * 2; keep.tier++;
+      for (const x of gone) {
+        run.things.splice(run.things.indexOf(x), 1);
+        if (x.item) { if (!keep.item) keep.item = x.item; else { const b = benchFree(run); if (b >= 0) run.things.push({ uid: UID++, kind: 'item', id: x.item, bench: b, slot: null }); else run.gold += ITEMS[x.item].cost; } }
+      }
+      made.push(keep); again = true; break;
+    }
+  }
+  return made;
+}
+function place(run, t) {
+  if (t.slot != null || t.bench != null) return true;
+  if (t.kind === 'unit') { const s = boardFit(run, U[t.id].size); if (s >= 0) { t.slot = s; return true; } }
+  const b = benchFree(run); if (b >= 0) { t.bench = b; return true; }
+  return false;
+}
+const priceOf = (run, s) => s.kind === 'item' ? Math.max(1, ITEMS[s.id].cost - (run.leader === 'quartermaster' ? 1 : 0)) : Math.max(1, U[s.id].cost - (run.leader === 'architect' && U[s.id].building ? 1 : 0));
+function buy(run, i) {
+  const s = run.shop[i]; if (!s) return { ok: false };
+  const cost = priceOf(run, s);
+  if (run.gold < cost) return { ok: false, msg: 'Not enough gold.' };
+  let t;
+  if (s.kind === 'item') { const b = benchFree(run); if (b < 0) return { ok: false, msg: 'Your bench is full.' }; t = { uid: UID++, kind: 'item', id: s.id, bench: b, slot: null }; run.things.push(t); }
+  else {
+    const willMerge = run.things.filter(x => x.kind === 'unit' && x.id === s.id && x.tier === 1).length >= 2;
+    if (!willMerge && boardFit(run, U[s.id].size) < 0 && benchFree(run) < 0) return { ok: false, msg: 'No room. Sell or merge something first.' };
+    t = { uid: UID++, kind: 'unit', id: s.id, tier: 1, item: null, gAtk: 0, gHp: 0, slot: null, bench: null };
+    run.things.push(t);
+  }
+  run.gold -= cost; run.shop[i] = null; run.acts.push('buy ' + s.id);
+  const merged = mergeAll(run);
+  merged.forEach(x => run.acts.push('upgrade ' + x.id + ' t' + x.tier));
+  if (run.things.includes(t)) place(run, t);
+  const items = mergeItems(run);
+  return { ok: true, merged, items, thing: t };
+}
+const itemValue = (run, id) => { const it = ITEMS[id], base = ITEMS[it.base || id]; return Math.max(1, base.cost - (run && run.leader === 'quartermaster' ? 1 : 0)) * (it.base ? 3 : 1); };
+const sellValue = (t, run) => t.kind === 'item' ? itemValue(run, t.id) : Math.max(1, U[t.id].cost - (run && run.leader === 'architect' && U[t.id].building ? 1 : 0)) * Math.pow(3, t.tier - 1);
+function sell(run, t) {
+  run.acts.push('sell ' + t.id + (t.tier > 1 ? ' t' + t.tier : '')); run.gold += sellValue(t, run); run.things.splice(run.things.indexOf(t), 1);
+  if (t.kind === 'unit' && t.item) { const b = benchFree(run); if (b >= 0) run.things.push({ uid: UID++, kind: 'item', id: t.item, bench: b, slot: null }); else run.gold += itemValue(run, t.item); }
+}
+/* three of the same basic item, worn or loose, become one upgraded item */
+function mergeItems(run) {
+  const made = [];
+  for (let again = true; again;) {
+    again = false;
+    for (const id of BASE_ITEMS) {
+      const loose = run.things.filter(t => t.kind === 'item' && t.id === id), worn = run.things.filter(t => t.kind === 'unit' && t.item === id);
+      if (loose.length + worn.length < 3) continue;
+      let need = 2;
+      if (worn.length) { worn[0].item = id + '+'; for (const x of [...loose, ...worn.slice(1)]) { if (!need) break; if (x.kind === 'item') run.things.splice(run.things.indexOf(x), 1); else x.item = null; need--; } }
+      else { loose[0].id = id + '+'; for (const x of loose.slice(1, 3)) run.things.splice(run.things.indexOf(x), 1); }
+      made.push(id + '+'); run.acts.push('upgrade item ' + id); again = true; break;
+    }
+  }
+  return made;
+}
+function equip(run, item, unit) {
+  run.acts.push('equip ' + item.id + ' > ' + unit.id);
+  if (unit.item) { const old = unit.item; unit.item = item.id; item.id = old; }
+  else { unit.item = item.id; run.things.splice(run.things.indexOf(item), 1); }
+}
+/* Where a unit dropped on a board slot lands, and which neighbours slide aside to make room. Its left edge goes to the slot.
+   Neighbours shift right, or left when there is no room on the right; a unit moved along the board lets them slide into the gap it leaves. */
+function planMove(run, t, slot) {
+  if (!t || t.kind !== 'unit') return null;
+  const size = U[t.id].size, open = openArr(openCount(run.level)), lo = open.indexOf(true), hi = open.lastIndexOf(true);
+  if (hi - lo + 1 < size) return null;
+  const s = Math.max(lo, Math.min(slot, hi - size + 1)), others = boardUnits(run).filter(x => x !== t).sort((a, b) => a.slot - b.slot);
+  const right = () => { const mv = []; let c = s + size; for (const x of others) { if (x.slot + U[x.id].size <= s) continue; const to = Math.max(x.slot, c); if (to !== x.slot) mv.push({ x, to }); c = to + U[x.id].size; } return c <= hi + 1 ? mv : null; };
+  const left = () => { const mv = []; let c = s; for (const x of others.slice().reverse()) { if (x.slot >= s + size) continue; const to = Math.min(x.slot, c - U[x.id].size); if (to !== x.slot) mv.push({ x, to }); c = to; } return c >= lo ? mv : null; };
+  for (const f of t.slot != null && t.slot < s ? [left, right] : [right, left]) { const mv = f(); if (mv) return { slot: s, moves: mv }; }
+  return null;
+}
+/* what moveTo would do, without doing it: null, or where everything ends up */
+function tryMove(run, t, dest) {
+  const before = run.things.map(x => [x, x.slot, x.bench]);
+  const ok = moveTo(run, t, dest), out = ok ? { slot: t.slot, bench: t.bench, moves: before.filter(b => b[0] !== t && (b[0].slot !== b[1] || b[0].bench !== b[2])).map(b => ({ uid: b[0].uid, from: b[1], to: b[0].slot })) } : null;
+  for (const b of before) { b[0].slot = b[1]; b[0].bench = b[2]; }
+  return out;
+}
+/* dest = {slot} or {bench}. Board drops push neighbours aside; failing that, swap when the swap fits. */
+function moveTo(run, t, dest) {
+  const old = { slot: t.slot, bench: t.bench };
+  const fits = (x, s, ignore) => { const o = occOf(run, ignore); if (s < 0 || s + U[x.id].size > SLOTS) return false; for (let i = 0; i < U[x.id].size; i++) if (o[s + i]) return false; return true; };
+  if (dest.bench != null) {
+    const other = run.things.find(x => x.bench === dest.bench && x !== t);
+    if (other) {
+      if (old.slot != null) { if (other.kind !== 'unit') return false; let s = Math.min(old.slot, SLOTS - U[other.id].size); if (!fits(other, s, [t, other])) return false; other.bench = null; other.slot = s; }
+      else other.bench = old.bench;
+    }
+    t.slot = null; t.bench = dest.bench; return true;
+  }
+  if (t.kind !== 'unit') return false;
+  const P = planMove(run, t, dest.slot);
+  if (P) { for (const m of P.moves) m.x.slot = m.to; t.slot = P.slot; t.bench = null; return true; }
+  const size = U[t.id].size, o = occOf(run, [t]), over = [];
+  let s = -1;
+  for (let k = 0; k < size && s < 0; k++) { const c = dest.slot - k; if (c < 0 || c + size > SLOTS) continue; let ok = true; for (let i = 0; i < size; i++) if (o[c + i] === LOCK) ok = false; if (ok) s = c; }
+  if (s < 0) return false;
+  for (let i = 0; i < size; i++) if (o[s + i] && !over.includes(o[s + i])) over.push(o[s + i]);
+  if (!over.length) { t.slot = s; t.bench = null; return true; }
+  if (over.length > 1) return false;
+  const x = over[0];
+  if (old.slot != null) {
+    // swap on board: try both orderings so different sizes can trade places
+    const a = Math.min(s, old.slot), tFirst = s <= old.slot;
+    const cands = tFirst ? [[s, Math.max(old.slot, s + size)], [a, a + size]] : [[s, old.slot], [old.slot + U[x.id].size, old.slot]];
+    for (const [ts, xs] of cands) {
+      const xs2 = Math.min(xs, SLOTS - U[x.id].size), ts2 = Math.min(ts, SLOTS - size);
+      const oo = occOf(run, [t, x]); let ok = ts2 >= 0 && xs2 >= 0;
+      for (let i = 0; i < size && ok; i++) if (oo[ts2 + i]) ok = false;
+      for (let i = 0; i < U[x.id].size && ok; i++) if (oo[xs2 + i]) ok = false;
+      if (ok && (ts2 + size <= xs2 || xs2 + U[x.id].size <= ts2)) { t.slot = ts2; x.slot = xs2; return true; }
+    }
+    return false;
+  }
+  if (!fits(t, s, [t, x])) return false;
+  x.slot = null; x.bench = old.bench; t.bench = null; t.slot = s; return true;
+}
+function buyXp(run) { if (run.level >= 9 || run.gold < 4) return false; run.gold -= 4; addXp(run, 4); run.acts.push('xp'); return true; }
+function addXp(run, n) { run.xp += n; while (run.level < 9 && run.xp >= XPNEED[run.level - 1]) { run.xp -= XPNEED[run.level - 1]; run.level++; } if (run.level >= 9) run.xp = 0; }
+function reroll(run) { if (run.freeRoll) run.freeRoll = false; else { if (run.gold < 2) return false; run.gold -= 2; } rollShop(run); run.acts.push('reroll'); return true; }
+const brief = t => { const o = { id: t.id }; if (t.scale) o.scale = Math.round(t.scale * 100) / 100; if (t.tier > 1) o.tier = t.tier; if (t.slot != null) o.slot = t.slot; if (t.item) o.item = t.item; if (t.gAtk) o.gAtk = t.gAtk; if (t.gHp) o.gHp = t.gHp; return o; };
+const bopt = run => ({ leader: run.leader, relics: run.relics, foeLeader: run.enemy.leader || null, foeRelics: run.enemy.relics || [], foeMul: run.enemy.mul || 1 });
+/* BALANCE goes up with every rules change. Boards saved under rules older than GHOST_FROM are no longer used as post-game opponents. */
+const BALANCE = 7, GHOST_FROM = 1, POSTSTEP = .15;
+/* the board a saved winning run finished its tenth win with, checked against today's units and items */
+function ghostFrom(x, key) {
+  try {
+    if (!x || x.game !== 'warband' || x.outcome !== 'won' || (x.bal || 1) < GHOST_FROM) return null;
+    const e = x.log.filter(r => !r.post && r.result === 'win').pop(); if (!e || !e.board || !e.board.length) return null;
+    const n = Math.max(4, Math.min(SLOTS, e.slots || openCount(e.level || 9))), open = openArr(n), occ = Array(SLOTS).fill(0), units = [];
+    for (const b of e.board) {
+      const d = U[b.id]; if (!d || d.token || d.f !== x.faction) return null;
+      if (b.item && !ITEMS[b.item]) return null;
+      if (!(b.slot >= 0) || b.slot + d.size > SLOTS) return null;
+      for (let i = 0; i < d.size; i++) { if (occ[b.slot + i] || !open[b.slot + i]) return null; occ[b.slot + i] = 1; }
+      units.push({ id: b.id, tier: Math.max(1, Math.min(3, b.tier || 1)), slot: b.slot, item: b.item || null, gAtk: +b.gAtk || 0, gHp: +b.gHp || 0 });
+    }
+    const power = units.reduce((s, o) => { const t = stats(o); return s + Math.sqrt(t.hp * Math.max(1, t.atk)); }, 0);
+    return { key: String(key || x.ended), faction: x.faction, leader: LEADERS[x.leader] ? x.leader : null, relics: (x.relics || []).filter(k => RELICS[k]), units, open: n, round: e.round, power: Math.round(power) };
+  } catch (err) { return null; }
+}
+/* order saved boards by how they actually fare against each other: a quick round-robin under today's rules */
+function rankGhosts(pool) {
+  if (pool.length < 2) return pool;
+  const per = pool.length > 12 ? 1 : 2, w = pool.map(() => 0);
+  const bout = (a, b) => { const B = createBattle(a.units.map(x => Object.assign({}, x)), b.units.map(x => Object.assign({}, x)), 13, a.open, b.open, { leader: a.leader, relics: a.relics, foeLeader: b.leader, foeRelics: b.relics }); let n = 0; while (!B.over && n++ < 3000) { step(B, .05); B.ev.length = 0; } return B.winner; };
+  for (let i = 0; i < pool.length; i++) for (let j = 0; j < pool.length; j++) if (i !== j) for (let k = 0; k < per; k++) { const r = bout(pool[i], pool[j]); if (r === 0) w[i]++; else if (r === 1) w[j]++; }
+  pool.forEach((g, i) => { g.rank = w[i] / ((pool.length - 1) * per * 2); });
+  return pool;
+}
+function nextFoe(run) {
+  const P = run.post, mul = Math.round((1 + POSTSTEP * P.n) * 100) / 100;
+  let pool = P.pool.filter(g => !P.faced.includes(g.key));
+  if (!pool.length && P.pool.length) { P.faced = []; pool = P.pool.slice(); }
+  if (pool.length) {
+    const g = pool.sort((a, b) => (a.rank == null ? 0 : a.rank) - (b.rank == null ? 0 : b.rank) || a.power - b.power)[0]; P.faced.push(g.key);
+    return { faction: g.faction, units: g.units.map(o => Object.assign({ uid: UID++, kind: 'unit' }, o)), open: g.open, leader: g.leader, relics: g.relics, mul, ghost: g.key, title: 'Your past warband' + (g.leader ? ' under ' + LEADERS[g.leader].name.replace('The ', 'the ') : '') };
+  }
+  const e = genEnemy(run.round, SLOTS, true); e.mul = mul; return e;
+}
+/* after the tenth win: keep the board and fight past winning boards, each stronger than the last, until the lives run out */
+function continueRun(run, ghosts) {
+  if (run.over !== 'won' || run.post) return false;
+  run.post = { n: 0, faced: [], pool: rankGhosts((ghosts || []).filter(Boolean)) };
+  run.over = null; run.saved = false; run.offer = null; run.lives = Math.max(run.lives, 3);
+  const last = run.log[run.log.length - 1]; run.gold += last ? last.income : 0;
+  run.round++; addXp(run, 2 + (has(run, 'scholar') ? 2 : 0)); run.freeRoll = has(run, 'seal'); rollShop(run); run.enemy = nextFoe(run);
+  return true;
+}
+function startBattle(run) {
+  const bu = boardUnits(run).filter(t => !occOf(run, [t]).slice(t.slot, t.slot + U[t.id].size).includes(LOCK)), lv = synergy(bu).lv, on = {};
+  for (const k in lv) if (lv[k]) on[k] = lv[k];
+  run.pending = { round: run.round, gold: run.gold, level: run.level, slots: openCount(run.level), lives: run.lives, wins: run.wins, acts: run.acts, bonuses: on,
+    board: bu.map(brief).sort((a, b) => a.slot - b.slot), bench: run.things.filter(t => t.slot == null).map(brief),
+    enemy: { faction: run.enemy.faction, slots: run.enemy.open, units: run.enemy.units.map(brief).sort((a, b) => a.slot - b.slot) } };
+  run.acts = [];
+  if (run.lastEnc) { run.pending.encounter = run.lastEnc; run.lastEnc = null; }
+  if (run.enemy.title) run.pending.enemy.title = run.enemy.title;
+  if (run.post) { run.pending.post = run.post.n + 1; if (run.enemy.ghost) Object.assign(run.pending.enemy, { ghost: run.enemy.ghost, leader: run.enemy.leader, relics: run.enemy.relics }); run.pending.enemy.mul = run.enemy.mul; }
+  return createBattle(bu, run.enemy.units, run.round, openCount(run.level), run.enemy.open, bopt(run));
+}
+function battleReport(B) {
+  const R = v => Math.round(v);
+  return { time: Math.round(B.time * 10) / 10, sudden: !!B.sudden, heroHp: [R(Math.max(0, B.hero[0].hp)), R(Math.max(0, B.hero[1].hp))], heroMax: B.hero[0].max, effects: { you: { rot: R(B.fx[0].rot), burn: R(B.fx[0].burn) }, enemy: { rot: R(B.fx[1].rot), burn: R(B.fx[1].burn) } },
+    units: B.units.map(u => { const o = { side: u.side ? 'enemy' : 'you', id: u.d.id, slot: u.slot, dealt: R(u.dealt), hero: R(u.heroDmg), taken: R(u.taken) };
+      if (u.m > 1) o.tier = u.m === 4 ? 3 : 2; if (u.healed >= 1) o.healed = R(u.healed); if (u.summoned) o.summoned = 1; if (u.merged) o.merged = u.merged; if (u.waited) o.waited = u.waited; if (u.flanks) o.flanks = u.flanks; if (u.died != null) o.died = u.died; else o.hpLeft = R(u.hp); return o; }) };
+}
+function exportLog(run) { return { v: 1, game: 'warband', bal: BALANCE, post: run.post ? run.post.n : undefined, ended: new Date().toISOString(), faction: run.faction, leader: run.leader, relics: run.relics, outcome: run.over || 'abandoned', wins: run.wins, lives: run.lives, rounds: run.log.length, log: run.log }; }
+function finishBattle(run, B) {
+  const res = B.winner === 0 ? 'win' : B.winner === 1 ? 'loss' : 'draw';
+  if (res === 'win') { run.wins++; if (run.post) run.post.n++; } else if (res === 'loss') run.lives--;
+  const grown = [];
+  const bu = boardUnits(run), tree = bu.some(t => U[t.id].doubleGrow) ? .5 : 0;
+  for (const t of bu) {
+    const d = U[t.id], m = Math.pow(2, t.tier - 1); let a = 0, h = 0;
+    if (d.grow) { a += d.grow[0] * m; h += d.grow[1] * m; }
+    for (const n of bu) if (n !== t && U[n.id].mentor && (n.slot + U[n.id].size === t.slot || t.slot + d.size === n.slot) && !d.building) { const nm = Math.pow(2, n.tier - 1); a += U[n.id].mentor[0] * nm; h += U[n.id].mentor[1] * nm; }
+    if (has(run, 'seedling') && !d.building) { a += 1; h += 3; }
+    const gk = 1 + tree + (run.leader === 'grovekeeper' ? .5 : 0);
+    if (a || h) { t.gAtk += Math.round(a * gk); t.gHp += Math.round(h * gk); grown.push(t); }
+  }
+  for (const t of bu) if (U[t.id].bless) { const c = bu.filter(x => x !== t && !U[x.id].building); if (c.length) { const x = rnd(c), m = Math.pow(2, t.tier - 1); x.gAtk += U[t.id].bless[0] * m; x.gHp += U[t.id].bless[1] * m; if (!grown.includes(x)) grown.push(x); } }
+  const inc = income(run) + (res === 'win' ? 1 : 0);
+  run.log.push(Object.assign(run.pending || { round: run.round }, { result: res, income: inc, battle: battleReport(B) })); run.pending = null;
+  if (run.lives <= 0) { run.over = run.post ? 'won' : 'lost'; if (run.post) run.post.done = true; } else if (run.wins >= MAXWINS && !run.post) run.over = 'won';
+  const beatBoss = res === 'win' && run.enemy.boss;
+  if (!run.over) { run.gold += inc; run.round++; addXp(run, 2 + (has(run, 'scholar') ? 2 : 0)); run.freeRoll = has(run, 'seal'); rollShop(run); run.enemy = run.post ? nextFoe(run) : genEnemy(run.round, openCount(run.level)); run.offer = run.post ? null : genOffer(run, beatBoss); }
+  return { res, income: inc, grown: grown.length };
+}
+
+const LEADERS = {
+  quartermaster: { f: 'H', name: 'The Quartermaster', art: 'crossbow', text: 'Items appear in your shop twice as often and cost 1 less.' },
+  marshal: { f: 'H', name: 'The Marshal', art: 'captain', text: 'Your Full party bonus is doubled to +30% health and attack.' },
+  warden: { f: 'H', name: 'The Warden', art: 'knight', text: 'Your leftmost and rightmost units have +50% health.' },
+  grovekeeper: { f: 'E', name: 'The Grovekeeper', art: 'treant', text: 'Your units grow 50% more after each battle.' },
+  architect: { f: 'E', name: 'The Architect', art: 'sunspire', text: 'Buildings cost 1 less and have double health. Allies beside a building have +20% attack.' },
+  bladesinger: { f: 'E', name: 'The Bladesinger', art: 'assassin', text: 'Your highest-attack unit attacks 30% faster.' },
+  gravecaller: { f: 'U', name: 'The Gravecaller', art: 'necromancer', text: 'Your summons arrive with a shield worth 75% of their health.' },
+  bloodpriest: { f: 'U', name: 'The Blood Priest', art: 'bloodcultist', text: 'Whenever one of your own units dies, your others gain 8% attack. Summons do not count.' },
+  plaguefather: { f: 'U', name: 'The Plaguefather', art: 'plague', text: 'Every enemy starts with 1 Rot, and Rot deals 25% more damage.' }
+};
+const RELICS = {
+  whetstone: { name: 'Whetstone', text: 'Your leftmost unit attacks 50% faster.' },
+  bulwark: { name: 'Bulwark Plate', text: 'Your rightmost unit has +50% health.' },
+  wardrum: { name: 'War Drum', text: 'All your units have +10% attack.' },
+  font: { name: 'Healing Font', text: 'Your units regenerate 1% of their health each second.' },
+  aegis: { name: 'Hero\'s Aegis', text: 'Your hero takes 20% less damage.' },
+  banner: { name: 'Vanguard Banner', text: 'Your units make their first attack twice as soon.' },
+  belt: { name: 'Giant\'s Belt', text: 'Your units wider than one slot have +25% health and attack.' },
+  coin: { name: 'Lucky Coin', text: '+1 gold every round.' },
+  seal: { name: 'Merchant\'s Seal', text: 'Your first reroll each round is free.' },
+  scholar: { name: 'Scholar\'s Tome', text: '+2 extra XP every round.' },
+  armoury: { name: 'Armoury Key', f: 'H', text: 'Your units without an item have +15% health.' },
+  seedling: { name: 'Elder Seedling', f: 'E', text: 'Your units grow an extra +1 attack and +3 health after each battle.' },
+  bell: { name: 'Summoner\'s Bell', f: 'U', text: 'Start each battle with a Bone Minion in an empty slot.' }
+};
+const freeRelics = run => Object.keys(RELICS).filter(k => !run.relics.includes(k) && (!RELICS[k].f || RELICS[k].f === run.faction));
+function genCamp(round, maxSlots, hard) {
+  const n = Math.max(3, Math.min(maxSlots || SLOTS, 3 + Math.floor(round / 2))), open = openArr(maxSlots), kind = rnd(['wolves', 'bandits', 'ogre']), units = [], occ = Array(SLOTS).fill(0);
+  const sc = Math.pow((hard ? .95 : .6) * budget(round) / n, .7);
+  const put = id => { const sz = U[id].size, s = ORDER.find(s0 => { if (s0 + sz > SLOTS) return false; for (let i = 0; i < sz; i++) if (occ[s0 + i] || !open[s0 + i]) return false; return true; }); if (s === undefined) return false; for (let i = 0; i < sz; i++) occ[s + i] = 1; units.push(monster(id, s, sc)); return true; };
+  if (kind === 'ogre') put('ogre');
+  while (occ.filter(Boolean).length < n) { const id = kind === 'wolves' ? 'wolf' : kind === 'bandits' ? (units.length % 3 === 2 ? 'shaman' : 'bandit') : 'wolf'; if (!put(id)) break; }
+  return { units, open: maxSlots, name: kind === 'wolves' ? 'Wolf pack' : kind === 'bandits' ? 'Bandit camp' : 'Ogre den' };
+}
+const EVENTS = {
+  purse: { name: 'Lost purse', text: run => `Gain ${3 + Math.floor(run.round / 3)} gold.`, go: run => { const g = 3 + Math.floor(run.round / 3); run.gold += g; return `You gained ${g} gold.`; } },
+  training: { name: 'Training ground', text: () => 'Gain 4 XP.', go: run => { addXp(run, 4); return 'You gained 4 XP.'; } },
+  recruit: { name: 'Veteran for hire', text: () => 'A unit costing 3 or more joins you for free.', go: run => { let id = rollUnit(run.faction, Math.min(9, run.level + 3)); for (let i = 0; i < 40 && U[id].cost < 3; i++) id = rollUnit(run.faction, Math.min(9, run.level + 3)); if (U[id].cost < 3) id = rnd(POOL[run.faction][3]); return grant(run, id); } },
+  drill: { name: 'Drill sergeant', text: () => 'A random tier-1 unit on your board that costs 3 or less is upgraded to tier 2.', ok: run => run.round >= 4 && run.round - (run.drillSeen || -9) >= 2 && boardUnits(run).some(t => t.tier === 1 && U[t.id].cost <= 3),
+    go: run => { const t = rnd(boardUnits(run).filter(x => x.tier === 1 && U[x.id].cost <= 3)); t.tier = 2; t.gAtk *= 2; t.gHp *= 2; mergeAll(run); return `${U[t.id].name} was upgraded to tier 2.`; } },
+  armourer: { f: 'H', name: 'Travelling armourer', text: () => 'Gain a random item.', ok: run => benchFree(run) >= 0, go: run => { const id = rnd(BASE_ITEMS); run.things.push({ uid: UID++, kind: 'item', id, bench: benchFree(run), slot: null }); mergeItems(run); return `You received a ${ITEMS[id].name}.`; } },
+  glade: { f: 'E', name: 'Moonlit glade', text: () => 'Every unit on your board grows as if it had just fought a battle.', ok: run => boardUnits(run).some(t => U[t.id].grow),
+    go: run => { let k = 0; for (const t of boardUnits(run)) { const d = U[t.id], m = Math.pow(2, t.tier - 1); if (d.grow) { t.gAtk += d.grow[0] * m; t.gHp += d.grow[1] * m; k++; } } return `${k} unit${k === 1 ? '' : 's'} grew stronger.`; } },
+  grave: { f: 'U', name: 'Mass grave', text: () => 'Two Skeletons claw their way out and join you.', go: run => { grant(run, 'skeleton'); return grant(run, 'skeleton') && 'Two Skeletons joined you.'; } }
+};
+function grant(run, id) {
+  const t = { uid: UID++, kind: 'unit', id, tier: 1, item: null, gAtk: 0, gHp: 0, slot: null, bench: null };
+  run.things.push(t); mergeAll(run);
+  if (run.things.includes(t) && !place(run, t)) { run.things.splice(run.things.indexOf(t), 1); run.gold += U[id].cost; return `No room for ${U[id].name}, so you took ${U[id].cost} gold instead.`; }
+  return `${U[id].name} joined you.`;
+}
+function genOffer(run, beatBoss) {
+  if (beatBoss) { const pool = freeRelics(run).sort(() => Math.random() - .5).slice(0, 3); if (pool.length) return { kind: 'relics', cards: pool.map(k => ({ type: 'relic', relic: k })) }; }
+  const slots = openCount(run.level), round = run.round, cards = [];
+  const camp = hard => { const c = genCamp(round, slots, hard), rel = hard ? rnd(freeRelics(run)) : null, gold = (hard ? 5 : 2) + Math.floor(round / 3);
+    return Object.assign(c, { type: 'camp', hard, reward: rel ? { relic: rel } : !hard && Math.random() < .35 ? { unit: rollUnit(run.faction, Math.min(9, run.level + 1)) } : { gold } }); };
+  const evs = Object.keys(EVENTS).filter(k => (!EVENTS[k].f || EVENTS[k].f === run.faction) && (!EVENTS[k].ok || EVENTS[k].ok(run))).sort(() => Math.random() - .5);
+  cards.push(camp(false)); cards.push({ type: 'event', id: evs[0] });
+  const x = Math.random(), fr = freeRelics(run);
+  if (x < .45) cards.push(camp(true)); else if (x < .65 && run.lives > 1 && fr.length) cards.push({ type: 'shrine', relic: rnd(fr) }); else cards.push({ type: 'event', id: evs[1] });
+  if (cards.some(c => c.id === 'drill')) run.drillSeen = run.round;
+  return { kind: 'encounter', cards };
+}
+/* returns { msg } when resolved on the spot, or { fight: true } when a camp battle must be played */
+function chooseOffer(run, i) {
+  const c = run.offer && run.offer.cards[i]; if (!c) return null;
+  run.offer = null;
+  if (c.type === 'camp') { run.camp = c; return { fight: true }; }
+  let msg = '';
+  if (c.type === 'event') { msg = EVENTS[c.id].go(run); run.lastEnc = { pick: EVENTS[c.id].name }; }
+  else if (c.type === 'relic') { run.relics.push(c.relic); msg = `You took the ${RELICS[c.relic].name}.`; run.lastEnc = { pick: 'relic ' + c.relic }; }
+  else if (c.type === 'shrine') { run.lives--; run.relics.push(c.relic); msg = `You gave a life and took the ${RELICS[c.relic].name}.`; run.lastEnc = { pick: 'shrine ' + c.relic }; }
+  if (has(run, 'seal') && c.relic === 'seal') run.freeRoll = true;
+  return { msg };
+}
+function startCamp(run) { return createBattle(boardUnits(run), run.camp.units, run.round, openCount(run.level), run.camp.open, { leader: run.leader, relics: run.relics }); }
+function finishCamp(run, B) {
+  const c = run.camp, win = B.winner === 0; let msg = 'You were driven off and gained nothing.';
+  if (win) { const rw = c.reward; if (rw.relic) { run.relics.push(rw.relic); msg = `You found the ${RELICS[rw.relic].name}.`; if (rw.relic === 'seal') run.freeRoll = true; } else if (rw.unit) msg = grant(run, rw.unit); else { run.gold += rw.gold; msg = `You took ${rw.gold} gold.`; } }
+  run.lastEnc = { pick: (c.hard ? 'hard ' : '') + c.name, won: win, time: Math.round(B.time * 10) / 10 };
+  run.camp = null;
+  return { win, msg };
+}
+function restore(run) { for (const t of run.things.concat(run.enemy ? run.enemy.units : [])) UID = Math.max(UID, t.uid + 1); if (!run.log) run.log = []; if (!run.acts) run.acts = []; if (!run.relics) run.relics = []; if (run.camp) for (const t of run.camp.units) UID = Math.max(UID, t.uid + 1); return run; }
+function preview(run, uid) {
+  const bu = boardUnits(run), B = createBattle(bu, run.enemy.units, run.round, openCount(run.level), run.enemy.open, bopt(run));
+  const u = B.units.find(x => x.side === 0 && x.o.uid === uid);
+  if (!u || u.d.building || !(u.atk > 0)) return null;
+  const A = aim(B, u), ts = u.d.all ? foes(B, 0) : A.ts;
+  return { to: ts.map(x => x.o.uid).filter(x => x != null), names: ts.map(x => x.d.name), hero: !ts.length, diag: A.diag };
+}
+/* which way a unit is aiming: 'l' / 'r' diagonal, 'c' straight ahead, 'h' the hero, '' for units that do not attack */
+function aimDir(B, u) {
+  if (u.d.building || !(u.atk > 0)) return '';
+  const A = aim(B, u); if (!A.ts.length) return 'h';
+  if (u.d.all || A.ts.length > 1) return 'c';
+  const t = A.ts[0]; return t.slot + t.size <= u.slot ? 'l' : t.slot >= u.slot + u.size ? 'r' : 'c';
+}
+function previewAll(run) {
+  const B = createBattle(boardUnits(run), run.enemy.units, run.round, openCount(run.level), run.enemy.open, bopt(run)), out = {};
+  for (const u of B.units) if (u.o.uid != null) out[u.o.uid] = aimDir(B, u);
+  return out;
+}
+const api = { rankGhosts, planMove, tryMove, BALANCE, ghostFrom, continueRun, nextFoe, POSTSTEP, BASE_ITEMS, mergeItems, itemValue, LEADERS, RELICS, EVENTS, priceOf, genOffer, chooseOffer, startCamp, finishCamp, genCamp, genBoss, has, restore, preview, aim, aimDir, previewAll, interest, toggleFreeze, openCount, openArr, effAtk, enemyLevel, LOCK, exportLog, battleReport, SLOTS, BENCH, SUDDEN, MAXWINS, LIVES, ODDS, XPNEED, FACTIONS, TRIBES, ITEMS, U, POOL, stats, synergy, heroHp, createBattle, step, newRun, buy, sell, sellValue, equip, moveTo, buyXp, reroll,
+  startBattle, finishBattle, boardUnits, occOf, boardFit, benchFree, genEnemy, income, mergeAll, budget };
+if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.WB = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* Placeholder SVG art: one distinct drawing per unit, built from a small figure kit. */
+(function (root) {
+'use strict';
+const STEEL = '#b4bec7', GOLD = '#e0b040', WOOD = '#7a5a34', BONE = '#e6e0cc', DARK = '#15181b';
+const HATS = {
+  helm: c => `<path d="M22 23a10 10 0 0 1 20 0v3h-20z" fill="${c}"/><rect x="31" y="20" width="2" height="10" fill="${c}"/>`,
+  great: c => `<rect x="22.5" y="12" width="19" height="21" rx="4" fill="${c}"/><rect x="26" y="21" width="12" height="2.6" fill="${DARK}"/><path d="M32 12q2-9 10-8q-6 2-7 8z" fill="#c23b3b"/>`,
+  hood: c => `<path d="M19 30Q18 8 32 8Q46 8 45 30L41 25Q32 12 23 25z" fill="${c}"/>`,
+  wizard: c => `<path d="M18 17h28l-4-3L34-1 22 14z" fill="${c}"/><rect x="22" y="13" width="20" height="2.4" fill="${GOLD}"/>`,
+  mitre: c => `<path d="M24.5 16L32 1l7.5 15z" fill="${c}"/><rect x="31" y="6" width="2" height="8" fill="${GOLD}"/><rect x="28.5" y="9" width="7" height="2" fill="${GOLD}"/>`,
+  crown: c => `<path d="M23 15V7l4.5 4L32 5l4.5 6L41 7v8z" fill="${c}"/>`,
+  horns: c => `<path d="M25 17Q15 14 16 3Q21 11 28 13zM39 17Q49 14 48 3Q43 11 36 13z" fill="${c}"/>`,
+  cap: c => `<path d="M21 19Q31 5 44 16l-2 3z" fill="${c}"/><path d="M40 14L51 3l-6 14z" fill="#d8443a"/>`,
+  circlet: c => `<rect x="22.5" y="16" width="19" height="2.6" fill="${GOLD}"/><circle cx="32" cy="17" r="2.4" fill="${c}"/>`,
+  hair: c => `<path d="M22 25Q19 9 32 10Q45 9 42 25l4 17-6-11V21q-8-6-16 0v10l-6 11z" fill="${c}"/>`,
+  leaves: c => `<circle cx="24" cy="13" r="6" fill="${c}"/><circle cx="33" cy="9" r="7" fill="${c}"/><circle cx="41" cy="14" r="5.5" fill="${c}"/>`
+};
+const WPN = {
+  sword: c => `<path d="M48.5 48V18l2-5 2 5v30z" fill="${c || STEEL}"/><rect x="44.5" y="46" width="12" height="3" rx="1" fill="${GOLD}"/><rect x="49.3" y="49" width="2.4" height="6" fill="${WOOD}"/>`,
+  dagger: c => `<path d="M49 46V30l1.7-4 1.7 4v16z" fill="${c || STEEL}"/><rect x="46.5" y="45" width="8.5" height="2.4" fill="${GOLD}"/><path d="M12 46V30l1.7-4 1.7 4v16z" fill="${c || STEEL}"/><rect x="9.5" y="45" width="8.5" height="2.4" fill="${GOLD}"/>`,
+  staff: c => `<rect x="49" y="13" width="2.6" height="49" fill="${WOOD}"/><circle cx="50.3" cy="11" r="5.5" fill="${c}"/><circle cx="48.8" cy="9.5" r="1.8" fill="#fff" opacity=".7"/>`,
+  bow: c => `<path d="M47 12Q63 32 47 54" fill="none" stroke="${c || WOOD}" stroke-width="3" stroke-linecap="round"/><path d="M47 12V54" stroke="#ddd" stroke-width="1"/><path d="M38 33h17l-3-2.5m3 2.5l-3 2.5" stroke="#ddd" stroke-width="1.4" fill="none"/>`,
+  xbow: () => `<rect x="36" y="41" width="24" height="3.4" fill="${WOOD}"/><path d="M55 30Q63 43 55 56" fill="none" stroke="${STEEL}" stroke-width="3"/><path d="M55 30V56" stroke="#ddd" stroke-width="1"/>`,
+  mace: c => `<rect x="49" y="22" width="2.6" height="34" fill="${WOOD}"/><circle cx="50.3" cy="18" r="6" fill="${c || STEEL}"/><path d="M50.3 9v4m-8 5h4m12 0h-4" stroke="${c || STEEL}" stroke-width="2.4"/>`,
+  scythe: c => `<rect x="49" y="8" width="2.6" height="54" fill="${WOOD}"/><path d="M51 9Q33 4 25 17Q38 11 51 16z" fill="${c || STEEL}"/>`,
+  spade: () => `<rect x="49" y="12" width="2.6" height="38" fill="${WOOD}"/><path d="M45 48h11v8q-5.5 6-11 0z" fill="${STEEL}"/>`,
+  banner: c => `<rect x="49" y="6" width="2.4" height="56" fill="${WOOD}"/><path d="M51.4 8h11l-3 6 3 6h-11z" fill="${c}"/>`,
+  book: c => `<rect x="43" y="40" width="14" height="11" rx="1.5" fill="${c}"/><rect x="49.3" y="40" width="1.4" height="11" fill="${GOLD}"/>`
+};
+function fig(o) {
+  const skin = o.skin || '#e3b890', b = o.body, d = o.dark || '#0006';
+  let s = '';
+  if (o.wings) s += `<path d="M23 37L1 18l5 27 15 3zM41 37L63 18l-5 27-15 3z" fill="${o.wings}"/>`;
+  if (o.cloak) s += `<path d="M13 62l8-30h22l8 30z" fill="${o.cloak}"/>`;
+  if (o.hat === 'hair' || o.hat === 'hood') s += HATS[o.hat](o.hatc);
+  if (o.robe) s += `<path d="M22 34h20l6 28H16z" fill="${b}"/><path d="M31 34h2v28h-2z" fill="${d}"/>`;
+  else s += `<rect x="21" y="34" width="22" height="19" rx="3" fill="${b}"/><rect x="23" y="52" width="7.5" height="10" rx="1.5" fill="${b}"/><rect x="33.5" y="52" width="7.5" height="10" rx="1.5" fill="${b}"/><rect x="21" y="48" width="22" height="3" fill="${d}"/>`;
+  s += `<rect x="14.5" y="35" width="6.5" height="17" rx="3.2" fill="${b}"/><rect x="43" y="35" width="6.5" height="17" rx="3.2" fill="${b}"/>`;
+  if (o.trim) s += `<path d="M26 34h12l-6 9z" fill="${o.trim}"/>`;
+  if (o.ears) s += `<path d="M24 21l-10-8 9 15zM40 21l10-8-9 15z" fill="${skin}"/>`;
+  s += `<circle cx="32" cy="23" r="9.5" fill="${skin}"/>`;
+  if (o.skull) s += `<circle cx="28.3" cy="22.5" r="2.7" fill="${DARK}"/><circle cx="35.7" cy="22.5" r="2.7" fill="${DARK}"/><path d="M27 29h10M29.5 27.5v3.5M32 27.5v3.5M34.5 27.5v3.5" stroke="${DARK}" stroke-width="1.1"/>`;
+  else s += `<rect x="27.2" y="21.5" width="2.6" height="3" rx="1" fill="${o.eyes || DARK}"/><rect x="34.2" y="21.5" width="2.6" height="3" rx="1" fill="${o.eyes || DARK}"/>`;
+  if (o.glow) s += `<circle cx="28.3" cy="22.5" r="1.3" fill="${o.glow}"/><circle cx="35.7" cy="22.5" r="1.3" fill="${o.glow}"/>`;
+  if (o.hat && o.hat !== 'hair' && o.hat !== 'hood') s += HATS[o.hat](o.hatc);
+  if (o.hat === 'hood') s += `<path d="M22 22Q23 12 32 12Q41 12 42 22Q32 15 22 22z" fill="${o.hatc}"/>`;
+  if (o.shield) s += `<path d="M6 33h19v13q-9.5 13-19 0z" fill="${o.shield}" stroke="${GOLD}" stroke-width="1.6"/><path d="M15.5 36v14M9 41h13" stroke="${GOLD}" stroke-width="1.6"/>`;
+  if (o.wpn) s += WPN[o.wpn](o.wc);
+  return s;
+}
+const quad = (c, eye) => `<path d="M14 38Q4 30 8 22Q10 32 17 36z" fill="${c}"/><ellipse cx="30" cy="40" rx="17" ry="9" fill="${c}"/><rect x="15" y="43" width="5.500" height="15" rx="2" fill="${c}"/><rect x="23" y="45" width="5.500" height="13" rx="2" fill="${c}"/><rect x="34" y="45" width="5.500" height="13" rx="2" fill="${c}"/><rect x="41" y="43" width="5.500" height="15" rx="2" fill="${c}"/><path d="M40 36L52 22l9 9-4 6-8 5z" fill="${c}"/><path d="M50 23l1-8 5 7z" fill="${c}"/><circle cx="54" cy="29" r="1.700" fill="${eye}"/><path d="M57 35l4-1-3 3z" fill="#fff"/>`;
+const big = s => `<g transform="translate(-6.4 -9) scale(1.2)">${s}</g>`;
+const small = s => `<g transform="translate(6.4 12) scale(.8)">${s}</g>`;
+const SK = { skull: 1, skin: BONE };
+const ELF = { ears: 1 };
+const UNITS = {
+  footman: fig({ body: '#4f6f9c', hat: 'helm', hatc: STEEL, shield: '#35527d', wpn: 'sword' }),
+  archer: fig({ body: '#5d7a3c', hat: 'cap', hatc: '#3f5a2a', wpn: 'bow' }),
+  apprentice: fig({ body: '#4b5fb0', robe: 1, hat: 'wizard', hatc: '#39489a', wpn: 'staff', wc: '#7fd0ff' }),
+  acolyte: fig({ body: '#e8e2d0', robe: 1, trim: GOLD, hat: 'hair', hatc: '#8a5a2b', wpn: 'mace', wc: GOLD }),
+  knight: big(fig({ body: STEEL, dark: '#0004', hat: 'great', hatc: '#c6ced5', shield: '#8c2f2f', wpn: 'sword' })),
+  crossbow: fig({ body: '#7a4a2e', hat: 'helm', hatc: '#8b949c', wpn: 'xbow' }),
+  firemage: fig({ body: '#b5402c', robe: 1, trim: GOLD, hat: 'wizard', hatc: '#8f2b1c', wpn: 'staff', wc: '#ff9a2e', eyes: '#ffb347' }),
+  priest: fig({ body: '#f1ecdd', robe: 1, trim: '#c23b3b', hat: 'mitre', hatc: '#f1ecdd', wpn: 'staff', wc: GOLD }),
+  captain: fig({ body: '#2f4f86', trim: GOLD, cloak: '#8c2f2f', hat: 'hair', hatc: '#3a2a1c', wpn: 'banner', wc: '#d8443a' }),
+  sharpshooter: fig({ body: '#39424a', cloak: '#2a3238', hat: 'hood', hatc: '#2a3238', wpn: 'bow', wc: '#c9c2a8' }),
+  paladin: big(fig({ body: '#d9c27a', dark: '#0003', trim: '#fff', hat: 'crown', hatc: GOLD, shield: '#f1ecdd', wpn: 'mace', wc: GOLD, cloak: '#f1ecdd' })),
+  archmage: big(fig({ body: '#6a3fa8', robe: 1, trim: GOLD, cloak: '#3d2470', hat: 'wizard', hatc: '#4d2c8a', wpn: 'staff', wc: '#e58cff', glow: '#e58cff' })),
+  scout: fig({ ...ELF, body: '#3f7d4a', hat: 'hair', hatc: '#c58a3a', wpn: 'bow' }),
+  sunaco: fig({ ...ELF, body: '#e3b23c', robe: 1, trim: '#fff', hat: 'circlet', hatc: '#ff7a2e', wpn: 'staff', wc: '#ffd34d' }),
+  drowblade: fig({ ...ELF, skin: '#6b6690', body: '#2d2440', hat: 'hair', hatc: '#e9e6f5', wpn: 'dagger', eyes: '#ff5c8a' }),
+  sentinel: fig({ ...ELF, body: '#8fa6c9', hat: 'helm', hatc: '#d6e0f0', shield: '#3d5688', wpn: 'sword', wc: '#d6e8ff' }),
+  treant: `<path d="M22 62l3-30-13-9 4-4 11 6 2-9h7l2 9 11-6 4 4-13 9 3 30z" fill="#6b4a2a"/><path d="M27 62V44M37 62V46" stroke="#4d341c" stroke-width="2"/><circle cx="20" cy="15" r="9" fill="#3f8a45"/><circle cx="33" cy="10" r="11" fill="#4c9c50"/><circle cx="46" cy="16" r="9" fill="#3f8a45"/><circle cx="28" cy="36" r="2.2" fill="#ffd34d"/><circle cx="37" cy="36" r="2.2" fill="#ffd34d"/><path d="M28 44q4.500 3 9 0" stroke="#2c1d10" stroke-width="2" fill="none"/>`,
+  altar: `<path d="M14 60h36l-4-10H18z" fill="#2a2238"/><path d="M18 50h28l-3-22H21z" fill="#3b2f52"/><path d="M16 28h32v-6H16z" fill="#57457a"/><path d="M32 20c-6-5-3-11 0-16c3 5 6 11 0 16z" fill="#c77dff"/><path d="M32 18c-3-3-1-6 0-9c1 3 3 6 0 9z" fill="#f3dcff"/><path d="M27 34l5 8l5-8M32 42v6" stroke="#c77dff" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="22" cy="25" r="1.5" fill="#c77dff"/><circle cx="42" cy="25" r="1.5" fill="#c77dff"/>`,
+  moonwell: `<ellipse cx="32" cy="50" rx="24" ry="9" fill="#77808c"/><ellipse cx="32" cy="47" rx="24" ry="9" fill="#9aa4b0"/><ellipse cx="32" cy="47" rx="18" ry="6" fill="#7fd8ff"/><ellipse cx="29" cy="46" rx="7" ry="2" fill="#e6f8ff" opacity=".8"/><path d="M36 8a12 12 0 1 0 8 20a10 10 0 1 1-8-20z" fill="#e6ecff"/><path d="M32 30v10M24 34v6M40 34v6" stroke="#bfeaff" stroke-width="1.6" stroke-dasharray="2 2"/>`,
+  sunspire: `<path d="M25 62l4-40h6l4 40z" fill="#e8dcc0"/><path d="M27 44h10M28 34h8" stroke="#b9a877" stroke-width="2"/><path d="M26 62h12v-9q-6-5-12 0z" fill="#8a6a2f"/><circle cx="32" cy="14" r="8" fill="#ffd34d"/><path d="M32 1v5M32 22v4M19 14h5M40 14h5M23 5l3.500 3.500M41 5l-3.500 3.500M23 23l3.500-3.500M41 23l-3.500-3.500" stroke="#ffb02e" stroke-width="2.2" stroke-linecap="round"/>`,
+  assassin: fig({ ...ELF, skin: '#5a557d', body: '#1e1a2b', cloak: '#3a1d4a', hat: 'hood', hatc: '#3a1d4a', wpn: 'dagger', wc: '#c9f', eyes: '#ff3d6e', glow: '#ff3d6e' }),
+  priestess: fig({ ...ELF, body: '#c7d3ee', robe: 1, trim: '#7f8fd0', hat: 'hair', hatc: '#e8ecff', wpn: 'staff', wc: '#bcd0ff', eyes: '#5a6fd0' }) + `<path d="M34 2a6 6 0 1 0 4 10a5 5 0 1 1-4-10z" fill="#e6ecff"/>`,
+  sunchamp: big(fig({ ...ELF, body: '#e0a82e', trim: '#fff3c4', cloak: '#c2452d', hat: 'hair', hatc: '#f4d98a', shield: '#c2452d', wpn: 'sword', wc: '#ffe9a0', eyes: '#c2452d' })),
+  matriarch: fig({ ...ELF, skin: '#6b6690', body: '#4a1f5c', robe: 1, trim: '#c9a0ff', hat: 'crown', hatc: '#c9a0ff', wpn: 'scythe', wc: '#d6c4ff', eyes: '#ff5c8a', cloak: '#2a1238' }),
+  worldtree: `<path d="M26 62q3-14 0-26l-10-8 3-3 9 5 2-8h4l2 8 9-5 3 3-10 8q-3 12 0 26z" fill="#7a5632"/><circle cx="16" cy="20" r="11" fill="#2f7a3c"/><circle cx="48" cy="20" r="11" fill="#2f7a3c"/><circle cx="32" cy="13" r="14" fill="#3f9a4c"/><circle cx="23" cy="10" r="8" fill="#55b560"/><circle cx="42" cy="9" r="7" fill="#55b560"/><circle cx="20" cy="22" r="2" fill="#ffd34d"/><circle cx="44" cy="17" r="2" fill="#ffd34d"/><circle cx="33" cy="6" r="2" fill="#ffd34d"/><circle cx="31" cy="24" r="2" fill="#ffd34d"/><path d="M14 62h36" stroke="#3f9a4c" stroke-width="3" stroke-linecap="round"/>`,
+  skeleton: fig({ ...SK, body: '#8f8a78', dark: '#0007', wpn: 'sword', wc: '#9aa39f' }),
+  ghoul: fig({ skin: '#8fae7a', body: '#4a4436', eyes: '#f4ff7a', glow: '#f4ff7a', hat: 'hair', hatc: '#3a3a2e' }) + `<path d="M28 28l1.500 3 1.500-3 1.500 3 1.500-3 1.500 3" stroke="#fff" stroke-width="1" fill="none"/><path d="M10 50l5-6 1 6 3-5v8zM54 50l-5-6-1 6-3-5v8z" fill="#8fae7a"/>`,
+  gravedigger: fig({ skin: '#c9c0a8', body: '#3d3a33', robe: 1, hat: 'cap', hatc: '#2a2824', wpn: 'spade' }),
+  initiate: fig({ skin: '#d6b9a0', body: '#7a2030', robe: 1, hat: 'hood', hatc: '#5a1422', wpn: 'dagger' }),
+  plague: fig({ skin: '#a9b86a', body: '#5a6a2a', robe: 1, hat: 'hood', hatc: '#3e4a1c', eyes: '#d8ff4d', wpn: 'staff', wc: '#b6e04a' }) + `<circle cx="10" cy="40" r="3" fill="#b6e04a" opacity=".7"/><circle cx="15" cy="30" r="2" fill="#b6e04a" opacity=".6"/><circle cx="9" cy="24" r="1.600" fill="#b6e04a" opacity=".5"/>`,
+  necromancer: fig({ skin: '#cfd6c4', body: '#2c2440', robe: 1, trim: '#7dffb0', hat: 'hood', hatc: '#1c1630', wpn: 'staff', wc: '#7dffb0', eyes: '#7dffb0', glow: '#7dffb0' }),
+  bloodcultist: fig({ skin: '#d6b9a0', body: '#a01c2c', robe: 1, trim: DARK, hat: 'horns', hatc: '#2a1216', wpn: 'scythe', wc: '#e0a0a0', eyes: '#ffdf5c' }),
+  banshee: `<path d="M17 62q-2-22 4-36a11.500 11.500 0 0 1 22 0q6 14 4 36l-5-6-5 6-5-6-5 6-5-6z" fill="#bfe9ef" opacity=".85"/><path d="M12 40q-6-2-8-10q6 4 10 2zM52 40q6-2 8-10q-6 4-10 2z" fill="#bfe9ef" opacity=".7"/><ellipse cx="27.500" cy="24" rx="2.800" ry="3.800" fill="${DARK}"/><ellipse cx="36.500" cy="24" rx="2.800" ry="3.800" fill="${DARK}"/><ellipse cx="32" cy="34" rx="3.500" ry="5.500" fill="${DARK}"/>`,
+  colossus: big(fig({ ...SK, body: '#b9b29a', dark: '#0006', hat: 'horns', hatc: BONE, glow: '#7dffb0', wpn: 'mace', wc: BONE })),
+  lich: big(fig({ ...SK, body: '#2f3f6a', robe: 1, trim: '#7fd8ff', cloak: '#1c2644', hat: 'crown', hatc: '#7fd8ff', glow: '#7fd8ff', wpn: 'staff', wc: '#7fd8ff' })),
+  pitlord: fig({ skin: '#d6b9a0', body: '#3a1420', robe: 1, trim: '#ff6a2e', cloak: '#5a1422', hat: 'horns', hatc: '#ff6a2e', wpn: 'book', wc: '#5a1422', eyes: '#ff6a2e', glow: '#ff6a2e' }) + `<path d="M6 60q3-9 0-14q6 4 5 14zM14 62q2-6 0-10q5 3 4 10z" fill="#ff6a2e"/>`,
+  herald: big(fig({ skin: '#8a8f9a', body: '#1c1c22', trim: '#ff3d3d', cloak: '#6a1018', hat: 'great', hatc: '#2c2c34', wpn: 'banner', wc: '#ff3d3d' })),
+  revenant: fig({ ...SK, body: '#3f4a52', dark: '#0007', cloak: '#26303a', hat: 'hood', hatc: '#26303a', glow: '#8fe8ff', wpn: 'sword', wc: '#8fe8ff' }),
+  deathknight: big(fig({ ...SK, body: '#2a2f3a', trim: '#7fd8ff', cloak: '#14181f', hat: 'great', hatc: '#3a4250', shield: '#1c2230', wpn: 'sword', wc: '#bfeaff', glow: '#7fd8ff' })),
+  plaguelord: big(fig({ skin: '#9fb85a', body: '#4a5a22', robe: 1, trim: '#d8ff4d', cloak: '#2e3a14', hat: 'crown', hatc: '#d8ff4d', eyes: '#1a2208', glow: '#d8ff4d', wpn: 'scythe', wc: '#b6e04a' })) + `<circle cx="9" cy="44" r="4" fill="#b6e04a" opacity=".7"/><circle cx="14" cy="30" r="2.500" fill="#b6e04a" opacity=".6"/><circle cx="7" cy="20" r="2" fill="#b6e04a" opacity=".5"/><circle cx="56" cy="56" r="3" fill="#b6e04a" opacity=".6"/>`,
+  halberdier: fig({ body: '#56708f', hat: 'helm', hatc: STEEL, trim: '#c23b3b', wpn: 'scythe', wc: STEEL }),
+  duelist: fig({ body: '#7a2f3a', trim: '#fff', hat: 'cap', hatc: '#26262c', wpn: 'sword', wc: '#e6ecf2' }),
+  bishop: fig({ body: '#6a2c8a', robe: 1, trim: GOLD, hat: 'mitre', hatc: '#6a2c8a', wpn: 'staff', wc: '#fff3c4' }),
+  stormmage: fig({ body: '#2f6f8a', robe: 1, trim: '#fff59a', hat: 'wizard', hatc: '#1f4f66', wpn: 'staff', wc: '#fff59a', glow: '#fff59a' }) + `<path d="M8 20l6 8-4 1 5 9" stroke="#fff59a" stroke-width="2" fill="none"/>`,
+  champion: fig({ body: '#c9a13a', trim: '#fff', cloak: '#2f4f86', hat: 'crown', hatc: GOLD, wpn: 'sword', wc: '#fff3c4', shield: '#2f4f86' }),
+  venom: fig({ ears: 1, skin: '#6b6690', body: '#27402a', hat: 'hood', hatc: '#1c2e1e', wpn: 'dagger', wc: '#9cff6a', eyes: '#9cff6a', glow: '#9cff6a' }),
+  briar: fig({ ears: 1, body: '#4a6a2a', hat: 'leaves', hatc: '#3f8a45', shield: '#5a3f1e', wpn: 'mace', wc: '#8a6a3a' }),
+  sunfire: fig({ ears: 1, body: '#d9772e', trim: '#ffe9a0', hat: 'hair', hatc: '#ffd34d', wpn: 'bow', wc: '#ff9a2e', eyes: '#c2452d' }),
+  archon: big(fig({ ears: 1, body: '#dfe6ff', robe: 1, trim: '#7f8fd0', cloak: '#3d5688', hat: 'crown', hatc: '#bcd0ff', wpn: 'staff', wc: '#e6ecff', glow: '#7f8fd0' })),
+  archdruid: fig({ ears: 1, body: '#3a5a2e', robe: 1, trim: GOLD, cloak: '#27401f', hat: 'horns', hatc: '#8a6a3a', wpn: 'staff', wc: '#7dff8a', eyes: '#27401f' }),
+  collector: fig({ skin: '#cfd6c4', body: '#4a4034', robe: 1, trim: BONE, hat: 'cap', hatc: '#2e2820', wpn: 'staff', wc: BONE, eyes: '#7dffb0' }),
+  boneshaper: fig({ skin: '#cfd6c4', body: '#3a3340', robe: 1, trim: BONE, hat: 'hood', hatc: '#2a2430', wpn: 'mace', wc: BONE, eyes: '#7dffb0' }),
+  soulreaper: fig({ skin: '#b9b4c4', body: '#1a1a22', cloak: '#3a0c14', hat: 'hood', hatc: '#0e0e14', wpn: 'scythe', wc: '#ff8a8a', eyes: '#ff3d3d', glow: '#ff3d3d' }),
+  rothound: quad('#6f8a3a', '#d8ff4d') + `<circle cx="24" cy="36" r="2.500" fill="#b6e04a"/><circle cx="34" cy="42" r="2" fill="#b6e04a"/>`,
+  wolf: quad('#8a8f96', '#ffd34d'),
+  bandit: fig({ body: '#5a4a3a', hat: 'hood', hatc: '#3a2e22', wpn: 'dagger' }) + `<rect x="23" y="24.500" width="18" height="5" rx="2" fill="#2a2018"/>`,
+  shaman: fig({ skin: '#9fb07a', body: '#6a5a2a', robe: 1, hat: 'horns', hatc: BONE, wpn: 'staff', wc: '#7dffb0', eyes: '#2a2018' }),
+  ogre: big(fig({ skin: '#8fa86a', body: '#5a4a3a', wpn: 'mace', wc: '#8a6a3a', eyes: '#2a2018' })),
+  ogrelord: big(fig({ skin: '#7f9a5a', body: '#3a2a22', trim: GOLD, cloak: '#5a1f1f', hat: 'crown', hatc: GOLD, shield: '#5a1f1f', wpn: 'mace', wc: STEEL, eyes: '#ffd34d' })),
+  bonedragon: `<path d="M4 54Q16 28 32 34Q48 28 60 54l-8-7-5 9-5-9-5 9-5-9-5 9-5-9-5 9-5-9z" fill="${BONE}" opacity=".85"/><rect x="30" y="26" width="4" height="34" fill="${BONE}"/><path d="M24 40h16M25 46h14M26 52h12" stroke="${BONE}" stroke-width="2.500"/><path d="M21 14Q32 0 43 14l-2 14q-9 7-18 0z" fill="${BONE}"/><path d="M23 12L12 1l10 16zM41 12L52 1 42 17z" fill="${BONE}"/><circle cx="27.500" cy="16" r="3" fill="${DARK}"/><circle cx="36.500" cy="16" r="3" fill="${DARK}"/><circle cx="27.500" cy="16" r="1.400" fill="#7dffb0"/><circle cx="36.500" cy="16" r="1.400" fill="#7dffb0"/><path d="M27 26l1.500 3 1.500-3 2 3 2-3 1.500 3 1.500-3" stroke="${DARK}" stroke-width="1.200" fill="none"/>`,
+  titan: big(fig({ skin: '#8a8f96', body: '#6a7078', dark: '#0005', trim: '#ffb02e', eyes: '#ffb02e', glow: '#ffb02e', hat: 'helm', hatc: '#565c64' })) + `<path d="M20 44l6 4-3 6M44 40l-5 5 4 5" stroke="#ffb02e" stroke-width="1.600" fill="none"/>`,
+  minion: small(fig({ ...SK, body: '#77735f', dark: '#0007' })),
+  warrior: fig({ ...SK, body: '#6f6a5a', dark: '#0007', hat: 'helm', hatc: '#7d8489', shield: '#4a4a3e', wpn: 'sword', wc: '#9aa39f' }),
+  imp: small(fig({ skin: '#e0563a', body: '#b03a26', hat: 'horns', hatc: '#3a1410', wings: '#8a2a1c', eyes: '#ffe04d' })),
+  demon: fig({ skin: '#c2362a', body: '#7a1c18', hat: 'horns', hatc: '#2a0e0c', wings: '#5a1410', eyes: '#ffe04d', glow: '#ffe04d', wpn: 'sword', wc: '#ff8a4d' }),
+  archdemon: big(fig({ skin: '#9a1c2a', body: '#3a0c14', trim: '#ff8a2e', hat: 'horns', hatc: '#ffb02e', wings: '#5a0c18', eyes: '#fff', glow: '#ffe04d', wpn: 'scythe', wc: '#ff8a4d' }))
+};
+const ITEMS = {
+  sword: `<path d="M29 46V12l3-7 3 7v34z" fill="${STEEL}"/><rect x="21" y="44" width="22" height="5" rx="2" fill="${GOLD}"/><rect x="30" y="49" width="4" height="10" fill="${WOOD}"/>`,
+  shield: `<path d="M12 10h40v24q-20 28-40 0z" fill="#35527d" stroke="${GOLD}" stroke-width="3"/><path d="M32 14v36M16 26h32" stroke="${GOLD}" stroke-width="3"/>`,
+  tome: `<rect x="10" y="12" width="44" height="42" rx="4" fill="#4b3fa8"/><rect x="14" y="12" width="4" height="42" fill="${GOLD}"/><circle cx="35" cy="33" r="9" fill="none" stroke="#c9a0ff" stroke-width="3"/><path d="M35 26l2 5h5l-4 3.500 1.500 5.500-4.500-3-4.500 3 1.500-5.500-4-3.500h5z" fill="#c9a0ff"/>`,
+  symbol: `<circle cx="32" cy="32" r="22" fill="#f1ecdd" stroke="${GOLD}" stroke-width="3"/><path d="M32 16v32M21 27h22" stroke="${GOLD}" stroke-width="5" stroke-linecap="round"/>`,
+  bow: `<path d="M22 6Q58 32 22 58" fill="none" stroke="${WOOD}" stroke-width="5" stroke-linecap="round"/><path d="M22 6V58" stroke="#ddd" stroke-width="2"/><path d="M10 32h40l-6-5m6 5l-6 5" stroke="#ddd" stroke-width="2.500" fill="none"/>`
+};
+const TR = {
+  Tank: 'M2 1.5h8v4.5q0 3-4 4.5q-4-1.500-4-4.500z',
+  DPS: 'M10.5 1.5l-1 5-1.500-1.500-5 5-1.500-1.500 5-5-1.500-1.500z',
+  Mage: 'M6 .5l1.500 4 4 1.500-4 1.500-1.500 4-1.500-4-4-1.500 4-1.500z',
+  Cleric: 'M4.800 1h2.400v3.800H11v2.400H7.200V11H4.800V7.200H1V4.800h3.800z',
+  Party: 'M2 2h3v3H2zM7 2h3v3H7zM2 7h3v3H2zM7 7h3v3H7z',
+  Grove: 'M2 10.500Q1 3 10.500 1.500Q11 9.500 4 9.800L7 5 2.800 11z',
+  Sun: 'M6 3.200a2.800 2.800 0 1 0 0 5.600a2.800 2.800 0 0 0 0-5.600zM5.400 0h1.200v2H5.400zM5.400 10h1.200v2H5.400zM0 5.400h2v1.200H0zM10 5.400h2v1.200h-2z',
+  Drow: 'M6 .5l1.400 2.500V7H9v1.200H6.800v3.300H5.200V8.200H3V7h1.600V3z',
+  Moon: 'M8 1a5 5 0 1 0 3 8.500a4 4 0 1 1-3-8.500z',
+  Building: 'M3 11V4.500H2v-3h1.500V3H5V1.500h2V3h1.500V1.500H10v3H9V11z',
+  Reborn: 'M6 1a4 4 0 0 0-4 4v2.500l1.500 1V11h5V8.500l1.500-1V5a4 4 0 0 0-4-4zM4.300 4.300a1.100 1.100 0 1 1 0 2.200a1.100 1.100 0 0 1 0-2.200zM7.700 4.300a1.100 1.100 0 1 1 0 2.200a1.100 1.100 0 0 1 0-2.200z',
+  Blight: 'M6 .8Q10 5.500 10 7.800a4 4 0 0 1-8 0Q2 5.500 6 .8z',
+  Necromancer: 'M4 1h4l2 3-1.500 7h-5L2 4z',
+  Cultist: 'M6 .5Q9.500 4 9.500 7.500a3.500 3.500 0 0 1-7 0Q2.500 5.500 4 4Q4.500 6 5.500 6Q5 3 6 .5z',
+  Demon: 'M1.500 1Q2 5 4.500 6v5h3V6Q10 5 10.500 1Q8.500 4.500 6 4.500Q3.500 4.500 1.500 1z',
+  Minion: 'M6 2l4 4-4 4-4-4z',
+  Beast: 'M2 5.500a1.500 1.500 0 1 1 3 0a1.500 1.500 0 0 1-3 0zM7 5.500a1.500 1.500 0 1 1 3 0a1.500 1.500 0 0 1-3 0zM4.500 2.500a1.500 1.500 0 1 1 3 0a1.500 1.500 0 0 1-3 0zM3 9.500Q6 5 9 9.500Q6 11.500 3 9.500z',
+  Boss: 'M1.500 9.500V3l2.500 2.500L6 2l2 3.500L10.500 3v6.500z'
+};
+const svg = s => `<svg viewBox="0 0 64 64" aria-hidden="true">${s}</svg>`;
+root.ART = { tribe: t => `<svg viewBox="0 0 12 12" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="${TR[t] || TR.Minion}"/></svg>`, unit: id => svg(UNITS[id] || ''), item: id => svg(ITEMS[id] || '') };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* Leader portraits: faceless, faceted, three-quarter busts in a 100 x 120 frame, lit from the viewer's left. */
+(function (root) {
+'use strict';
+const ch = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+const sh = (h, f) => '#' + ch(h).map(v => Math.max(0, Math.min(255, Math.round(v * f))).toString(16).padStart(2, '0')).join('');
+const P = (pts, fill, o) => `<polygon points="${pts}" fill="${fill}"${o != null ? ` opacity="${o}"` : ''}/>`;
+const C = (cx, cy, r, fill, o) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}"${o != null ? ` opacity="${o}"` : ''}/>`;
+const L = (pts, stroke, w, o) => `<polyline points="${pts}" fill="none" stroke="${stroke}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"${o != null ? ` opacity="${o}"` : ''}/>`;
+const mx = pts => pts.split(' ').map(p => { const [x, y] = p.split(','); return (100 - +x) + ',' + y; }).join(' ');
+const glow = (cx, cy, r, c) => C(cx, cy, r * 2.4, c, .1) + C(cx, cy, r * 1.6, c, .22) + C(cx, cy, r, c, .95) + C(cx - r * .3, cy - r * .3, r * .35, '#fff', .8);
+
+const HORNS = s => `<g transform="translate(-5,1)">${s}</g>`;
+const HD = s => `<g transform="translate(-10,-6) scale(1.2)">${s}</g>`; // bigger head, set lower so the neck is short
+const bg = (dark, light, motif) => P('0,0 100,0 100,120 0,120', dark) + P('0,0 70,0 0,76', light) + P('100,40 100,120 30,120', sh(dark, .82), .7) + (motif || '');
+
+/* the base head: ten facets and no drawn features */
+function face(skin, o) {
+  o = o || {};
+  const lit = skin, hi = sh(skin, 1.08), mid = sh(skin, .9), shd = sh(skin, .76), deep = sh(skin, .6), sock = sh(skin, .64);
+  let s = '';
+  if (o.ears === 'elf') s += P('34,46 20,27 27,44 34,56', lit) + P('27,44 20,27 30,40', hi) + P('67,46 82,29 75,45 66,56', shd) + P('75,45 82,29 71,42', deep);
+  else if (o.ears !== 'none') s += P('33,46 29,48 30,56 34,58', mid) + P('67,46 71,48 70,56 66,58', deep);
+  s += P('33,38 40,27 52,24 54,40 40,42', hi)              // forehead, lit
+     + P('52,24 63,28 68,40 60,42 54,40', mid)             // forehead, turning away
+     + P('33,38 40,42 36,43 37,48 33,54', lit)             // temple
+     + P('36,43 47,42 46,47 37,48', sock)                  // eye socket, near
+     + P('53,42 64,43 63,48 54,47', deep)                  // eye socket, far
+     + P('37,48 46,47 46,55 40,60 33,54', lit)             // cheek, lit
+     + P('54,47 63,48 68,40 67,52 62,64 56,60 54,55', shd) // cheek, shadow
+     + P('47,42 50,42 49,55 46,55', hi)                    // nose bridge
+     + P('50,42 53,42 54,55 50,57 49,55', mid)             // nose side
+     + P('46,55 50,57 54,55 51,59 47,58', deep)            // under the nose
+     + P('40,60 46,55 47,58 51,59 54,55 56,60 51,65', mid) // muzzle plane
+     + P('33,54 40,60 51,65 51,72 40,66', lit)             // jaw, lit
+     + P('56,60 62,64 51,72 51,65', shd)                   // jaw, shadow
+     + P('40,66 51,72 46,71', deep, .5);                   // chin underside
+  return s;
+}
+const neck = skin => P('43,66 58,64 60,86 42,86', sh(skin, .86)) + P('43,66 58,64 52,76', sh(skin, .58)) + P('52,76 58,64 60,86', sh(skin, .7));
+const torso = c => P('0,120 4,98 26,84 44,80 50,96 50,120', c) + P('50,120 50,96 56,80 74,84 96,98 100,120', sh(c, .72))
+  + P('4,98 26,84 22,106', sh(c, 1.14)) + P('74,84 96,98 80,108', sh(c, .58)) + P('44,80 56,80 54,120 46,120', sh(c, .86));
+const pauldronL = c => P('0,106 2,90 16,79 33,81 35,96 20,107', c) + P('2,90 16,79 33,81 18,86', sh(c, 1.25)) + P('0,116 0,106 20,107 35,96 37,109 22,118', sh(c, .8)) + L('0,106 20,107 35,96', sh(c, 1.35), .8, .8) + C(27, 90, 1.3, sh(c, 1.4));
+const pauldronR = c => P(mx('0,106 2,90 16,79 33,81 35,96 20,107'), sh(c, .7)) + P(mx('2,90 16,79 33,81 18,86'), sh(c, .9)) + P(mx('0,116 0,106 20,107 35,96 37,109 22,118'), sh(c, .52)) + L(mx('0,106 20,107 35,96'), sh(c, .95), .8, .7) + C(73, 90, 1.3, sh(c, 1));
+const cloak = c => P('0,120 0,96 20,76 80,76 100,96 100,120', sh(c, .7)) + P('0,96 20,76 30,80 6,104', c) + P('80,76 100,96 94,104 70,80', sh(c, .5));
+function hood(c) { return {
+  back: P('23,48 29,20 50,9 71,18 79,46 77,72 67,84 33,84 23,72', c) + P('23,48 29,20 36,24 30,44 32,66 23,72', sh(c, 1.22)) + P('71,18 79,46 77,72 68,66 70,44 64,23', sh(c, .62)) + P('30,44 36,24 50,17 64,23 70,44 68,66 60,74 40,74 32,66', sh(c, .34)),
+  front: P('30,44 36,24 50,17 64,23 70,44 62,35 50,30 38,35', sh(c, .82)) + P('30,44 36,24 50,17 50,30 38,35', sh(c, 1.05)) + P('33,38 40,27 52,24 63,28 68,40 67,50 33,50', '#06080a', .5)
+}; }
+const shortHair = c => P('32,42 33,27 45,18 60,18 70,27 71,43 66,33 54,27 42,29 35,37', c) + P('33,27 45,18 54,27 42,29 35,37', sh(c, 1.3)) + P('60,18 70,27 71,43 66,33', sh(c, .66)) + P('45,18 60,18 66,33 54,27', sh(c, .95));
+
+const LEADERS = {
+  quartermaster() {
+    const skin = '#d9a47a', lea = '#7a5232', mail = '#8d949c', cap = '#6a4a2e';
+    return bg('#4f3d2b', '#63503a', P('62,10 92,10 92,40 77,52 62,40', '#000', .12) + P('66,14 88,14 88,38 77,47 66,38', '#fff', .05))
+      + torso(mail) + L('8,100 20,92 32,100 44,92', sh(mail, 1.3), .7, .5) + L('58,94 70,100 82,94 94,102', sh(mail, .5), .7, .6)
+      + P('30,84 44,80 46,120 22,120', lea) + P('56,80 70,84 78,120 54,120', sh(lea, .7)) + P('44,80 56,80 54,120 46,120', sh(lea, .86))
+      + P('30,84 36,82 34,120 28,120', sh(lea, 1.25)) + P('64,82 70,84 72,120 66,120', sh(lea, .52))
+      + P('40,96 60,96 60,101 40,101', sh(lea, .5)) + P('47,95 53,95 53,102 47,102', '#d8b24a') + P('48.500,96.500 51.500,96.500 51.500,100.500 48.500,100.500', sh(lea, .5))
+      + neck(skin) + HD(face(skin)
+      + P('36,58 46,56 51,60 56,57 62,60 60,68 51,74 41,68', '#5a3a22') + P('36,58 46,56 51,60 51,74 41,68', '#6e4a2c') + P('44,56 50,57 56,56 54,60 47,60', '#4a2e1a')
+      + P('31,40 32,26 44,16 58,15 69,22 71,38 60,33 44,34', cap) + P('32,26 44,16 52,24 40,30', sh(cap, 1.3)) + P('58,15 69,22 71,38 62,28', sh(cap, .66)) + P('27,40 44,34 60,33 74,40 60,38 44,39', sh(cap, .55)) + P('27,40 44,34 44,39', sh(cap, .9))
+      + P('64,22 80,2 84,6 70,26', '#f1ecdd') + P('72,12 80,2 84,6', '#cfc8b4') + L('64,24 82,4', '#8a8370', .7))
+      + `<circle cx="22" cy="103" r="5" fill="none" stroke="#d8b24a" stroke-width="1.600"/>` + P('21,108 23,108 24,118 22,118 22,115 20,115 20,113 22,113', '#d8b24a') + P('25,107 27,106 30,114 28,115', '#b8922f')
+      + P('70,100 96,94 100,96 100,120 74,120', '#3f5a7a') + P('70,100 96,94 97,97 72,103', '#d8b24a') + P('74,106 96,101 96,103 74,108', '#f1ecdd', .7);
+  },
+  marshal() {
+    const skin = '#e2b48c', steel = '#b4bec7', blue = '#2f4f86', gold = '#e0b040', hair = '#3a2a1c';
+    return bg('#22324f', '#2e4268', P('74,0 77,0 77,70 74,70', '#000', .2))
+      + P('75.500,0 77,0 77,84 75.500,84', '#8a6a3a') + P('77,3 100,6 92,14 100,22 77,24', '#c23b3b') + P('77,3 100,6 92,14 77,13', '#d8544a') + P('84,10 88,13 84,16 80,13', gold)
+      + cloak(blue) + torso(steel) + P('44,80 56,80 54,120 46,120', sh(steel, .8)) + L('50,84 50,120', sh(steel, .5), .8)
+      + pauldronL(steel) + pauldronR(steel) + L('2,90 16,79 33,81', gold, 1.100) + L(mx('2,90 16,79 33,81'), sh(gold, .7), 1.100)
+      + P('36,78 50,86 64,78 62,90 50,97 38,90', gold) + P('36,78 50,86 50,97 38,90', sh(gold, 1.15)) + P('64,78 62,90 50,97 50,86', sh(gold, .7)) + C(50, 90, 2.200, '#c23b3b') + C(49.400, 89.400, .7, '#fff', .7)
+      + P('20,76 30,80 36,78 38,90 28,96 16,86', blue) + P('80,76 70,80 64,78 62,90 72,96 84,86', sh(blue, .6)) + L('20,76 30,80 28,96', gold, .9)
+      + neck(skin) + HD(face(skin) + shortHair(hair) + P('32,42 33,34 36,38 35,46', '#9a958c') + P('70,43 70,35 67,37 67,46', '#6f6a62')
+      + P('43,57 50,58 57,56 59,60 51,61 42,61', hair) + P('43,57 50,58 51,61 42,61', sh(hair, 1.4)))
+      + P('0,120 0,100 8,92 22,92 28,104 28,120', sh(steel, .9)) + P('0,100 8,92 22,92 14,98', sh(steel, 1.25)) + P('6,104 22,104 22,107 6,107', '#15181b') + P('14,92 12,78 20,70 30,74 22,82 22,92', '#c23b3b') + P('12,78 20,70 22,82', '#e0645a');
+  },
+  warden() {
+    const skin = '#c99a78', steel = '#aab4bd', grey = '#b9b9b4', sld = '#35527d', gold = '#e0b040';
+    return bg('#353d43', '#485259', P('60,14 64,14 64,8 70,8 70,14 76,14 76,8 82,8 82,14 86,14 86,52 60,52', '#000', .13))
+      + torso(steel) + pauldronL(steel) + pauldronR(steel)
+      + P('8,96 22,84 34,86 36,100 22,110', sh(steel, 1.1)) + P('8,96 22,84 24,90 12,100', sh(steel, 1.35)) + P(mx('8,96 22,84 34,86 36,100 22,110'), sh(steel, .6))
+      + P('36,74 44,70 50,76 56,70 64,74 66,90 50,98 34,90', steel) + P('36,74 44,70 50,76 50,98 34,90', sh(steel, 1.18)) + P('56,70 64,74 66,90 50,98 50,76', sh(steel, .68)) + L('36,74 44,70 50,76 56,70 64,74', sh(steel, 1.4), .9)
+      + P('44,98 56,98 55,120 45,120', sh(steel, .7)) + L('50,98 50,120', sh(steel, .45), .8) + C(40, 86, 1.200, sh(steel, 1.4)) + C(60, 86, 1.200, sh(steel, .9))
+      + HD(face(skin, {})
+      + P('32,40 34,32 38,36 37,46', grey) + P('70,42 68,33 65,36 66,46', sh(grey, .7)) + P('40,27 52,24 63,28 56,26 46,26', sh(skin, 1.15))
+      + P('33,54 40,58 46,56 51,60 56,57 62,60 67,52 66,66 60,78 51,84 41,78 35,66', grey) + P('33,54 40,58 46,56 51,60 51,84 41,78 35,66', sh(grey, 1.1)) + P('56,57 62,60 67,52 66,66 60,78 51,84 51,60', sh(grey, .66))
+      + P('43,56 50,57 57,55 55,60 46,60', sh(grey, .8)) + L('41,66 44,76', sh(grey, .7), .7) + L('47,66 48,80', sh(grey, .7), .7) + L('56,66 55,79', sh(grey, .5), .7))
+      + P('0,30 16,30 16,120 0,120', sld) + P('0,30 16,30 12,36 0,36', sh(sld, 1.3)) + P('13,30 16,30 16,120 13,120', gold) + P('14.500,30 16,30 16,120 14.500,120', sh(gold, .7))
+      + C(7, 46, 1.600, gold) + C(7, 70, 1.600, gold) + C(7, 94, 1.600, gold) + P('0,56 13,56 13,60 0,60', sh(sld, .7));
+  },
+  grovekeeper() {
+    const skin = '#e8c8a0', hair = '#8a4a22', bark = '#5a4028', moss = '#4c9c50', ant = '#c2a676';
+    const leaf = (x, y, r, c) => P(`${x},${y - r} ${x + r * .7},${y} ${x},${y + r} ${x - r * .7},${y}`, c);
+    return bg('#1d3526', '#294a35', leaf(80, 20, 12, '#3f8a45') + leaf(90, 44, 8, '#2f6a38') + leaf(68, 8, 7, '#2f6a38'))
+      + HD(P('22,52 28,24 46,14 62,16 74,28 78,56 84,96 70,92 70,50 30,50 30,92 14,98', hair) + P('22,52 28,24 34,30 30,50 30,92 14,98', sh(hair, 1.25)) + P('74,28 78,56 84,96 70,92 70,50', sh(hair, .6)))
+      + cloak(bark) + torso(bark) + L('10,100 18,94 14,110 24,102', sh(bark, .6), .9) + L('78,92 86,100 82,110 92,106', sh(bark, .45), .9)
+      + P('0,104 6,90 24,80 36,84 30,98 14,108', moss) + P('6,90 24,80 36,84 22,88', sh(moss, 1.25)) + P(mx('0,104 6,90 24,80 36,84 30,98 14,108'), sh(moss, .6))
+      + P('36,80 50,90 64,80 60,96 50,104 40,96', sh(bark, 1.2)) + P('64,80 60,96 50,104 50,90', sh(bark, .8)) + glow(50, 95, 3, '#7dff8a')
+      + neck(skin) + HD(face(skin, { ears: 'elf' })
+      + P('32,42 32,26 44,16 58,16 69,25 70,42 64,32 52,26 40,30', hair) + P('32,26 44,16 52,26 40,30', sh(hair, 1.3)) + P('58,16 69,25 70,42 64,32', sh(hair, .62))
+      + P('32,36 50,30 68,36 68,39 50,33 32,39', ant) + C(50, 32, 2, '#7dff8a') + C(49.500, 31.500, .7, '#fff', .8)
+      + L('36,34 30,18 22,10', ant, 2.200) + L('30,18 24,20 18,16', ant, 1.800) + L('27,14 28,6', ant, 1.600) + L('22,10 16,6', ant, 1.400)
+      + L('64,34 70,18 78,10', sh(ant, .72), 2.200) + L('70,18 76,20 82,16', sh(ant, .72), 1.800) + L('73,14 72,6', sh(ant, .72), 1.600) + L('78,10 84,6', sh(ant, .72), 1.400))
+      + leaf(26, 60, 4, '#55b560') + leaf(74, 72, 3.500, '#3f8a45') + leaf(30, 76, 3, '#3f8a45') + leaf(22, 12, 3, '#55b560') + leaf(80, 14, 2.500, '#3f8a45');
+  },
+  architect() {
+    const skin = '#f0d2a8', hair = '#e8c860', robe = '#d9a52e', white = '#f4eede', silver = '#cfd6dc';
+    return bg('#4f4124', '#6a5730', P('76,120 78,40 82,18 86,40 88,120', '#000', .16) + C(82, 14, 9, '#ffd34d', .2) + C(82, 14, 5, '#ffe9a0', .3))
+      + torso(robe) + P('26,84 44,80 40,120 16,120', sh(robe, 1.12)) + L('30,90 26,120', sh(robe, .7), .9) + L('70,90 76,120', sh(robe, .45), .9)
+      + P('38,78 50,92 62,78 58,100 50,108 42,100', white) + P('62,78 58,100 50,108 50,92', sh(white, .78))
+      + P('30,82 38,78 42,100 46,120 40,120 34,100', '#fff3c4') + P(mx('30,82 38,78 42,100 46,120 40,120 34,100'), sh(robe, .5))
+      + P('31,86 33,85 33.500,89 31.500,90', '#c2452d') + P('33,94 35,93 35.500,97 33.500,98', '#c2452d') + P('35,102 37,101 37.500,105 35.500,106', '#c2452d')
+      + neck(skin) + HD(face(skin, { ears: 'elf' })
+      + P('32,42 32,27 44,18 58,18 69,26 70,42 64,32 52,27 40,30', hair) + P('32,27 44,18 52,27 40,30', sh(hair, 1.2)) + P('58,18 69,26 70,42 64,32', sh(hair, .66))
+      + P('42,18 44,8 52,4 60,8 60,18 51,21', hair) + P('42,18 44,8 52,4 51,21', sh(hair, 1.2)) + P('60,8 60,18 51,21 52,4', sh(hair, .7)) + P('43,16 60,16 60,18.500 43,18.500', '#c2452d')
+      + P('33,36 50,30 68,36 68,38.500 50,32.500 33,38.500', '#fff3c4') + P('48,29 52,29 53,33 50,35 47,33', '#ff9a2e'))
+      + L('14,120 22,84', silver, 2) + L('30,120 22,84', sh(silver, .7), 2) + C(22, 83, 2.600, silver) + C(22, 83, 1, '#4f4124') + L('17,106 27,106', sh(silver, .8), 1.200)
+      + P('66,98 96,90 100,94 100,108 70,112', white) + P('66,98 96,90 97,93 68,101', sh(white, .8)) + L('74,104 94,99', '#8a7a55', .7) + L('74,107 90,103', '#8a7a55', .7);
+  },
+  bladesinger() {
+    const skin = '#6f6a96', hair = '#ecebf7', arm = '#2d2440', sash = '#8a3fb0', steel = '#cfd6dc', mag = '#ff5c8a';
+    const hilt = flip => { const f = flip ? mx : (x => x), k = flip ? .7 : 1;
+      return P(f('6,60 12,56 34,88 28,92'), sh(steel, k)) + P(f('6,60 9,58 31,90 28,92'), sh(steel, k * 1.25)) + P(f('2,64 16,52 18,55 4,67'), sh('#e0b040', k)) + P(f('0,54 6,48 10,54 4,60'), sh('#3a2a4a', k * 1.4)) + C(flip ? 97 : 3, 51, 2.400, sh(mag, k)); };
+    return bg('#261d3a', '#372a55', `<path d="M86 8a16 16 0 1 0 10 28a13 13 0 1 1-10-28z" fill="#e6ecff" opacity=".14"/>`)
+      + HD(P('58,18 72,10 90,14 100,30 100,70 88,44 76,30 66,28', hair) + P('72,10 90,14 100,30 86,22', sh(hair, .8)) + P('76,30 88,44 100,70 100,84 84,52', sh(hair, .62)))
+      + hilt(false) + hilt(true)
+      + torso(arm) + P('4,98 26,84 44,80 40,92 14,104', sh(arm, 1.5)) + P('74,84 96,98 90,104 62,92 56,80', sh(arm, .7))
+      + P('36,80 50,92 64,80 62,96 50,104 38,96', sh(arm, 1.7)) + P('64,80 62,96 50,104 50,92', sh(arm, 1.1)) + L('36,80 50,92 64,80', sh(arm, 2.400), .8)
+      + P('18,120 26,100 44,108 80,96 86,104 50,118 40,120', sash) + P('18,120 26,100 44,108 40,120', sh(sash, 1.25)) + P('80,96 86,104 50,118 44,108', sh(sash, .7))
+      + P('26,84 34,82 36,92 28,96', sh(arm, 2)) + P(mx('26,84 34,82 36,92 28,96'), sh(arm, 1.2)) + C(31, 89, 1.100, steel) + C(69, 89, 1.100, sh(steel, .7))
+      + neck(skin) + HD(face(skin, { ears: 'elf' })
+      + P('32,42 32,26 44,17 58,16 69,24 70,42 64,31 52,26 42,28', hair) + P('32,26 44,17 52,26 42,28', '#ffffff') + P('58,16 69,24 70,42 64,31', sh(hair, .7)) + P('32,42 32,26 42,28 36,36', sh(hair, .9))
+      + P('56,16 62,10 68,14 66,22', sh(hair, .85)) + P('60,13 66,13 66,16 60,16', sash)
+      + P('35,44.500 47,43.500 47,45.500 36,46.500', mag, .9) + P('53,43.500 64,44.500 63.500,46.500 53,45.500', sh(mag, .75), .9) + C(22, 31, 1.600, mag) + C(22, 31, 3.200, mag, .25));
+  },
+  gravecaller() {
+    const pale = '#cfd6c4', hd = '#2c2440', grn = '#7dffb0', bone = '#e6e0cc';
+    const H = hood(hd);
+    return bg('#1a222c', '#26313d', P('8,120 8,84 14,76 20,84 20,120', '#000', .22) + P('84,120 84,92 89,86 94,92 94,120', '#000', .16) + P('0,96 100,84 100,92 0,104', '#9fb4c4', .06))
+      + `<g transform="translate(10,-3)">` + L('84,120 80,26', bone, 2.600) + L('85.500,120 81.500,26', sh(bone, .7), 1) + P('72,26 74,12 82,7 90,13 90,26 86,30 76,30', bone) + P('82,7 90,13 90,26 86,30 82,24', sh(bone, .72))
+      + C(78.500, 19, 2.200, '#0c1014') + C(85.500, 19, 2.200, '#0c1014') + C(78.500, 19, 1, grn) + C(85.500, 19, 1, grn, .8) + P('78,26 80,29 82,26 84,29 86,26', '#0c1014') + C(82, 18, 12, grn, .07) + '</g>'
+      + cloak(hd) + torso(sh(hd, .9)) + P('0,120 4,98 14,104 10,120', sh(hd, 1.4)) + P('14,104 22,120 18,120', sh(hd, .5)) + P('30,120 34,108 38,120', sh(hd, .5)) + P('62,120 68,106 72,120', sh(hd, .4))
+      + HD(H.back + neck(pale) + P('40,64 60,62 62,84 50,90 38,84', '#0a0d10', .55)
+      + face(pale, { ears: 'none' }) + H.front)
+      + P('34,82 50,94 66,82 70,90 50,104 30,90', sh(hd, 1.5)) + P('66,82 70,90 50,104 50,94', sh(hd, .9)) + L('34,82 50,94 66,82', sh(hd, 2.200), .8)
+      + P('46,94 54,94 55,100 50,104 45,100', bone) + C(48, 97.500, 1, '#0c1014') + C(52, 97.500, 1, '#0c1014') + glow(50, 110, 2.600, grn)
+      + HD(C(42, 45, 1.400, grn, .55) + C(58, 45.500, 1.300, grn, .4) + C(42, 45, 3.200, grn, .12));
+  },
+  bloodpriest() {
+    const skin = '#d6b9a0', cowl = '#5a1422', red = '#a01c2c', horn = '#241014', gold = '#e0b040', black = '#16090c';
+    const H = hood(cowl);
+    return bg('#34121a', '#481a22', P('82,54 74,34 80,22 78,10 90,24 94,40 88,54', '#ff6a2e', .1) + P('83,50 80,38 84,28 88,40 86,50', '#ffb347', .12))
+      + HORNS(P('30,24 16,22 6,8 4,0 12,10 24,14 36,18', horn) + P('30,24 16,22 6,8 14,14 26,18', sh(horn, 2)) + P(mx('30,24 16,22 6,8 4,0 12,10 24,14 36,18'), sh(horn, .8)) + P(mx('24,14 12,10 4,0 10,6'), sh(horn, 1.5)))
+      + cloak(red) + torso(red) + L('12,104 20,96 16,116', sh(red, .6), .9) + L('82,96 90,104 86,116', sh(red, .4), .9)
+      + P('34,82 44,80 46,120 30,120', black) + P('56,80 66,82 70,120 54,120', sh(black, .7)) + P('34,82 37,81.500 34,120 30,120', gold) + P('63,81.500 66,82 70,120 66,120', sh(gold, .65))
+      + P('37,96 43,96 43,98 41,98 41,106 39,106 39,98 37,98', gold) + P('58,96 64,96 64,98 62,98 62,106 60,106 60,98 58,98', sh(gold, .7))
+      + HD(H.back + neck(skin) + face(skin, { ears: 'none' }) + H.front
+      + P('36,34 50,29 64,34 64,37 50,32 36,37', gold) + P('47,28 53,28 54,33 50,36 46,33', '#ff3d3d') + C(50, 31.500, 1, '#fff', .6))
+      + P('34,82 50,92 66,82 68,88 50,100 32,88', sh(cowl, 1.5)) + P('66,82 68,88 50,100 50,92', sh(cowl, .9)) + C(50, 96, 2.400, gold) + C(50, 96, 1.100, '#ff3d3d')
+      + P('8,120 10,98 13,96 16,98 18,120', '#3a2a22') + P('5,98 21,98 21,101 5,101', gold) + P('10,98 13,58 16,98', '#d6dce2') + P('13,58 16,98 13,98', '#9aa3ab') + P('12,70 13,58 14.500,76 13,90', '#ff3d3d', .8)
+      + C(13, 104, 1.600, '#ff3d3d');
+  },
+  plaguefather() {
+    const robe = '#56662a', hd = '#3c481c', bone = '#d9d2b8', brass = '#b8922f', grn = '#b6e04a';
+    const H = hood(hd);
+    const puff = (x, y, r, o) => C(x, y, r, grn, o) + C(x - r * .3, y - r * .3, r * .5, '#e6ffb0', o * .6);
+    return bg('#28331a', '#384623', puff(86, 30, 9, .1) + puff(78, 12, 6, .08) + puff(92, 56, 7, .1))
+      + P('0,120 0,90 14,76 86,76 100,90 100,120', sh(robe, .6)) + P('0,120 0,92 12,80 40,78 50,98 50,120', robe) + P('50,120 50,98 60,78 88,80 100,92 100,120', sh(robe, .68))
+      + P('0,92 12,80 40,78 24,90 6,104', sh(robe, 1.25)) + P('60,78 88,80 100,92 96,106 78,92', sh(robe, .5)) + P('40,78 60,78 56,120 44,120', sh(robe, .84))
+      + P('16,96 28,94 30,106 18,108', sh(robe, 1.5), .7) + L('16,96 28,94 30,106 18,108 16,96', '#2a3312', .7) + P('66,100 76,98 78,108 68,110', sh(robe, .5)) + L('66,100 76,98 78,108 68,110 66,100', '#1a2009', .7)
+      + L('6,112 14,104 10,120', sh(robe, .6), .9) + L('40,84 44,120', sh(robe, .6), .8)
+      + HD(H.back + P('36,40 50,34 64,40 66,56 58,66 42,66 34,56', '#2a2418') + P('36,40 50,34 50,66 42,66 34,56', '#3a3222')
+      + P('40,54 50,50 58,54 50,92 44,90 38,70', bone) + P('40,54 50,50 50,92 44,90 38,70', sh(bone, 1.08)) + P('50,50 58,54 54,78 50,92', sh(bone, .68)) + L('44,66 49,88', sh(bone, .6), .7) + L('40,56 50,52 58,55', '#6a5a3a', 1.200)
+      + C(42, 46, 5.600, brass) + C(42, 46, 4.200, '#16200c') + C(42, 46, 3.200, grn, .55) + C(40.600, 44.600, 1.200, '#fff', .7)
+      + C(59, 47, 5, sh(brass, .7)) + C(59, 47, 3.700, '#101808') + C(59, 47, 2.800, grn, .35) + L('46,43 55,44', sh(brass, .8), 1.400)
+      + H.front.replace(/<polygon points="33,38[^>]*>/, ''))
+      + P('32,80 50,90 68,80 72,88 50,102 28,88', sh(hd, 1.5)) + P('68,80 72,88 50,102 50,90', sh(hd, .85))
+      + L('84,62 86,88', brass, 1) + L('92,64 88,88', sh(brass, .7), 1) + P('80,88 94,88 96,98 87,106 78,98', brass) + P('87,88 94,88 96,98 87,106', sh(brass, .66)) + P('82,91 92,91 92,93 82,93', '#1a2009') + C(87, 98, 2, grn, .9)
+      + puff(88, 76, 5, .3) + puff(82, 62, 6.500, .24) + puff(90, 46, 7.500, .17) + puff(80, 34, 6, .12);
+  }
+};
+const svg = (id, crop) => `<svg viewBox="${crop ? '19 20 62 62' : '0 0 100 120'}" role="img" aria-label="${id}">${LEADERS[id]()}</svg>`;
+const api = { ids: Object.keys(LEADERS), leader: id => svg(id, false), head: id => svg(id, true) };
+if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.PORTRAIT = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+(function () {
+'use strict';
+const W = window.WB, ART = window.ART, root = document.getElementById('app');
+const S = { pickF: null, campFight: false, foeTitle: '', screen: 'pick', run: null, sel: null, insp: null, B: null, speed: 1, msg: '', result: null, foe: 'H', quitArm: false, save: '' };
+const RAR = ['', 'Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'], ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+const n = v => Math.max(0, Math.round(v));
+const thing = uid => S.run.things.find(t => t.uid === uid);
+const stars = t => t > 1 ? `<span class="stars" aria-label="tier ${t}">${'★'.repeat(t)}</span>` : '';
+const chip = k => `<span class="tb tb-${k}">${ART.tribe(k)}${k}</span>`;
+const badges = list => `<span class="tis">${list.map(k => `<span class="ti tb-${k}" title="${k}">${ART.tribe(k)}</span>`).join('')}</span>`;
+const itemArt = id => ART.item(W.ITEMS[id].base || id) + (W.ITEMS[id].base ? '<i class="iup">★</i>' : '');
+const nameOf = t => t.kind === 'item' ? W.ITEMS[t.id].name : W.U[t.id].name;
+
+function card(o, attrs, battle) {
+  const d = W.U[o.id], st = W.stats(o);
+  return `<div class="u f${d.f} t${o.tier || 1}${d.building ? ' bld' : ''}${d.token ? ' tok' : ''}${S.sel != null && S.sel === o.uid ? ' sel' : ''}" ${attrs}>
+<div class="art">${ART.unit(o.id)}</div><i class="aimc" data-aim="${S.aims && o.uid != null && S.aims[o.uid] || ''}"></i>${badges(d.counts ? [...Array(d.counts).fill(st.tribes[0]), ...st.tribes.slice(1)] : st.tribes)}${stars(o.tier || 1)}${o.item ? `<span class="it">${itemArt(o.item)}</span>` : ''}
+${battle ? '<span class="rotb" hidden></span><div class="bars"><div class="hpb"><i></i><u></u></div><div class="cdb"><i></i></div></div>' : ''}
+<div class="st"><b class="a">${d.building ? '' : n(st.atk)}</b><b class="h">${n(st.hp)}</b></div></div>`;
+}
+const itemCard = (t, attrs) => `<div class="u item${S.sel === t.uid ? ' sel' : ''}" ${attrs}><div class="art">${itemArt(t.id)}</div><div class="st"><b class="lbl">Item</b></div></div>`;
+const ownAttrs = o => `data-own="${o.uid}" data-insp="own:${o.uid}" draggable="true" tabindex="0" role="button" aria-label="${nameOf(o)}"`;
+const span = (slot, size) => `style="grid-column:${slot + 1}/span ${size}"`;
+const buHTML = u => card(u.o, `id="bu${u.bid}" ${span(u.slot, u.size)} data-insp="def:${u.d.id}:${u.o.tier || 1}"`, true);
+const cells = (side, open, lvl) => ROMAN.map((r, i) => !open || open[i] ? `<div class="cell" style="grid-column:${i + 1}" ${side === 0 ? `data-slot="${i}"` : ''}><span>${r}</span></div>`
+  : `<div class="cell locked" style="grid-column:${i + 1}" title="${side === 0 ? 'Opens at a higher shop level' : 'Closed for this opponent'}"><span>${side === 0 && lvl ? 'Lv ' + lvl(i) : '·'}</span></div>`).join('');
+const unlockLevel = i => { for (let l = 1; l <= 9; l++) if (W.openArr(W.openCount(l))[i]) return l; return 9; };
+
+const foeMul = run => run.enemy.mul > 1 ? ` · +${Math.round((run.enemy.mul - 1) * 100)}% health and attack` : '';
+/* the shop view: only your own board. The opponent stays hidden until the fight starts. */
+function boardHTML() {
+  S.aims = null;
+  const run = S.run, hp = W.heroHp(run.round);
+  const me = W.boardUnits(run).map(o => card(o, `${span(o.slot, W.U[o.id].size)} ${ownAttrs(o)}`)).join('');
+  const tag = run.enemy.boss ? '<b class="rtag boss">Boss round</b>' : run.post ? `<b class="rtag">${run.enemy.ghost ? 'Past warband' : 'Post-game opponent'}${foeMul(run)}</b>` : '';
+  return `<section class="field shopfield" id="field">
+<div class="hero p"><span class="ftitle">Your board</span><span>Round ${run.round}</span>${tag}<span class="grow"></span><span class="hid">Your opponent is revealed when the fight starts</span></div>
+<div class="scroll"><div class="rows"><div class="row p tall" id="row0">${cells(0, W.openArr(W.openCount(run.level)), unlockLevel)}${me}</div></div></div>
+<div class="hero p" id="hero0">${hport(run.leader)}<span>${run.leader ? W.LEADERS[run.leader].name : 'Your hero'}</span><div class="hbar"><i></i></div><b>${hp}</b></div>
+</section>`;
+}
+/* active bonuses of one side in a battle */
+function sideHTML(B, side) {
+  const lv = B.syn[side], ks = Object.keys(lv).filter(k => lv[k] && W.TRIBES[k] && W.TRIBES[k].text[lv[k] - 1]);
+  const lead = side === 0 ? S.run.leader : S.foeLead, L = lead && W.LEADERS[lead];
+  return `<section class="panel side s${side}"><h2>${side === 0 ? 'Your warband' : 'The enemy'}</h2>${L ? `<p><b class="lname">${L.name}.</b> ${L.text}</p>` : ''}
+${ks.length ? `<ul class="syn">${ks.map(k => `<li class="on"><span class="tb tb-${k}">${ART.tribe(k)}${k === 'Party' ? 'Full party' : k}</span><span class="ct">${lv[k]}<i>/${W.TRIBES[k].th.length}</i></span><small>${W.TRIBES[k].text[lv[k] - 1]}</small></li>`).join('')}</ul>` : '<p class="hint">No bonuses active.</p>'}</section>`;
+}
+function fieldHTML() {
+  S.aims = null;
+  const run = S.run, B = S.B, round = B ? B.round : run.round, hp = W.heroHp(round);
+  const en = B ? B.units.filter(u => u.side === 1 && u.alive).map(buHTML).join('')
+    : run.enemy.units.map(o => card(o, `${span(o.slot, W.U[o.id].size)} data-insp="enemy:${o.uid}"`)).join('');
+  const me = B ? B.units.filter(u => u.side === 0 && u.alive).map(buHTML).join('')
+    : W.boardUnits(run).map(o => card(o, `${span(o.slot, W.U[o.id].size)} ${ownAttrs(o)}`)).join('');
+  const foe = B ? (S.foeTitle || W.FACTIONS[S.foe].name) : (run.enemy.title ? run.enemy.title + (run.enemy.boss ? '' : ' (' + W.FACTIONS[run.enemy.faction].name + ')') : W.FACTIONS[run.enemy.faction].name) + foeMul(run);
+  return `<section class="field" id="field">
+<div class="hero e${!B && run.enemy.boss ? ' boss' : ''}" id="hero1">${hport(B ? S.foeLead : run.enemy.leader)}<span>${B ? 'Enemy hero' : 'Next opponent'} · ${foe}</span><div class="hbar"><i></i></div><b>${hp}</b></div>
+<div class="scroll"><div class="rows"><div class="row e" id="row1">${cells(1, B ? B.open[1] : W.openArr(run.enemy.open))}${en}</div>
+<div class="mid"><span>vs</span></div>
+<div class="row p" id="row0">${cells(0, B ? B.open[0] : W.openArr(W.openCount(run.level)), unlockLevel)}${me}</div>
+<svg class="fx" id="fx" aria-hidden="true"><defs><marker id="ah0" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#f4c860"/></marker><marker id="ah1" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#ff9488"/></marker></defs></svg></div></div>
+<div class="hero p" id="hero0">${hport(run.leader)}<span>${run.leader ? W.LEADERS[run.leader].name : 'Your hero'}</span><div class="hbar"><i></i></div><b>${hp}</b></div>
+</section>`;
+}
+
+function inspTarget() {
+  const k = S.insp || (S.sel != null ? 'own:' + S.sel : null);
+  if (!k || !S.run) return null;
+  const [a, b, c] = k.split(':');
+  if (a === 'own') { const t = S.run.things.find(x => x.uid === +b); return t ? { t, pv: null } : null; }
+  if (a === 'enemy') { const t = S.run.enemy.units.find(x => x.uid === +b); return t ? { t } : null; }
+  if (a === 'shop') { const s = S.run.shop[+b]; return s ? { t: s.kind === 'unit' ? { kind: 'unit', id: s.id, tier: 1 } : { kind: 'item', id: s.id } } : null; }
+  if (a === 'def') return { t: { kind: 'unit', id: b, tier: +c } };
+  return null;
+}
+const helpHTML = () => `<details class="panel helpbox" id="helpbox"${S.helpOpen ? ' open' : ''}><summary>How it works</summary><ul class="help"><li>Drop a unit on the board and its neighbours slide aside to make room. The outline shows where it will land.</li><li>Each unit attacks whatever stands in the slot opposite it.</li><li>With nothing opposite, it attacks the weaker enemy one slot to either side. Only with nothing in reach does it hit the enemy hero. The first hero to fall loses.</li><li>A hero with no units left takes triple damage.</li><li>You do not see your opponent until the fight starts, so build a board that holds up against anything.</li><li>In battle, the small marker on a unit's edge shows where it is aiming: in the middle for straight ahead, in a corner for a diagonal attack, and white when it is hitting the hero.</li><li>A unit wider than one slot attacks every enemy opposite it and splits its damage evenly between them.</li><li>Buy three of the same unit to upgrade it. An upgraded unit is twice as strong.</li><li>Three of the same item combine into a stronger one. Selling a unit returns its item to your bench.</li><li>Select a unit, then a slot, to move it. Dragging works too.</li><li>Right-click one of your units to sell it. Right-click a shop card to freeze it, so it stays through rerolls and into the next round.</li><li>Raising your shop level opens more slots, for you and for your summons.</li><li>Between rounds you choose one encounter: a fight with no life at stake, an event, or a shrine. Every fifth round is a boss, and beating it earns a relic.</li><li>Against a boss, units with nothing in reach attack the boss, not the hero.</li><li>In battle, the gold bar under a unit is its attack timer.</li></ul></details>`;
+function detailHTML() {
+  const x = inspTarget();
+  if (!x) return '';
+  const t = x.t;
+  if (t.kind === 'item') { const it = W.ITEMS[t.id]; return `<div class="dhead"><div class="dart item">${itemArt(t.id)}</div><div><h3>${it.name}</h3><p class="sub">Item · ${it.cost} gold</p></div></div><p>${it.text}</p><p class="hint">Select it on your bench, then choose a unit to equip. Each unit holds one item.</p>`; }
+  const d = W.U[t.id], st = W.stats(t);
+  return `<div class="dhead"><div class="dart u f${d.f}">${ART.unit(t.id)}</div><div><h3 class="r${d.cost}">${d.name} ${stars(t.tier || 1)}</h3>
+<p class="sub">${d.token ? 'Summon' : RAR[d.cost] + ' · ' + d.cost + ' gold'} · ${d.size} slot${d.size > 1 ? 's' : ''}</p><p class="chips">${st.tribes.map(chip).join('')}</p></div></div>
+<p class="nums">${d.building ? '' : `<span class="a">${n(st.atk)} attack</span>`}<span class="h">${n(st.hp)} health</span>${d.building ? '' : `<span>every ${d.cd}s</span>`}</p>
+<p>${d.txt(st.m)}</p>
+${!d.token && (t.tier || 1) < 3 ? `<p class="hint">${[2, 3].filter(k => k > (t.tier || 1)).map(k => { const s2 = W.stats({ id: t.id, tier: k, item: t.item }); return `Tier ${k}: ${d.building ? '' : n(s2.atk) + ' attack, '}${n(s2.hp)} health`; }).join(' · ')}${t.gAtk || t.gHp ? ', plus growth' : ''}</p>` : ''}
+${d.size > 1 && !d.building && !d.all ? `<p class="hint">Wide: attacks every enemy opposite it, splitting its damage evenly.</p>` : ''}
+${x.pv ? `<p class="hint aimline"><b>Attacks first:</b> ${x.pv.hero ? 'the enemy hero (nothing in reach)' : [...new Set(x.pv.names)].join(', ') + (x.pv.diag ? ' (diagonal, nothing opposite)' : '')}</p>` : ''}
+${d.grow ? `<p class="hint">Grows +${d.grow[0] * st.m} attack and +${d.grow[1] * st.m} health after each battle${t.gAtk || t.gHp ? ` (+${t.gAtk}/+${t.gHp} so far)` : ''}.</p>` : ''}
+${t.item ? `<p class="hint"><b>${W.ITEMS[t.item].name}.</b> ${W.ITEMS[t.item].text}</p>` : ''}`;
+}
+function synHTML() {
+  const run = S.run, { cnt, lv } = W.synergy(W.boardUnits(run));
+  return Object.keys(W.TRIBES).filter(k => W.TRIBES[k].f === run.faction && W.TRIBES[k].th.length).map(k => {
+    const T = W.TRIBES[k], c = cnt[k] || 0, l = lv[k] || 0;
+    return `<li class="${l ? 'on' : ''}"><span class="tb tb-${k}">${ART.tribe(k)}${k === 'Party' ? 'Full party' : k}</span><span class="ct">${c}<i>/${T.th.find(x => x > c) || T.th[T.th.length - 1]}</i></span><small>${T.text[Math.max(0, l - 1)]}</small>${T.note ? `<small class="note">${T.note}</small>` : ''}</li>`;
+  }).join('');
+}
+function shopHTML() {
+  const run = S.run;
+  const cards = run.shop.map((s, i) => {
+    if (!s) return `<div class="card sold">Sold</div>`;
+    if (s.kind === 'item') { const it = W.ITEMS[s.id]; const ic = W.priceOf(run, s); return `<button class="card item${run.gold < ic ? ' poor' : ''}${s.frozen ? ' frozen' : ''}" data-shop="${i}" data-insp="shop:${i}"><span class="cost">${ic}</span><span class="cart">${itemArt(s.id)}</span><b>${it.name}</b><small class="tribes">Item</small><small>${it.text}</small>${s.frozen ? '<em class="ice">Frozen</em>' : ''}</button>`; }
+    const uc = W.priceOf(run, s), d = W.U[s.id], own = run.things.filter(t => t.kind === 'unit' && t.id === s.id && t.tier === 1).length;
+    return `<button class="card f${d.f} r${d.cost}${own >= 2 ? ' up' : ''}${run.gold < uc ? ' poor' : ''}${s.frozen ? ' frozen' : ''}" data-shop="${i}" data-insp="shop:${i}"><span class="cost">${uc}</span><span class="cart">${ART.unit(s.id)}</span><b>${d.name}</b>
+<span class="chips">${d.tribes.map(chip).join('')}</span>${d.size > 1 ? `<small class="tribes">Takes ${d.size} slots</small>` : ''}<span class="nums">${d.building ? '' : `<i class="a">${d.atk}</i>`}<i class="h">${d.hp + (d.flat || 0)}</i></span><small>${d.txt(1)}</small>${own ? `<em>${own >= 2 ? 'Completes an upgrade' : 'You own one'}</em>` : ''}${s.frozen ? '<em class="ice">Frozen</em>' : ''}</button>`;
+  }).join('');
+  const odds = W.ODDS[run.level - 1].map((p, i) => p ? `<i class="r${i + 1}">${p}%</i>` : '').join('');
+  const need = run.level < 9 ? `${run.xp}/${W.XPNEED[run.level - 1]} XP` : 'max';
+  return `<section class="panel"><div class="bar"><h2>Shop</h2><span class="odds" title="Chance of each rarity at this shop level">Level ${run.level} · ${W.openCount(run.level)} slots · ${need} · ${odds}</span>
+</div><div class="bar acts"><span class="purse"><b>${run.gold}</b> gold</span><button data-act="xp" ${run.level >= 9 ? 'disabled' : ''}>Buy 4 XP <b class="g">4</b></button><button data-act="reroll">Reroll <b class="g">2</b></button><span class="econ" title="Interest: 1 gold per 10 held when the battle ends, up to 3. Winning adds 1 more.">+${W.income(run)} next round (${W.income(run) - W.interest(run)} base, ${W.interest(run)} interest${W.interest(run) < 3 ? `; ${10 - run.gold % 10} more gold for +1` : ''})</span><button class="primary" data-act="fight">Fight</button></div>
+<div class="shop">${cards}</div></section>`;
+}
+function benchHTML() {
+  const run = S.run; let h = '';
+  for (let i = 0; i < W.BENCH; i++) { const t = run.things.find(x => x.bench === i); h += `<div class="bcell" data-bench="${i}">${t ? (t.kind === 'item' ? itemCard(t, ownAttrs(t)) : card(t, ownAttrs(t))) : ''}</div>`; }
+  const sel = S.sel != null ? thing(S.sel) : null;
+  return `<section class="panel"><div class="bar"><h2>Bench</h2><span class="grow"></span>${sel ? `<button data-act="sell">Sell ${nameOf(sel)} for <b class="g">${W.sellValue(sel, run)}</b></button>` : '<span class="odds">Select a unit to move or sell it</span>'}</div><div class="bench">${h}</div></section>`;
+}
+function headHTML() {
+  const run = S.run;
+  return `<header class="top"><h1>Warband</h1><div class="stats"><span>Round <b>${run.round}</b></span>${run.post ? `<span>Past warbands beaten <b>${run.post.n}</b></span>` : `<span>Wins <b>${run.wins}/${W.MAXWINS}</b></span>`}
+<span class="lives" aria-label="${run.lives} lives left">${'<i class="on"></i>'.repeat(Math.max(0, run.lives))}${'<i></i>'.repeat(W.LIVES - Math.max(0, run.lives))}</span>
+<button class="ghost" data-act="quit">${S.quitArm ? 'Press again to abandon' : 'Abandon run'}</button></div></header>`;
+}
+const hasPort = k => !!(k && window.PORTRAIT && PORTRAIT.ids.includes(k));
+const port = (k, cls) => hasPort(k) ? `<span class="port ${cls || ''}" title="${W.LEADERS[k].name}">${PORTRAIT.leader(k)}</span>` : '';
+const hport = k => hasPort(k) ? `<span class="hport" title="${W.LEADERS[k].name}">${PORTRAIT.head(k)}</span>` : '';
+function leaderPanel() {
+  const run = S.run, L = run.leader && W.LEADERS[run.leader];
+  return `<section class="panel"><h2>Leader and relics</h2>${L ? `<div class="lead">${port(run.leader, 'sm')}<p><b class="lname">${L.name}.</b> ${L.text}</p></div>` : '<p class="hint">No leader.</p>'}
+${run.relics.length ? `<ul class="relics">${run.relics.map(k => `<li><b>${W.RELICS[k].name}.</b> ${W.RELICS[k].text}</li>`).join('')}</ul>` : '<p class="hint">No relics yet. Hard camps, shrines and bosses give them.</p>'}</section>`;
+}
+function leaderHTML() {
+  const f = S.pickF;
+  return `<div class="wrap pick"><header class="intro"><h1>Choose a leader</h1><p class="lede">Each leader of the ${W.FACTIONS[f].name} bends the run toward a different kind of warband. The choice lasts the whole run.</p></header>
+<div class="factions">${Object.keys(W.LEADERS).filter(k => W.LEADERS[k].f === f).map(k => { const L = W.LEADERS[k]; return `<button class="fac f${f}" data-act="leader:${k}">${hasPort(k) ? port(k, 'big') : `<span class="crest one"><span class="u f${f}">${ART.unit(L.art)}</span></span>`}<h2>${L.name}</h2><p>${L.text}</p><span class="go">Lead with ${L.name.replace('The ', 'the ')}</span></button>`; }).join('')}</div>
+<p><button class="ghost" data-act="back">Back to factions</button></p></div>`;
+}
+function rewardText(c) { const r = c.reward; return r.relic ? `Relic: ${W.RELICS[r.relic].name}. ${W.RELICS[r.relic].text}` : r.unit ? `A free ${W.U[r.unit].name}.` : `${r.gold} gold.`; }
+function encounterHTML() {
+  const run = S.run, o = run.offer;
+  const cards = o.cards.map((c, i) => {
+    if (c.type === 'relic') return `<button class="fac enc relic" data-act="enc:${i}"><span class="tag">Relic</span><h2>${W.RELICS[c.relic].name}</h2><p>${W.RELICS[c.relic].text}</p><span class="go">Take it</span></button>`;
+    if (c.type === 'event') { const E = W.EVENTS[c.id]; return `<button class="fac enc event" data-act="enc:${i}"><span class="tag">Event · no fight</span><h2>${E.name}</h2><p>${E.text(run)}</p><span class="go">Accept</span></button>`; }
+    if (c.type === 'shrine') return `<button class="fac enc shrine" data-act="enc:${i}"><span class="tag">Shrine · costs a life</span><h2>Blood shrine</h2><p>Give up 1 of your ${run.lives} lives and take the ${W.RELICS[c.relic].name}. ${W.RELICS[c.relic].text}</p><span class="go">Pay the price</span></button>`;
+    return `<button class="fac enc camp${c.hard ? ' hard' : ''}" data-act="enc:${i}"><span class="tag">${c.hard ? 'Hard fight' : 'Easy fight'} · no life at stake</span><h2>${c.name}</h2>
+<span class="row mini" style="grid-template-columns:repeat(${c.units.reduce((a, t) => a + W.U[t.id].size, 0)},minmax(0,1fr))">${c.units.slice().sort((a, b) => a.slot - b.slot).map(t => card(t, `style="grid-column:span ${W.U[t.id].size}"`)).join('')}</span>
+<p><b>If you win:</b> ${rewardText(c)}</p><span class="go">Fight</span></button>`;
+  }).join('');
+  return `<div class="wrap">${headHTML()}<p class="msg" role="status">${S.msg || '&nbsp;'}</p><header class="intro"><h1 class="h1s">${o.kind === 'relics' ? 'Spoils of the boss' : 'On the road to round ' + run.round}</h1><p class="lede">${o.kind === 'relics' ? 'Choose one relic to keep for the rest of the run.' : 'Choose one before you reach the shop.'}</p></header>
+<div class="factions">${cards}</div>
+<div class="cols"><main><section class="field"><div class="hero p"><span>Your board</span></div><div class="scroll"><div class="rows"><div class="row p">${cells(1, W.openArr(W.openCount(run.level)))}${W.boardUnits(run).map(t => card(t, `${span(t.slot, W.U[t.id].size)}`)).join('')}</div></div></div></section></main><aside>${leaderPanel()}</aside></div></div>`;
+}
+function pickHTML() {
+  const show = { H: ['footman', 'priest', 'archmage'], E: ['scout', 'sunspire', 'matriarch'], U: ['skeleton', 'necromancer', 'herald'] };
+  return `<div class="wrap pick"><header class="intro"><h1>Warband</h1><p class="lede">Draft a single row of ten slots. Each unit strikes whatever stands opposite it, and anything left unblocked hits the enemy hero. Win ten battles before you lose five.</p></header>
+<div class="factions">${Object.keys(W.FACTIONS).filter(f => f !== 'N').map(f => `<button class="fac f${f}" data-act="pick:${f}"><span class="crest">${show[f].map(id => `<span class="u f${f}">${ART.unit(id)}</span>`).join('')}</span><h2>${W.FACTIONS[f].name}</h2><p>${W.FACTIONS[f].blurb}</p>
+<p class="chips">${Object.keys(W.TRIBES).filter(k => W.TRIBES[k].f === f && W.TRIBES[k].th.length && k !== 'Party').map(chip).join('')}</p><span class="go">Lead the ${W.FACTIONS[f].name}</span></button>`).join('')}</div></div>`;
+}
+function logRows() {
+  return S.run.log.map(L => {
+    const b = L.battle, mine = b.units.filter(x => x.side === 'you').sort((x, y) => (y.dealt + y.hero) - (x.dealt + x.hero))[0];
+    const res = L.result === 'win' ? 'Win' : L.result === 'loss' ? 'Loss' : 'Draw';
+    return `<tr class="${L.result}"><td>${L.round}</td><td>${W.FACTIONS[L.enemy.faction].name}</td><td><b>${res}</b></td><td>${b.heroHp[0]} / ${b.heroMax}</td><td>${b.heroHp[1]} / ${b.heroMax}</td><td>${b.time}s${b.sudden ? ' (sudden death)' : ''}</td><td>${mine ? W.U[mine.id].name + ' · ' + (mine.dealt + mine.hero) : ''}</td></tr>`;
+  }).join('');
+}
+function endHTML() {
+  const run = S.run, won = run.over === 'won';
+  return `<div class="wrap pick"><header class="intro withport">${port(run.leader, 'mid')}<div><h1>${won ? 'The realm is yours' : 'Your warband has fallen'}</h1>${run.post ? `<p class="lede"><b>After the crown: ${run.post.n} past warband${run.post.n === 1 ? '' : 's'} beaten.</b></p>` : ''}<p class="lede">${run.wins} win${run.wins === 1 ? '' : 's'} over ${run.log.length} round${run.log.length === 1 ? '' : 's'} leading the ${W.FACTIONS[run.faction].name}${run.leader ? ' under ' + W.LEADERS[run.leader].name.replace('The ', 'the ') : ''}${run.relics.length ? ', carrying ' + run.relics.map(k => W.RELICS[k].name).join(', ') : ''}.</p></div></header>
+<section class="field"><div class="scroll"><div class="rows"><div class="row p">${cells(1, W.openArr(W.openCount(run.level)))}${W.boardUnits(run).map(o => card(o, `${span(o.slot, W.U[o.id].size)} data-insp="own:${o.uid}"`)).join('')}</div></div></div></section>
+<section class="panel"><div class="bar"><h2>Run log</h2><span class="odds" id="save" role="status">${S.save || ''}</span><span class="grow"></span><button data-act="copylog">Copy run log</button>${won && !run.post ? `<button data-act="newrun">Start a new run</button><button class="primary" data-act="keepgoing" title="Keep this warband and fight the boards of your past winning runs, each stronger than the last, until your lives run out.">Keep going</button>` : `<button class="primary" data-act="newrun">Start a new run</button>`}</div>
+<div class="scroll"><table class="log"><thead><tr><th>Round</th><th>Opponent</th><th>Result</th><th>Your hero</th><th>Enemy hero</th><th>Length</th><th>Your top damage</th></tr></thead><tbody>${logRows()}</tbody></table></div>
+<details id="rawlog"><summary>Show the full log as text</summary><textarea id="rawtext" readonly rows="8" aria-label="Full run log"></textarea></details></section></div>`;
+}
+function setSave(t) { S.save = t; const e = document.getElementById('save'); if (e) e.textContent = t; }
+async function saveLog() {
+  const run = S.run; if (!run || run.saved) return;
+  run.saved = true; setSave('Saving the run log…');
+  try {
+    const db = window.claude && window.claude.use ? await window.claude.use('db') : null;
+    if (!db) { run.saved = false; setSave("Couldn't reach storage. Use Copy run log and paste it into the chat."); return; }
+    const x = W.exportLog(run);
+    run.docId = run.docId || 'run-' + Date.now();
+    await db.collection('runs').doc(run.docId).set({ ended: x.ended, faction: x.faction, outcome: x.outcome, wins: x.wins, rounds: x.rounds, bal: x.bal, post: x.post == null ? -1 : x.post, json: JSON.stringify(x) });
+    setSave('Run log saved. Ask Claude to look at your last run.');
+  } catch (err) { run.saved = false; setSave("Couldn't save the run log. Use Copy run log and paste it into the chat."); }
+}
+/* the final boards of past winning runs, for the post-game. Any failure just means generated opponents. */
+async function loadGhosts(skip) {
+  try {
+    const db = window.claude && window.claude.use ? await window.claude.use('db') : null; if (!db) return [];
+    const snap = await Promise.race([db.collection('runs').where('outcome', '==', 'won').get(), new Promise((_, no) => setTimeout(() => no(new Error('timeout')), 10000))]);
+    const out = [];
+    for (const d of snap.docs) { if (d.id === skip) continue; let x = null; try { x = JSON.parse(d.data().json); } catch (err) { continue; } const g = W.ghostFrom(x, d.id); if (g) out.push(g); }
+    return out;
+  } catch (err) { return []; }
+}
+async function keepGoing() {
+  const run = S.run; if (!run || run.over !== 'won' || run.post || S.loading) return;
+  S.loading = true; setSave('Gathering your past warbands…');
+  const gs = await loadGhosts(run.docId);
+  S.loading = false; if (S.run !== run || !W.continueRun(run, gs)) return;
+  S.save = ''; S.msg = gs.length ? `${gs.length} past warband${gs.length === 1 ? '' : 's'} to face, weakest first. Each fight you win makes the next one 15% stronger.` : 'No past winning boards to face yet, so these are fresh opponents. Each fight you win makes the next one 15% stronger.';
+  if (run.lives === 3) S.msg += ' You go in with at least 3 lives.';
+  S.screen = 'shop'; S.sel = null; S.insp = null; render();
+}
+/* unit details float beside whatever is hovered, focused or (on touch) selected */
+let tipT = null;
+const tipEl = () => { let t = document.getElementById('tip'); if (!t) { t = document.createElement('div'); t.id = 'tip'; t.className = 'tip'; t.setAttribute('role', 'tooltip'); t.hidden = true; document.body.appendChild(t); } return t; };
+function hideTip() { clearTimeout(tipT); tipT = null; const t = document.getElementById('tip'); if (t) t.hidden = true; }
+function placeTip(a) {
+  const t = tipEl(), html = a && a.isConnected ? detailHTML() : ''; if (!html) { t.hidden = true; return; }
+  t.innerHTML = html; t.hidden = false; t.style.left = '0px'; t.style.top = '0px';
+  const r = a.getBoundingClientRect(), w = t.offsetWidth, h = t.offsetHeight, vw = window.innerWidth, vh = window.innerHeight, g = 10;
+  let x, y;
+  if (a.closest('#row0') && r.bottom + g + h <= vh - 8) { t.style.left = Math.round(Math.max(8, Math.min(vw - w - 8, r.left + r.width / 2 - w / 2))) + 'px'; t.style.top = Math.round(r.bottom + g) + 'px'; return; } // your own row: drop below it, over the bench, so the board stays visible
+  if (r.right + g + w <= vw - 8) x = r.right + g; else if (r.left - g - w >= 8) x = r.left - g - w; else x = Math.max(8, Math.min(vw - w - 8, r.left + r.width / 2 - w / 2));
+  if (x >= r.right || x + w <= r.left) y = Math.max(8, Math.min(vh - h - 8, r.top)); else y = r.bottom + g + h <= vh - 8 ? r.bottom + g : Math.max(8, r.top - g - h);
+  t.style.left = Math.round(x) + 'px'; t.style.top = Math.round(y) + 'px';
+}
+function showTip(a, now) { clearTimeout(tipT); const t = document.getElementById('tip'); if (now || (t && !t.hidden)) placeTip(a); else tipT = setTimeout(() => placeTip(a), 220); }
+function afterRender() {
+  hideTip();
+  if (S.touch && S.sel != null && S.screen === 'shop') { const el = root.querySelector(`[data-own="${S.sel}"]`); if (el) { S.insp = null; showTip(el, true); } }
+}
+function render() { render0(); afterRender(); }
+function render0() {
+  if (S.screen === 'pick') { root.innerHTML = pickHTML(); return; }
+  if (S.screen === 'leader') { root.innerHTML = leaderHTML(); return; }
+  if (S.screen === 'encounter') { S.aims = null; root.innerHTML = encounterHTML(); return; }
+  if (S.screen === 'end') { root.innerHTML = endHTML(); document.getElementById('rawtext').value = JSON.stringify(W.exportLog(S.run)); saveLog(); return; }
+  if (S.screen === 'summary') { root.innerHTML = summaryHTML(); const g = document.getElementById('sumgo'); if (g) g.focus(); return; }
+  if (S.screen === 'battle') {
+    const B = S.B, foe = S.foeTitle || W.FACTIONS[S.foe].name;
+    root.innerHTML = `<div class="wrap battle">${headHTML()}
+<div class="vs"><h2>${S.campFight ? 'Camp' : 'Round ' + B.round}</h2><p><b>${S.run.leader ? W.LEADERS[S.run.leader].name : 'Your warband'}</b> against <b>${foe}</b>${!S.campFight && S.foeTitle && S.foe !== 'N' ? ' (' + W.FACTIONS[S.foe].name + ')' : ''}</p></div>
+${fieldHTML()}
+<section class="panel"><div class="bar"><h2>Battle</h2><span class="odds" id="clock">0s</span><span class="grow"></span>${[1, 2, 4].map(x => `<button data-act="speed:${x}" class="${S.speed === x ? 'active' : ''}">${x}×</button>`).join('')}<button data-act="skip">Skip to result</button></div></section>
+<div class="sides">${sideHTML(B, 0)}${sideHTML(B, 1)}</div></div>`;
+    return;
+  }
+  root.innerHTML = `<div class="wrap">${headHTML()}<p class="msg" role="status">${S.msg || '&nbsp;'}</p><div class="cols"><main>${boardHTML()}
+${benchHTML() + shopHTML()}</main>
+<aside>${leaderPanel()}<section class="panel"><h2>${W.FACTIONS[S.run.faction].name} bonuses</h2><ul class="syn">${synHTML()}</ul></section>${helpHTML()}</aside></div></div>`;
+  drawPreview();
+}
+
+/* ---- attack lines ---- */
+const NS = 'http://www.w3.org/2000/svg';
+function fxLine(fromEl, toEl, side, cls, ttl) {
+  const svg = document.getElementById('fx'); if (!svg || !fromEl) return;
+  const R = svg.getBoundingClientRect(), a = fromEl.getBoundingClientRect();
+  const x1 = a.left + a.width / 2 - R.left, y1 = a.top + a.height / 2 - R.top; let x2 = x1, y2 = side === 0 ? 4 : R.height - 4;
+  if (toEl) { const b = toEl.getBoundingClientRect(); x2 = b.left + b.width / 2 - R.left; y2 = b.top + b.height / 2 - R.top; }
+  const l = document.createElementNS(NS, 'line'), k0 = toEl ? .3 : .45, k1 = toEl ? .78 : 1;
+  l.setAttribute('x1', x1 + (x2 - x1) * k0); l.setAttribute('y1', y1 + (y2 - y1) * k0); l.setAttribute('x2', x1 + (x2 - x1) * k1); l.setAttribute('y2', y1 + (y2 - y1) * k1);
+  l.setAttribute('class', 'tr s' + side + ' ' + cls); l.setAttribute('marker-end', `url(#ah${side})`);
+  svg.appendChild(l); if (ttl) setTimeout(() => l.remove(), ttl);
+}
+function drawPreview() {
+  document.querySelectorAll('.tr.pv').forEach(e => e.remove()); document.querySelectorAll('.aimed').forEach(e => e.classList.remove('aimed'));
+  if (S.screen !== 'shop') return;
+  const x = inspTarget(); if (!x || !x.pv) return;
+  const from = root.querySelector(`.row.p [data-own="${x.t.uid}"]`); if (!from) return;
+  if (x.pv.hero) { const h = document.getElementById('hero1'); if (h) h.classList.add('aimed'); return; }
+  for (const id of x.pv.to) { const to = root.querySelector(`[data-insp="enemy:${id}"]`); if (to) to.classList.add('aimed'); }
+}
+
+/* ---- battle playback ---- */
+let raf = 0, last = 0, els = {};
+function bind() { els = {}; for (const u of S.B.units) { const e = document.getElementById('bu' + u.bid); if (e) els[u.bid] = e; } }
+function float(el, text, cls) {
+  if (!el || el.querySelectorAll('.fl').length > 3) return;
+  const s = document.createElement('span'); s.className = 'fl ' + cls; s.textContent = text; s.style.left = (30 + Math.random() * 40) + '%';
+  el.appendChild(s); setTimeout(() => s.remove(), 700);
+}
+function drain(B) {
+  for (const e of B.ev) {
+    const el = els[e.b];
+    if (e.t === 'summon') { const u = B.units.find(x => x.bid === e.b); if (u && u.alive) { document.getElementById('row' + u.side).insertAdjacentHTML('beforeend', buHTML(u)); const ne = document.getElementById('bu' + u.bid); ne.classList.add('spawn'); els[u.bid] = ne; } }
+    else if (e.t === 'die') { if (el) { el.classList.add('dead'); el.removeAttribute('id'); setTimeout(() => el.remove(), 350); delete els[e.b]; } }
+    else if (e.t === 'hit') { if (e.v >= 1) float(el, (e.flank ? 'Flank ' : '') + '-' + n(e.v), e.crit ? 'crit' : e.flank ? 'flank' : 'dmg'); }
+    else if (e.t === 'heal') { if (e.v >= 1) float(el, '+' + n(e.v), 'heal'); }
+    else if (e.t === 'revive') float(el, 'Rises', 'heal');
+    else if (e.t === 'buff') float(el, '+' + n(e.a) + '/+' + n(e.h), 'heal');
+    else if (e.t === 'buff') float(el, '+' + n(e.a) + '/+' + n(e.h), 'heal');
+    else if (e.t === 'atk') { if (el) { el.classList.remove('lunge'); void el.offsetWidth; el.classList.add('lunge'); } }
+    else if (e.t === 'hero') { const h = document.getElementById('hero' + e.side); if (h) { h.classList.remove('flash'); void h.offsetWidth; h.classList.add('flash'); } }
+  }
+  B.ev.length = 0;
+}
+function paint(B) {
+  for (const u of B.units) {
+    const el = els[u.bid]; if (!el || !u.alive) continue;
+    el.querySelector('.hpb i').style.width = Math.max(0, u.hp / u.maxhp * 100) + '%';
+    el.querySelector('.hpb u').style.width = Math.min(100, u.shield / u.maxhp * 100) + '%';
+    el.querySelector('.cdb i').style.width = (u.d.building ? (u.d.every ? u.at / u.d.every : 0) : Math.min(1, u.t / u.cd)) * 100 + '%';
+    el.querySelector('.h').textContent = Math.max(1, n(u.hp));
+    if (!u.d.building) el.querySelector('.a').textContent = n(W.effAtk(u));
+    const rb = el.querySelector('.rotb'); if (u.rot > 0) { rb.hidden = false; rb.textContent = u.rot; } else rb.hidden = true;
+    const ac = el.querySelector('.aimc'), dir = W.aimDir(B, u); if (ac && ac.dataset.aim !== dir) ac.dataset.aim = dir;
+    el.classList.toggle('weak', u.weak > 0 || u.rot > 0); el.classList.toggle('rot', u.rot > 0); el.classList.toggle('burn', u.burnT > 0);
+  }
+  for (const s of [0, 1]) { const h = document.getElementById('hero' + s); if (!h) continue; h.querySelector('i').style.width = Math.max(0, B.hero[s].hp / B.hero[s].max * 100) + '%'; h.querySelector('b').textContent = n(B.hero[s].hp); }
+  const c = document.getElementById('clock'); if (c) c.textContent = Math.floor(B.time) + 's' + (B.sudden ? ' · Sudden death: both heroes are taking damage' : '');
+}
+function frame(ts) {
+  const B = S.B; if (!B || S.screen !== 'battle' || S.result) return;
+  let acc = Math.min(.1, (ts - last) / 1000) * S.speed; last = ts;
+  while (acc > 1e-6 && !B.over) { const d = Math.min(.05, acc); W.step(B, d); acc -= d; }
+  drain(B); paint(B);
+  if (B.over) endBattle(); else raf = requestAnimationFrame(frame);
+}
+function startBattle() {
+  const run = S.run;
+  if (!W.boardUnits(run).length) { S.msg = 'Put at least one unit on the board first.'; render(); return; }
+  S.campFight = false; S.foeLead = run.enemy.leader || null; S.foeTitle = (run.enemy.title || (run.post ? W.FACTIONS[run.enemy.faction].name : '')) + (run.post ? foeMul(run) : ''); S.foe = run.enemy.faction; S.B = W.startBattle(run); S.screen = 'battle'; S.sel = null; S.insp = null; S.result = null; S.msg = '';
+  render(); bind(); paint(S.B); last = performance.now(); raf = requestAnimationFrame(frame);
+}
+function startCamp() {
+  const run = S.run;
+  if (!W.boardUnits(run).length) { run.camp = null; S.msg = 'You had no units on the board, so you passed the camp by.'; S.screen = 'shop'; render(); return; }
+  S.campFight = true; S.foeLead = null; S.foeTitle = run.camp.name; S.foe = 'N'; S.B = W.startCamp(run); S.screen = 'battle'; S.sel = null; S.insp = null; S.result = null; S.msg = '';
+  render(); bind(); paint(S.B); last = performance.now(); raf = requestAnimationFrame(frame);
+}
+function endBattle() {
+  const rep = W.battleReport(S.B), foe = S.foeTitle || W.FACTIONS[S.foe].name;
+  if (S.campFight) {
+    const c = W.finishCamp(S.run, S.B); S.result = { camp: true };
+    S.sum = { rep, res: c.win ? 'win' : 'draw', title: c.win ? 'Camp cleared' : 'Driven off', bits: [c.msg, 'No life was at stake.'], foe, go: 'On to the shop', round: 'Camp' };
+  } else {
+    const run = S.run, wasBoss = run.enemy.boss, round = S.B.round, r = W.finishBattle(run, S.B); S.result = r;
+    if (run.over) saveLog();
+    const bits = [];
+    if (r.res === 'loss') bits.push(run.lives > 0 ? `You lose a life. ${run.lives} left.` : 'That was your last life.');
+    if (!run.over) bits.push(`+${r.income} gold.`);
+    if (r.grown) bits.push(`${r.grown} unit${r.grown > 1 ? 's' : ''} grew stronger.`);
+    if (wasBoss && r.res === 'win' && !run.over) bits.push('The boss leaves a relic behind.');
+    S.sum = { rep, res: r.res, title: r.res === 'win' ? 'Victory' : r.res === 'loss' ? 'Defeat' : 'Draw', bits, foe, go: run.over ? 'See how it ended' : 'Continue', round: 'Round ' + round };
+  }
+  cancelAnimationFrame(raf); S.screen = 'summary'; render();
+}
+/* after every fight: who did what */
+function summaryHTML() {
+  const Z = S.sum, b = Z.rep, num = v => Math.round(v || 0).toLocaleString('en');
+  const rows = side => { const out = [];
+    for (const u of b.units.filter(x => x.side === side)) {
+      let g = u.summoned ? out.find(x => x.sum && x.id === u.id) : null;
+      if (!g) { g = { id: u.id, tier: u.tier, sum: !!u.summoned, n: 0, dealt: 0, hero: 0, taken: 0, healed: 0, alive: 0, hp: 0, died: 0 }; out.push(g); }
+      g.n++; g.dealt += u.dealt; g.hero += u.hero; g.taken += u.taken; g.healed += u.healed || 0; if (u.died == null) { g.alive++; g.hp += u.hpLeft; } else g.died = Math.max(g.died, u.died);
+    }
+    return out.sort((p, q) => q.dealt + q.hero - p.dealt - p.hero); };
+  const me = rows('you'), en = rows('enemy'), top = Math.max(1, ...me.concat(en).map(r => r.dealt + r.hero));
+  const nm = r => W.U[r.id].name + (r.n > 1 ? ' ×' + r.n : '');
+  const fate = r => r.n > 1 ? (r.alive ? `${r.alive} of ${r.n} survived` : 'All fell') : r.alive ? `Survived · ${num(r.hp)} health` : `Fell at ${r.died}s`;
+  const table = (list, side) => { const t = list.reduce((a, r) => ({ dealt: a.dealt + r.dealt, hero: a.hero + r.hero, taken: a.taken + r.taken, healed: a.healed + r.healed }), { dealt: 0, hero: 0, taken: 0, healed: 0 });
+    return `<div class="scroll"><table class="bstat"><thead><tr><th>Unit</th><th class="bcol">Damage</th><th>To units</th><th>To hero</th><th>Taken</th><th>Healed</th><th>Outcome</th></tr></thead><tbody>${list.map(r => `<tr class="${r.alive ? '' : 'gone'}"><td><div class="un"><span class="ic u f${W.U[r.id].f}">${ART.unit(r.id)}</span><span>${nm(r)} ${stars(r.tier || 1)}${r.sum ? '<small>summoned</small>' : ''}</span></div></td>
+<td class="bcol"><span class="dbar" title="${num(r.dealt)} to units, ${num(r.hero)} to the hero"><i class="du" style="width:${(r.dealt / top * 100).toFixed(1)}%"></i><i class="dh" style="width:${(r.hero / top * 100).toFixed(1)}%"></i></span></td>
+<td>${num(r.dealt)}</td><td>${r.hero ? num(r.hero) : '–'}</td><td>${num(r.taken)}</td><td>${r.healed ? num(r.healed) : '–'}</td><td class="fate">${fate(r)}</td></tr>`).join('')}</tbody>
+<tfoot><tr><td>Total</td><td class="bcol"></td><td>${num(t.dealt)}</td><td>${num(t.hero)}</td><td>${num(t.taken)}</td><td>${t.healed ? num(t.healed) : '–'}</td><td></td></tr></tfoot></table></div>`; };
+  const lost = [b.heroMax - b.heroHp[0], b.heroMax - b.heroHp[1]], notes = [];
+  const big = list => list.slice().sort((p, q) => q.hero - p.hero)[0];
+  if (Z.res !== 'win') { const t = big(en); if (t && t.hero > 0) notes.push(`Their ${nm(t)} dealt ${num(t.hero)} of the ${num(lost[0])} damage your hero took.`); }
+  if (Z.res !== 'loss') { const t = big(me); if (t && t.hero > 0) notes.push(`Your ${nm(t)} dealt ${num(t.hero)} of the ${num(lost[1])} damage their hero took.`); }
+  const fx = b.effects || { you: {}, enemy: {} };
+  if (fx.you.rot || fx.you.burn) notes.push(`Your ${[fx.you.rot ? 'Rot dealt ' + num(fx.you.rot) : '', fx.you.burn ? 'burn dealt ' + num(fx.you.burn) : ''].filter(Boolean).join(' and ')} to their units, on top of the figures below.`);
+  if (fx.enemy.rot || fx.enemy.burn) notes.push(`Their ${[fx.enemy.rot ? 'Rot dealt ' + num(fx.enemy.rot) : '', fx.enemy.burn ? 'burn dealt ' + num(fx.enemy.burn) : ''].filter(Boolean).join(' and ')} to your units.`);
+  if (b.sudden) notes.push('The fight went to sudden death.');
+  const hero = (label, i) => `<div class="tile"><small>${label}</small><b>${num(b.heroHp[i])} <i>/ ${num(b.heroMax)}</i></b><span class="hpb"><i style="width:${Math.max(0, b.heroHp[i] / b.heroMax * 100).toFixed(1)}%"></i></span></div>`;
+  return `<div class="wrap battle">${headHTML()}
+<section class="result ${Z.res}"><div><h2>${Z.title}</h2><p>${Z.bits.join(' ')}</p></div><span class="grow"></span><button class="primary" data-act="continue" id="sumgo">${Z.go}</button></section>
+<div class="tiles"><div class="tile"><small>${Z.round}</small><b>${S.run.leader ? W.LEADERS[S.run.leader].name.replace('The ', '') : 'You'} <i>against</i> ${Z.foe}</b></div>${hero('Your hero', 0)}${hero('Enemy hero', 1)}<div class="tile"><small>Length</small><b>${b.time}s</b></div></div>
+${notes.length ? `<section class="panel"><h2>What decided it</h2><ul class="notes">${notes.map(x => `<li>${x}</li>`).join('')}</ul></section>` : ''}
+<section class="panel"><div class="bar"><h2>Your warband</h2><span class="grow"></span><span class="key"><i class="du"></i>to units <i class="dh"></i>to their hero</span></div>${table(me, 0)}</section>
+<section class="panel side s1"><h2>The enemy</h2>${table(en, 1)}</section>
+<p><button class="primary" data-act="continue">${Z.go}</button></p></div>`;
+}
+
+/* ---- input ---- */
+/* which board slot the pointer is over, from the player row's geometry */
+function slotAt(e) {
+  const row = e.target.closest && e.target.closest('#row0'); if (!row || S.screen !== 'shop') return null;
+  const r = row.getBoundingClientRect(); return Math.max(0, Math.min(9, Math.floor((e.clientX - r.left) / (r.width / 10))));
+}
+function clearDrop() { S.hover = null; document.querySelectorAll('.dropmark').forEach(x => x.remove()); document.querySelectorAll('[data-push]').forEach(x => x.removeAttribute('data-push')); }
+/* outline where the held unit would land and nudge the units it would push */
+function showDrop(slot) {
+  if (slot === S.hover) return; clearDrop(); S.hover = slot;
+  const row = document.getElementById('row0'), t = S.sel != null ? thing(S.sel) : null; if (slot == null || !row || !t || t.kind !== 'unit') return;
+  const size = W.U[t.id].size, P = W.tryMove(S.run, t, { slot });
+  if (P && P.slot === t.slot && !P.moves.length) return;
+  const m = document.createElement('div'); m.className = 'dropmark' + (P ? '' : ' bad'); const s = P ? P.slot : Math.min(slot, 10 - size);
+  m.style.gridColumn = `${s + 1}/span ${size}`; row.appendChild(m);
+  if (P) for (const mv of P.moves) { const el = row.querySelector(`[data-own="${mv.uid}"]`); if (el) el.dataset.push = mv.to == null ? 'b' : mv.to > mv.from ? 'r' : 'l'; }
+}
+function act(a) {
+  const run = S.run, sel = S.sel != null ? thing(S.sel) : null; S.msg = '';
+  if (a.dataset.own) {
+    const t = thing(+a.dataset.own); if (!t) return;
+    if (!sel) S.sel = t.uid;
+    else if (sel === t) S.sel = null;
+    else if (sel.kind === 'item' && t.kind === 'unit') { W.equip(run, sel, t); S.sel = null; }
+    else if (t.kind === 'item' && sel.kind === 'unit') { W.equip(run, t, sel); S.sel = null; }
+    else { if (!W.moveTo(run, sel, t.slot != null ? { slot: sel.kind === 'unit' && S.hover != null ? S.hover : t.slot } : { bench: t.bench })) S.msg = "There's no room to fit it there. Clear a slot first."; S.sel = null; }
+  } else if (a.dataset.bench) { if (sel) { W.moveTo(run, sel, { bench: +a.dataset.bench }); S.sel = null; } }
+  else if (a.dataset.slot) {
+    if (sel) { if (sel.kind === 'item') S.msg = 'Items go on units. Select the item, then a unit.'; else if (!W.moveTo(run, sel, { slot: +a.dataset.slot })) S.msg = "It doesn't fit there."; S.sel = null; }
+  }
+  render();
+}
+function command(c) {
+  const run = S.run; S.msg = '';
+  if (c !== 'quit') S.quitArm = false;
+  if (c.startsWith('pick:')) { S.pickF = c.slice(5); S.screen = 'leader'; }
+  else if (c === 'back') { S.screen = 'pick'; }
+  else if (c.startsWith('leader:')) { S.save = ''; S.run = W.newRun(S.pickF, c.slice(7)); S.screen = 'shop'; S.sel = null; }
+  else if (c.startsWith('enc:')) { const r = W.chooseOffer(run, +c.slice(4)); if (!r) return; if (r.fight) { startCamp(); return; } S.msg = r.msg || ''; S.screen = 'shop'; }
+  else if (c === 'keepgoing') { keepGoing(); return; }
+  else if (c === 'newrun') { S.run = null; S.save = ''; S.screen = 'pick'; }
+  else if (c === 'copylog') {
+    const text = JSON.stringify(W.exportLog(run)), fail = () => { const d = document.getElementById('rawlog'), t = document.getElementById('rawtext'); if (d) d.open = true; if (t) { t.focus(); t.select(); } setSave('Copy was blocked. The full log is selected below: press Ctrl+C.'); };
+    try { navigator.clipboard.writeText(text).then(() => setSave('Run log copied. Paste it into the chat.'), fail); } catch (err) { fail(); }
+    return;
+  }
+  else if (c === 'quit') { if (S.quitArm) { cancelAnimationFrame(raf); S.quitArm = false; S.run = null; S.B = null; S.result = null; S.screen = 'pick'; } else S.quitArm = true; }
+  else if (c === 'reroll') { if (!W.reroll(run)) S.msg = 'A reroll costs 2 gold.'; }
+  else if (c === 'xp') { if (!W.buyXp(run)) S.msg = 'Buying XP costs 4 gold.'; }
+  else if (c === 'sell') { const t = thing(S.sel); if (t) W.sell(run, t); S.sel = null; }
+  else if (c.startsWith('sellid:')) { const t = thing(+c.slice(7)); if (t) { W.sell(run, t); if (S.sel === t.uid) S.sel = null; } }
+  else if (c === 'fight') { startBattle(); return; }
+  else if (c.startsWith('speed:')) { S.speed = +c.slice(6); document.querySelectorAll('[data-act^="speed:"]').forEach(b => b.classList.toggle('active', b.dataset.act === c)); return; }
+  else if (c === 'skip') { const B = S.B; if (!B || S.result) return; cancelAnimationFrame(raf); let g = 0; while (!B.over && g++ < 20000) W.step(B, .05); B.ev.length = 0; endBattle(); return; }
+  else if (c === 'copylog') {
+    const ta = document.getElementById('rawlog'), st = document.getElementById('savest'); if (!ta) return;
+    const fail = () => { document.getElementById('rawwrap').open = true; ta.focus(); ta.select(); if (st) st.textContent = 'Copying was blocked. The log is selected below; copy it from there.'; };
+    try { navigator.clipboard.writeText(ta.value).then(() => { if (st) st.textContent = 'Copied. Paste it into chat.'; }, fail); } catch (e) { fail(); }
+    return;
+  }
+  else if (c === 'continue') { S.B = null; S.result = null; S.sum = null; S.campFight = false; S.screen = run.over ? 'end' : run.offer ? 'encounter' : 'shop'; }
+  render();
+}
+root.addEventListener('click', e => {
+  const a = e.target.closest('[data-act],[data-shop],[data-own],[data-bench],[data-slot]');
+  if (!a) return;
+  if (a.dataset.act) return command(a.dataset.act);
+  if (S.screen !== 'shop') return;
+  if (a.dataset.shop) {
+    const s = S.run.shop[+a.dataset.shop], r = W.buy(S.run, +a.dataset.shop); S.msg = '';
+    if (!r.ok) S.msg = r.msg || ''; else if (r.merged.length || r.items.length) S.msg = r.merged.map(m => `${W.U[m.id].name} upgraded to tier ${m.tier}.`).concat(r.items.map(k => `Three combined into a ${W.ITEMS[k].name}.`)).join(' ');
+    else if (s && s.kind === 'item') S.msg = 'Item added to your bench. Select it, then a unit to equip.';
+    S.insp = null; render(); return;
+  }
+  act(a);
+});
+root.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-own]') && S.screen === 'shop') { e.preventDefault(); const id = e.target.dataset.own; act(e.target); const again = root.querySelector(`[data-own="${id}"]`); if (again) again.focus(); } });
+root.addEventListener('mouseover', e => {
+  const a = e.target.closest('[data-insp]'), k = a ? a.dataset.insp : null;
+  if (k !== S.insp) { S.insp = k; drawPreview(); if (k && !S.drag && (S.sel == null || S.touch)) showTip(a); else hideTip(); }
+});
+root.addEventListener('mouseleave', () => { if (S.insp) { S.insp = null; drawPreview(); } hideTip(); });
+root.addEventListener('focusin', e => { const a = e.target.closest && e.target.closest('[data-insp]'); if (a && a.matches(':focus-visible') && !S.drag) { S.insp = a.dataset.insp; drawPreview(); showTip(a, true); } });
+root.addEventListener('focusout', e => { if (e.target.closest && e.target.closest('[data-insp]')) hideTip(); });
+window.addEventListener('pointerdown', e => { S.touch = e.pointerType === 'touch'; if (!e.target.closest || !e.target.closest('[data-insp]')) hideTip(); }, true);
+function closeCtx() { const c = document.getElementById('ctx'); if (c) c.remove(); }
+root.addEventListener('contextmenu', e => {
+  if (S.screen !== 'shop') return;
+  const sh = e.target.closest('[data-shop]');
+  if (sh) { e.preventDefault(); W.toggleFreeze(S.run, +sh.dataset.shop); S.msg = ''; render(); return; }
+  const a = e.target.closest('[data-own]'); if (!a) return;
+  e.preventDefault(); closeCtx(); hideTip();
+  const t = thing(+a.dataset.own); if (!t) return;
+  const m = document.createElement('div'); m.id = 'ctx'; m.className = 'ctx';
+  m.innerHTML = `<button data-act="sellid:${t.uid}">Sell ${nameOf(t)} for <b class="g">${W.sellValue(t, S.run)}</b> gold</button>`;
+  m.style.left = Math.max(8, Math.min(e.clientX, window.innerWidth - 240)) + 'px'; m.style.top = Math.max(8, Math.min(e.clientY, window.innerHeight - 60)) + 'px';
+  root.appendChild(m); m.firstChild.focus();
+});
+document.addEventListener('click', e => { if (!e.target.closest('#ctx')) closeCtx(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCtx(); });
+window.addEventListener('scroll', () => { closeCtx(); hideTip(); }, true);
+root.addEventListener('toggle', e => { if (e.target && e.target.id === 'helpbox') S.helpOpen = e.target.open; }, true);
+root.addEventListener('dragstart', e => { const a = e.target.closest && e.target.closest('[data-own]'); if (!a || S.screen !== 'shop') return; S.sel = +a.dataset.own; e.dataTransfer.setData('text/plain', a.dataset.own); e.dataTransfer.effectAllowed = 'move'; a.classList.add('sel'); S.drag = true; hideTip(); });
+root.addEventListener('dragover', e => { if (S.sel == null) return; const s = slotAt(e); if (s != null || e.target.closest('[data-own],[data-bench],[data-slot]')) e.preventDefault(); showDrop(s); });
+root.addEventListener('mousemove', e => { if (S.sel == null || S.screen !== 'shop') { if (S.hover != null) clearDrop(); return; } showDrop(slotAt(e)); });
+root.addEventListener('drop', e => { e.preventDefault(); if (S.sel == null || S.screen !== 'shop') return;
+  const ds = slotAt(e), held = thing(S.sel);
+  if (ds != null && held && held.kind === 'unit') { S.msg = W.moveTo(S.run, held, { slot: ds }) ? '' : "There's no room to fit it there. Clear a slot first."; S.sel = null; clearDrop(); render(); return; }
+  const a = e.target.closest('[data-own],[data-bench],[data-slot]'); if (!a) return; if (a.dataset.own && +a.dataset.own === S.sel) { S.sel = null; render(); return; } act(a); });
+root.addEventListener('dragend', () => { S.drag = false; clearDrop(); if (S.sel != null && S.screen === 'shop') { S.sel = null; render(); } });
+
+function start(data) {
+  if (data && data.run && data.run.things) { S.run = W.restore(data.run); S.run.camp = null; S.screen = S.run.over ? 'end' : S.run.offer ? 'encounter' : 'shop'; }
+  render();
+}
+const hot = window.claude && window.claude.hot;
+if (hot && hot.snapshot) hot.snapshot(() => (S.run ? { run: S.run } : {}));
+if (hot && hot.ready) hot.ready(start); else start((hot && hot.data) || {});
+window.__S = S;
+})();
+
+</script>
+</body></html>
