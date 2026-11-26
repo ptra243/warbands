@@ -3,7 +3,8 @@ import type { Enemy, Ghost, RoundLog, Run, UnitSpec, UnitThing } from './types.t
 import { GHOST_FROM, POSTSTEP, SLOTS, openArr, openCount } from './constants.ts';
 import { ITEMS } from './data/items.ts';
 import { U } from './data/units.ts';
-import { createBattle, stats, step } from './battle/sim.ts';
+import { createBattle, stats } from './battle/sim.ts';
+import { runToEnd } from './playback.ts';
 import { rollShop } from './shop.ts';
 import { genEnemy } from './enemies.ts';
 import { addXp, has } from './run.ts';
@@ -84,11 +85,7 @@ export function yardstick(g: Ghost): number {
           ref.open,
           { leader: g.leader, relics: g.relics, foeLeader: ref.leader, foeRelics: ref.relics, foeMul: Math.exp(mid) },
         );
-        let n = 0;
-        while (!B.over && n++ < 3000) {
-          step(B, 0.05);
-          B.ev.length = 0;
-        }
+        runToEnd(B);
         if (B.winner === 0) lo = mid;
         else hi = mid;
       }

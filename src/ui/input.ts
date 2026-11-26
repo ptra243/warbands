@@ -175,9 +175,7 @@ export function command(c: string): void {
     const B = S.B;
     if (!B || S.result) return;
     stopBattleLoop();
-    let g = 0;
-    while (!B.over && g++ < 20000) W.step(B, 0.05);
-    B.ev.length = 0;
+    W.runToEnd(B);
     endBattle();
     return;
   } else if (c === 'continue') {
