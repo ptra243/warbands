@@ -4,6 +4,9 @@ export const SLOTS = 10,
   SUDDEN = 35,
   MAXWINS = 10,
   LIVES = 5;
+/* a battle advances in ticks of TICK seconds; fast-forward gives up on a battle still going at MAX_BATTLE_TIME */
+export const TICK = 0.05,
+  MAX_BATTLE_TIME = 200;
 export const ODDS: number[][] = [
   [80, 20, 0, 0, 0],
   [70, 27, 3, 0, 0],
