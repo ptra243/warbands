@@ -127,6 +127,9 @@ async function ensureApp(): Promise<Application | null> {
       resolution: Math.min(2, window.devicePixelRatio || 1),
       autoDensity: true,
       preference: 'webgl',
+      /* with no GPU (software WebGL) a frame takes well over 100ms and the page stops answering clicks, so
+         refuse to start and let the classic screen take over */
+      failIfMajorPerformanceCaveat: true,
     });
     a.stage.addChild(world, vignette, hud);
     a.ticker.add(tick);
