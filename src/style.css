@@ -1472,19 +1472,13 @@ textarea {
   background: rgba(220, 80, 70, 0.16);
   box-shadow: none;
 }
+/* pushed units stay put (the outline and arrow say where they go): moving them would slide them out from under
+   the pointer while it reads them */
 .u[data-push] {
-  transition: transform 0.12s;
   outline: 2px dashed var(--gold);
   outline-offset: 1px;
 }
-.u[data-push='r'] {
-  transform: translateX(10px);
-}
-.u[data-push='l'] {
-  transform: translateX(-10px);
-}
 .u[data-push='b'] {
-  transform: translateY(10px);
   opacity: 0.7;
 }
 .u[data-push]::before {
@@ -1515,11 +1509,6 @@ textarea {
   top: auto;
   bottom: -6px;
   transform: none;
-}
-@media (prefers-reduced-motion: reduce) {
-  .u[data-push] {
-    transition: none;
-  }
 }
 
 /* leader portraits */

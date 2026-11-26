@@ -233,7 +233,7 @@ export function installInput(): void {
     if (k !== S.insp) {
       S.insp = k;
       drawPreview();
-      if (k && !S.drag && (S.sel == null || S.touch)) showTip(a!);
+      if (k && !S.drag) showTip(a!);
       else hideTip();
     }
   });

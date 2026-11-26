@@ -242,11 +242,16 @@ function showBattle(): void {
     const stage = document.getElementById('pixi-stage'),
       dock = document.getElementById('pixi-dock');
     if (stage && dock) {
-      void mountPixiBattle(stage, dock, B, foeName(), endBattle).then((ok) => {
-        if (ok) return;
-        pixiFailed = true;
-        if (S.screen === 'battle' && S.B === B && !S.result) showBattle();
-      });
+      void mountPixiBattle(stage, dock, B, foeName(), endBattle)
+        .catch((e: unknown) => {
+          console.warn('The Pixi battle screen failed to start; using the classic one.', e);
+          return false;
+        })
+        .then((ok) => {
+          if (ok) return;
+          pixiFailed = true;
+          if (S.screen === 'battle' && S.B === B && !S.result) showBattle();
+        });
       return;
     }
   }
