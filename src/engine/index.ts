@@ -32,8 +32,9 @@ export {
   buyXp,
   reroll,
 } from './run.ts';
-export { ghostFrom, rankGhosts, nextFoe, continueRun } from './postgame.ts';
+export { ghostFrom, yardstick, spreadGhosts, nextFoe, continueRun } from './postgame.ts';
 export { startBattle, battleReport, exportLog, finishBattle } from './round.ts';
 export { EVENTS, genCamp, genOffer, chooseOffer, startCamp, finishCamp, restore } from './encounters.ts';
 export { preview, aimDir, previewAll } from './preview.ts';
-export { setRandom } from './rng.ts';
+export { setRandom, seeded } from './rng.ts';
+export { YARDSTICK } from './data/yardstick.ts';

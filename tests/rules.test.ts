@@ -205,6 +205,49 @@ describe('post-game', () => {
     W.continueRun(run, []);
     expect(run.lives).toBe(3);
   });
+
+  const human = W.YARDSTICK[0];
+  const ghost = (key: string, tierUp = 0, score?: number): W.Ghost => ({
+    key,
+    faction: human.faction,
+    leader: human.leader,
+    relics: human.relics,
+    open: human.open,
+    round: 12,
+    power: 0,
+    score,
+    units: human.units.map((o) => Object.assign({}, o, { tier: Math.min(3, (o.tier || 1) + tierUp) })),
+  });
+
+  it('scores the same board the same every time, and leaves the run’s random draws alone', () => {
+    const mine = () => 0.5;
+    W.setRandom(mine);
+    const a = W.yardstick(ghost('a')),
+      b = W.yardstick(ghost('b'));
+    expect(W.setRandom(Math.random)).toBe(mine);
+    expect(a).toBe(b);
+    expect(a).toBeGreaterThan(0.5);
+    expect(a).toBeLessThan(2);
+  });
+
+  it('scores a stronger board higher', () => {
+    expect(W.yardstick(ghost('up', 1))).toBeGreaterThan(W.yardstick(ghost('base')));
+  });
+
+  it('picks boards spread from weakest to strongest', () => {
+    const pool = Array.from({ length: 32 }, (_, i) => ghost('g' + i, 0, 31 - i));
+    const got = W.spreadGhosts(pool, 16).map((g) => g.score!);
+    expect(got).toHaveLength(16);
+    got.forEach((s, i) => expect(Math.floor(s / 2)).toBe(i));
+  });
+
+  it('faces the lowest-scoring board first', () => {
+    const run = W.newRun('H', 'marshal');
+    run.over = 'won';
+    run.log.push({ round: 10, income: 5 });
+    W.continueRun(run, [ghost('strong', 0, 2), ghost('weak', 0, 0.5), ghost('mid', 0, 1)]);
+    expect(run.enemy.ghost).toBe('weak');
+  });
 });
 
 describe('Duelist', () => {
