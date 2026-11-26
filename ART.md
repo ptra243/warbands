@@ -2,7 +2,7 @@
 
 How to draw a unit illustration that matches the ones already approved. Read this before adding or changing anything in `src/ui/card-art.ts`.
 
-The card art is in the game on the PixiJS battle screen, on the battle tiles and the inspect card. A unit with a scene in `card-art.ts` shows it there; every other unit still shows its small icon from `src/ui/art.ts`, as does the classic battle screen. Drawing a scene therefore puts it in the game, drafts included. Twelve units are drawn so far: the Human mages, tanks and DPS. `card-art.ts` also still holds two earlier busts (Lich, Assassin) from a concept that was dropped: `DROPPED` keeps them out of the game. Don't use them or build on them.
+The card art is in the game on the PixiJS battle screen, on the battle tiles and the inspect card. A unit with a scene in `card-art.ts` shows it there; every other unit still shows its small icon from `src/ui/art.ts`, as does the classic battle screen. Drawing a scene therefore puts it in the game, drafts included. Fourteen units are drawn so far: the Human mages, tanks and DPS. `card-art.ts` also still holds two earlier busts (Lich, Assassin) from a concept that was dropped: `DROPPED` keeps them out of the game. Don't use them or build on them.
 
 ## Where things are
 
@@ -143,6 +143,8 @@ Pose is the hardest part to get right from words alone. The Halberdier went thro
 | Crossbowman | Second draft: standing front-on, crossbow held low across the body, loaded bolt glinting for the crit. Side-on kneeling was rejected. Body is a large plain brown block.                                                           |
 | Captain     | Third draft: both hands on the horn, as a player holds one. Coat fitted and belted at the waist so he doesn't read as heavy; the cloak hangs behind with a pale lining so it parts from the coat.                                  |
 | Falconer    | Second draft, from the owner's photo: a front-on hawk, its head square to us, with wings spread nearly edge to edge on a fist raised straight up; the handler is small below on a rock. The face in the hood reads as a dark mask. |
+| Duelist     | First draft. Side-on fencing lunge in a brazier-lit courtyard; rings stack on the one point the rapier keeps hitting. The far leg's knee is vague.                                                                                 |
+| Champion    | First draft. Front-on, calm, sword planted point-down among the fallen; motes rise into the hilt. A gold laurel, not the Paladin's crown. Arms are still stiff.                                                                    |
 
 The Lich and Assassin busts in `card-art.ts` predate the move to scenes. The owner dropped the bust concept, so treat those units as not drawn: start their scenes fresh rather than adapting the busts.
 
