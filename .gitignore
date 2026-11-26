@@ -2,6 +2,7 @@ tests/shots/
 __pycache__/
 node_modules/
 dist/
+art/out/
 test-results/
 playwright-report/
 *.bak*
