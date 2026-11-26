@@ -134,8 +134,13 @@ function softwareGl(): boolean {
     return false;
   }
 }
-async function ensureApp(): Promise<Application | null> {
-  if (app || failed) return app;
+/* the start-up under way, shared so that two mounts during the first load can't make two applications */
+let starting: Promise<Application | null> | null = null;
+function ensureApp(): Promise<Application | null> {
+  if (app || failed) return Promise.resolve(app);
+  return (starting ??= startApp().finally(() => (starting = null)));
+}
+async function startApp(): Promise<Application | null> {
   if (softwareGl()) {
     failed = true;
     console.info('No GPU for WebGL; using the classic battle screen.');
@@ -1096,15 +1101,17 @@ export const pixiScreen: BattleScreen = {
     const stage = document.getElementById('pixi-stage'),
       dock = document.getElementById('pixi-dock');
     if (!stage || !dock) return false;
+    const gen = generation;
     const a = await ensureApp();
     if (!a) return false;
-    const gen = generation;
+    /* superseded while Pixi was starting: leave the page alone, the driver ignores this mount */
+    if (gen !== generation || !stage.isConnected) return true;
     stageEl = stage;
     stage.appendChild(a.canvas);
     initDock(dock);
     fit();
-    /* superseded while Pixi was starting or the art loaded: the driver ignores this mount */
-    if (gen !== generation || !(await setUp(b, foeName))) return true;
+    /* superseded while the art loaded: the driver ignores this mount */
+    if (!(await setUp(b, foeName))) return true;
     B = b;
     return true;
   },

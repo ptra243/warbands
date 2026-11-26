@@ -115,12 +115,11 @@ async function mountScreen(B: W.Battle): Promise<void> {
     console.warn('The battle screen failed to start.', e);
     ok = false;
   }
+  /* remember a Pixi failure even when this mount was overtaken, so the next battle goes straight to classic */
+  if (!ok && s === pixiScreen) pixiFailed = true;
   if (id !== showing || S.B !== B || S.screen !== 'battle' || S.result) return;
   if (!ok) {
-    if (s === pixiScreen) {
-      pixiFailed = true;
-      showBattle(); // redraw with the classic screen's markup
-    }
+    if (s === pixiScreen) showBattle(); // redraw with the classic screen's markup
     return;
   }
   screen = s;

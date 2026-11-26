@@ -72,7 +72,8 @@ export function unitSnapshot(B: Battle, u: BattleUnit, lead = 0): UnitSnapshot {
     ? u.d.every
       ? Math.min(1, (u.at + lead) / u.d.every)
       : 0
-    : Math.min(1, (u.t + lead * (1 + u.haste)) / u.cd);
+    : /* the sim only charges a unit that has attack, so only those sweep ahead of it */
+      Math.min(1, (u.t + (u.atk > 0 ? lead * (1 + u.haste) : 0)) / u.cd);
   return {
     unit: u,
     hpK: Math.max(0, Math.min(1, u.hp / u.maxhp)),

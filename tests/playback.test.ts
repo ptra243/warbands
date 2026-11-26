@@ -128,6 +128,14 @@ describe('unit snapshot', () => {
     expect(W.unitSnapshot(B, k, 1).cdK).toBe(1);
   });
 
+  it('a fighter with no attack does not charge between ticks, as the sim does not charge it', () => {
+    const B = battle([spec('knight', 4)], [spec('knight', 4)]);
+    const k = B.units.find((u) => u.side === 0)!;
+    k.t = 0;
+    k.atk = 0;
+    expect(W.unitSnapshot(B, k, k.cd / 2).cdK).toBe(0);
+  });
+
   it('ranged comes from reach or a ranged tribe, and a tank lunges', () => {
     const B = battle([spec('archer', 3), spec('apprentice', 4), spec('knight', 5)], [spec('knight', 4)]);
     const by = (id: string) =>
