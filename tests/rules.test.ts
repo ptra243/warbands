@@ -220,14 +220,26 @@ describe('post-game', () => {
   });
 
   it('scores the same board the same every time, and leaves the run’s random draws alone', () => {
-    const mine = () => 0.5;
+    let draws = 0;
+    const mine = () => (draws++, 0.5);
     W.setRandom(mine);
     const a = W.yardstick(ghost('a')),
       b = W.yardstick(ghost('b'));
     expect(W.setRandom(Math.random)).toBe(mine);
+    expect(draws).toBe(0);
     expect(a).toBe(b);
     expect(a).toBeGreaterThan(0.5);
     expect(a).toBeLessThan(2);
+  });
+
+  /* The golden baseline doesn't cover yardstick scores, so pin them here. If this fails, the reference boards,
+   the score search or the fights changed: that is a rules change, so bump BALANCE (browsers cache scores per
+   BALANCE) and update these numbers. */
+  it('scores the reference boards as before', () => {
+    const scores = W.YARDSTICK.map((ref, i) =>
+      W.yardstick({ key: 'ref' + i, ...ref, round: 12, power: 0, units: ref.units.map((o) => ({ ...o })) }),
+    );
+    expect(scores).toEqual([0.74, 0.74, 1.51]);
   });
 
   it('scores a stronger board higher', () => {
