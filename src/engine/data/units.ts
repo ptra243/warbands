@@ -35,7 +35,7 @@ const DEFS: Record<string, Omit<UnitDef, 'id'>> = {
     txt: () => 'Guard: takes 30% of the damage dealt to adjacent allies.',
   },
   archer: {
-    name: 'Militia Archer',
+    name: 'Militia Slinger',
     f: 'H',
     cost: 1,
     size: 1,
@@ -142,7 +142,7 @@ const DEFS: Record<string, Omit<UnitDef, 'id'>> = {
       }),
   },
   sharpshooter: {
-    name: 'Sharpshooter',
+    name: 'Falconer',
     f: 'H',
     cost: 4,
     size: 1,
@@ -151,7 +151,7 @@ const DEFS: Record<string, Omit<UnitDef, 'id'>> = {
     cd: 2.6,
     tribes: ['DPS'],
     snipe: 1,
-    txt: () => 'Always shoots the weakest enemy unit, wherever it stands.',
+    txt: () => 'Its hawk always strikes the weakest enemy unit, wherever it stands.',
   },
   paladin: {
     name: 'Paladin',

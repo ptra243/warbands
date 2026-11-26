@@ -63,6 +63,12 @@ const WPN: Record<string, Paint> = {
     `<rect x="49" y="12" width="2.6" height="38" fill="${WOOD}"/><path d="M45 48h11v8q-5.5 6-11 0z" fill="${STEEL}"/>`,
   banner: (c) =>
     `<rect x="49" y="6" width="2.4" height="56" fill="${WOOD}"/><path d="M51.4 8h11l-3 6 3 6h-11z" fill="${c}"/>`,
+  sling: (c) =>
+    `<path d="M46 37L50 17" stroke="${c || '#c9a46a'}" stroke-width="1.2"/><ellipse cx="50" cy="13" rx="9" ry="3" fill="none" stroke="#ddd" stroke-width=".8" stroke-dasharray="2 2" opacity=".7"/><circle cx="51" cy="15.5" r="3" fill="#8a8578"/>`,
+  falcon: (c) =>
+    `<rect x="42.5" y="34" width="7.5" height="6" rx="2" fill="#8a6a44"/><path d="M47 33q-1-9 4-11q5 2 4 11z" fill="${c}"/><path d="M50 26L38 12l9 6zM52 26l12-14-9 6z" fill="${c}"/><circle cx="51" cy="21" r="2.6" fill="${c}"/><path d="M53 21l2.4 1-2.4 1z" fill="${GOLD}"/>`,
+  horn: (c) =>
+    `<path d="M37 27Q47 26 52 13l5 2q-4 15-19 14z" fill="${c || GOLD}"/><path d="M51.5 12l7 3" stroke="#fff6" stroke-width="1.6"/><path d="M58 6q4 4 3 9M61 3q6 6 4 14" fill="none" stroke="#fff" stroke-width=".9" opacity=".6"/>`,
   book: (c) =>
     `<rect x="43" y="40" width="14" height="11" rx="1.5" fill="${c}"/><rect x="49.3" y="40" width="1.4" height="11" fill="${GOLD}"/>`,
 };
@@ -102,7 +108,7 @@ const SK = { skull: 1, skin: BONE };
 const ELF = { ears: 1 };
 const UNITS: Record<string, string> = {
   footman: fig({ body: '#4f6f9c', hat: 'helm', hatc: STEEL, shield: '#35527d', wpn: 'sword' }),
-  archer: fig({ body: '#5d7a3c', hat: 'cap', hatc: '#3f5a2a', wpn: 'bow' }),
+  archer: fig({ body: '#5d7a3c', hat: 'cap', hatc: '#3f5a2a', wpn: 'sling' }),
   apprentice: fig({ body: '#4b5fb0', robe: 1, hat: 'wizard', hatc: '#39489a', wpn: 'staff', wc: '#7fd0ff' }),
   acolyte: fig({ body: '#e8e2d0', robe: 1, trim: GOLD, hat: 'hair', hatc: '#8a5a2b', wpn: 'mace', wc: GOLD }),
   knight: big(fig({ body: STEEL, dark: '#0004', hat: 'great', hatc: '#c6ced5', shield: '#8c2f2f', wpn: 'sword' })),
@@ -124,10 +130,9 @@ const UNITS: Record<string, string> = {
     cloak: '#8c2f2f',
     hat: 'hair',
     hatc: '#3a2a1c',
-    wpn: 'banner',
-    wc: '#d8443a',
+    wpn: 'horn',
   }),
-  sharpshooter: fig({ body: '#39424a', cloak: '#2a3238', hat: 'hood', hatc: '#2a3238', wpn: 'bow', wc: '#c9c2a8' }),
+  sharpshooter: fig({ body: '#39424a', cloak: '#2a3238', hat: 'hood', hatc: '#2a3238', wpn: 'falcon', wc: '#9a7a52' }),
   paladin: big(
     fig({
       body: '#d9c27a',

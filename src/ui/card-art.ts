@@ -1413,6 +1413,770 @@ const CARDS: Record<string, () => string> = {
     );
     return s;
   },
+
+  archer() {
+    const tun = '#5d7a3c',
+      cap = '#3f5a2a',
+      lin = '#d6c9a8',
+      hose = '#5a4632',
+      skin = '#dcae86',
+      hair = '#a8743a',
+      lea = '#6a4a2c',
+      hide = '#8a6a44',
+      iron = '#5a6068',
+      hot = '#ffcf6a',
+      dust = '#c9a47a';
+    const r = rnd(17);
+    let fence = '';
+    for (let x = 2; x < 100; x += 9)
+      fence += P(`${x - 1},75 ${x - 1},${f1(62 + r() * 2)} ${x + 1},${f1(61 + r() * 2)} ${x + 1},75`, '#120a06');
+    // a farm field at dusk: haystack, a cottage with a lit window, a rail fence
+    let s = sbg(
+      '#1c120d',
+      '#4a2e1c',
+      Array.from({ length: 8 }, () =>
+        C(f1(r() * 100), f1(r() * 28), f2(0.3 + r() * 0.4), '#ffe9c8', f2(0.3 + r() * 0.4)),
+      ).join('') +
+        P('0,50 100,44 100,62 0,66', '#c07a3a', 0.32) +
+        P('0,57 100,52 100,64 0,68', '#ffb060', 0.2) +
+        P('0,30 60,24 100,30 100,34 50,30 0,36', '#2a1a14', 0.35) +
+        PA('M-4,70 Q-4,52 7,49 Q18,52 19,70 Z', '#1a110a') +
+        P('74,68 74,52 85,44 96,52 96,68', '#140c08') +
+        P('70,53 85,40 100,53 96,54 85,44 74,54', '#22160c') +
+        P('80,57 83.5,57 83.5,61 80,61', '#ffb860') +
+        C(81.7, 59, 6, '#ffb860', 0.1) +
+        fence +
+        L('0,66 100,64', '#120a06', 1.2) +
+        L('0,71 100,69', '#120a06', 1.2) +
+        P('0,75 100,71 100,100 0,100', '#22160e') +
+        L('0,75 100,71', '#5a3a22', 0.6, 0.7) +
+        E(24, 92, 18, 2.8, '#c07a3a', 0.2),
+    );
+    // speed lines streaming back from the figure as he darts left, and dust off the back foot
+    s +=
+      [
+        [40, 66, 0.3],
+        [47, 70, 0.22],
+        [55, 66, 0.3],
+        [62, 72, 0.2],
+        [69, 64, 0.28],
+        [76, 70, 0.22],
+        [83, 66, 0.26],
+      ]
+        .map((l) => L(`${l[1]},${l[0]} ${f1(l[1] + 14 + r() * 14)},${l[0]}`, '#f4e6cc', 0.5, l[2]))
+        .join('') +
+      E(80, 93, 9, 2.6, dust, 0.18) +
+      E(88, 90, 6, 2, dust, 0.12) +
+      E(74, 95, 5, 1.6, dust, 0.2);
+    // a limb as a tapered quad, its two halves lit by which way they face
+    const limb = (x0: number, y0: number, x1: number, y1: number, w0: number, w1: number, c: string) => {
+      const dx = x1 - x0,
+        dy = y1 - y0,
+        l = Math.hypot(dx, dy),
+        nx = -dy / l,
+        ny = dx / l,
+        lit = -nx - ny > 0 ? 1 : -1;
+      const pt = (x: number, y: number, w: number, side: number) => `${f1(x + nx * w * side)},${f1(y + ny * w * side)}`;
+      return (
+        P(
+          `${pt(x0, y0, w0 + 0.7, 1)} ${pt(x1, y1, w1 + 0.7, 1)} ${pt(x1, y1, w1 + 0.7, -1)} ${pt(x0, y0, w0 + 0.7, -1)}`,
+          '#0a0604',
+          0.35,
+        ) +
+        P(`${pt(x0, y0, w0, lit)} ${pt(x1, y1, w1, lit)} ${x1},${y1} ${x0},${y0}`, sh(c, 1.18)) +
+        P(`${pt(x0, y0, w0, -lit)} ${pt(x1, y1, w1, -lit)} ${x1},${y1} ${x0},${y0}`, sh(c, 0.74))
+      );
+    };
+    // the sling: the fist is the pivot, the stone sweeping overhand round it, trails fading behind
+    const fx = 76,
+      fy = 45,
+      cr = 24,
+      sa = -112;
+    const at = (a: number, rr = cr) =>
+      `${f1(fx + rr * Math.cos((a * Math.PI) / 180))},${f1(fy + rr * Math.sin((a * Math.PI) / 180))}`;
+    const arc = (a0: number, a1: number, rr = cr) => {
+      const n = Math.max(2, Math.ceil(Math.abs(a1 - a0) / 8));
+      return Array.from({ length: n + 1 }, (_, i) => at(a0 + ((a1 - a0) * i) / n, rr)).join(' ');
+    };
+    const stx = fx + cr * Math.cos((sa * Math.PI) / 180),
+      sty = fy + cr * Math.sin((sa * Math.PI) / 180);
+    s +=
+      L(arc(sa, sa + 40), hot, 1, 0.6) +
+      L(arc(sa + 40, sa + 80), hot, 0.8, 0.34) +
+      L(arc(sa + 80, sa + 120), hot, 0.6, 0.16) +
+      L(arc(sa + 4, sa + 60, cr - 2.2), '#fff4dc', 0.4, 0.4) +
+      L(arc(sa + 8, sa + 70, cr + 2.2), '#fff4dc', 0.35, 0.28) +
+      L(arc(sa + 12, sa + 90, cr - 4.4), '#fff4dc', 0.3, 0.18) +
+      C(stx, sty, 13, hot, 0.06);
+    let f = '';
+    // legs mid-stride: near leg forward, far leg pushing off behind
+    f +=
+      limb(56, 82, 66, 92, 3.6, 3, sh(hose, 0.75)) +
+      limb(66, 92, 74, 101, 3, 2.6, sh(hose, 0.62)) +
+      limb(41, 82, 31, 93, 3.8, 3.2, hose) +
+      limb(31, 93, 28, 104, 3.2, 2.8, sh(hose, 0.9));
+    // far arm, behind the body: elbow low and out, fist cocked by the shoulder
+    f +=
+      limb(60, 50, 71.5, 59, 3.4, 3, sh(lin, 0.72)) +
+      P('68.6,56 74.4,58.6 72.8,62.8 67.8,60.6', sh(lin, 0.58)) +
+      limb(72, 59.5, 76, 47.5, 2.4, 2, sh(skin, 0.78)) +
+      C(fx, fy + 0.6, 2.5, sh(skin, 0.82)) +
+      C(fx - 0.7, fy, 0.8, skin);
+    // tunic, the hem flicked back by the run
+    f +=
+      P('34,69 62,69 72,84 60,81 50,86 30,84', tun) +
+      P('50,69 62,69 72,84 60,81 50,86', sh(tun, 0.66)) +
+      P('34,69 38,69 34,84.6 30,84', sh(tun, 1.25)) +
+      L('44,72 42,85', sh(tun, 0.7), 0.5, 0.7) +
+      P('31,51 40,46 56,45 63,49.5 62,69 34,69', tun) +
+      P('50,45.4 56,45 63,49.5 62,69 52,69', sh(tun, 0.66)) +
+      P('31,51 36,48.2 38,69 34,69', sh(tun, 1.25)) +
+      L('45,50 47,66', sh(tun, 0.72), 0.5, 0.6) +
+      P('33.5,67 62.5,67 62.5,70.4 33.5,70.4', lea) +
+      P('50,67 62.5,67 62.5,70.4 50,70.4', sh(lea, 0.7)) +
+      C(56, 68.7, 1.1, '#c9a544') +
+      P('57,70.4 61,70.4 61.6,76 56.4,76.6', lea) +
+      C(59, 74, 1.2, '#8a8578');
+    // short dark neck in a laced linen collar
+    f +=
+      PA('M42.4,40.6 L49.4,40.2 L50,45.6 Q46.4,48 42.6,46 Z', sh(skin, 0.5)) +
+      PA('M46.4,40.4 L49.4,40.2 L50,45.6 Q48,47 46.4,47.2 Z', sh(skin, 0.42)) +
+      PA('M38.8,46.6 Q46,51.6 54.4,45.6 L56,48 Q46.4,55.4 37.4,49.4 Z', lin) +
+      PA('M47,51.4 Q51.4,50 54.4,45.6 L56,48 Q51.6,52.8 47,53.2 Z', sh(lin, 0.72)) +
+      `<path d="M39,46.8 Q46,51.6 54.2,45.8" fill="none" stroke="${sh(lin, 0.5)}" stroke-width=".5" opacity=".8"/>` +
+      L('46,51.6 46.4,54.6', '#4a3020', 0.4, 0.8);
+    // head turned toward the throw: eyes narrowed on the target, a small set grin
+    f += hd(
+      46,
+      31.5,
+      0.5,
+      -4,
+      face(skin) +
+        P('31,40 30,30 37,34', hair) +
+        P('69,40 71,30 64,34', sh(hair, 0.7)) +
+        P('32,42 29,47 33,49', hair) +
+        P('68,42 71,47 67,49', sh(hair, 0.7)) +
+        P('36,43 47,42 46,47 37,48', sh(skin, 0.92), 0.7) +
+        P('53,42 64,43 63,48 54,47', sh(skin, 0.8), 0.75) +
+        P('37.6,45.6 41.6,44.2 46,45.4 41.8,46.8', '#f4ece0') +
+        C(40.4, 45.5, 1.25, '#1a1a24') +
+        C(40, 45.1, 0.35, '#fff') +
+        P('54,45.4 58,44.2 62.4,45.6 58.2,46.8', '#e4ddd0') +
+        C(56.8, 45.5, 1.2, '#1a1a24') +
+        L('36,41.4 41,40.6 46.4,42.6', hair, 1.5) +
+        L('53.6,42.6 59,40.6 64,41.4', sh(hair, 0.8), 1.5) +
+        P('43,61 55,60 54,63 44,63.4', '#3a1c18') +
+        L('43.6,61.4 54.4,60.6', '#f2ead8', 0.9) +
+        P('29,38 31,25 44,16 58,15 69,22 72,37 66,31 50,27 35,31', cap) +
+        P('29,38 31,25 44,16 50,27 35,31', sh(cap, 1.3)) +
+        P('58,15 69,22 72,37 66,31', sh(cap, 0.62)) +
+        P('28,38 35,31 50,27 66,31 73,37 66,35 50,31 34,35', sh(cap, 0.8)) +
+        P('66,22 82,30 78,33 70,30', sh(cap, 0.7)),
+    );
+    // near arm: linen sleeve down to the elbow, forearm across the body behind the buckler
+    f +=
+      limb(33, 50.5, 27.5, 62.5, 3.8, 3.4, lin) +
+      P('24.4,60.6 30.6,61 30.8,65.6 24.6,65', sh(lin, 0.82)) +
+      limb(28, 63.5, 39, 64.5, 2.6, 2.3, skin);
+    // the buckler: small, hide over wood, turned a little toward the throw
+    const bx = 38,
+      by = 62,
+      brx = 8.2,
+      bry = 9.6,
+      n = 12;
+    const v = Array.from({ length: n }, (_, i) => {
+      const a = (i * 2 * Math.PI) / n;
+      return [bx + brx * Math.cos(a), by + bry * Math.sin(a), a] as const;
+    });
+    const rim = (k: number) => v.map((p) => `${f1(bx + (p[0] - bx) * k)},${f1(by + (p[1] - by) * k)}`).join(' ');
+    f += P(rim(1.12), sh(iron, 0.7)) + P(rim(1.12), '#000', 0.2);
+    v.forEach((p, i) => {
+      const q = v[(i + 1) % n],
+        m = (p[2] + Math.PI / n) % (2 * Math.PI),
+        k = 1 + 0.34 * ((-Math.cos(m) - Math.sin(m)) / Math.SQRT2);
+      f += P(`${bx},${by} ${f1(p[0])},${f1(p[1])} ${f1(q[0])},${f1(q[1])}`, sh(hide, k));
+    });
+    f +=
+      L(rim(1.06) + ' ' + rim(1.06).split(' ')[0], iron, 1.2) +
+      L(
+        v
+          .filter((p) => p[2] > Math.PI * 0.85 && p[2] < Math.PI * 1.6)
+          .map((p) => `${f1(bx + (p[0] - bx) * 1.06)},${f1(by + (p[1] - by) * 1.06)}`)
+          .join(' '),
+        '#d8dee6',
+        0.5,
+        0.7,
+      ) +
+      L(rim(0.62) + ' ' + rim(0.62).split(' ')[0], sh(hide, 0.6), 0.4, 0.7) +
+      C(bx, by, 3.2, sh(iron, 0.75)) +
+      C(bx - 0.5, by - 0.5, 2.5, iron) +
+      P(`${bx - 1.8},${by - 0.6} ${bx - 0.6},${by - 2.2} ${bx + 0.6},${by - 1.2}`, '#fff', 0.6) +
+      L(`${bx - 6},${by + 3} ${bx - 3},${by + 6.4}`, sh(hide, 1.4), 0.4, 0.6);
+    // cord from the fist to the pouch, and the glowing third stone
+    s +=
+      `<g transform="rotate(-4 50 100)">${f}</g>` +
+      L(`${fx},${fy - 1.6} ${f1(stx + 0.6)},${f1(sty + 1.4)}`, '#c9a46a', 0.55) +
+      L(`${fx + 0.4},${fy - 1.4} ${f1(stx + 1.6)},${f1(sty + 0.6)}`, sh('#c9a46a', 0.7), 0.45) +
+      E(stx, sty, 2.6, 1.6, sh(lea, 0.9), null, ` transform="rotate(${sa + 90} ${f1(stx)} ${f1(sty)})"`) +
+      glow(f1(stx), f1(sty - 0.4), 1.6, hot);
+    return s;
+  },
+
+  crossbow() {
+    const lea = '#7a4a2e',
+      pad = '#8f8468',
+      steel = '#9aa4b0',
+      skin = '#d0a07c',
+      wood = '#6a4a2c',
+      hose = '#3e3a34',
+      glove = '#5a3a24',
+      stone = '#2a3446',
+      fire = '#ff9a3c',
+      hot = '#ffe7a0';
+    const r = rnd(29);
+    let joints = '';
+    for (let y = 46; y < 100; y += 7)
+      for (let x = (y / 7) % 2 ? -6 : 0; x < 100; x += 13)
+        if (r() > 0.2) joints += L(`${x},${y} ${x + 12},${y}`, sh(stone, 0.6), 0.5, 0.6);
+    // the wall walk at night: crenellations against the sky, a torch on the merlon to his left
+    let s = sbg(
+      '#0b111c',
+      '#1b2840',
+      Array.from({ length: 14 }, () =>
+        C(f1(r() * 100), f1(r() * 40), f2(0.25 + r() * 0.4), '#e8eeff', f2(0.3 + r() * 0.5)),
+      ).join('') +
+        P('0,44 100,44 100,100 0,100', stone) +
+        [-4, 22, 48, 74]
+          .map(
+            (x) =>
+              P(`${x},44 ${x},30 ${x + 16},30 ${x + 16},44`, stone) +
+              P(`${x},30 ${x + 3},30 ${x + 3},44 ${x},44`, sh(stone, 1.25)) +
+              L(`${x},30 ${x + 16},30`, sh(stone, 1.6), 0.6, 0.7),
+          )
+          .join('') +
+        L('0,44 100,44', sh(stone, 0.6), 0.8, 0.8) +
+        joints +
+        C(90, 26, 18, fire, 0.07) +
+        C(90, 26, 9, fire, 0.13) +
+        P('74,30 100,30 100,62 74,60', fire, 0.06) +
+        L('89,40 90.4,30', '#3a2a1a', 1.5) +
+        P('87.2,30.5 87.8,26 89.2,23.5 90,18.5 91.4,23 92.6,26.4 92.8,30.5', fire) +
+        P('88.2,30.5 89,26.4 90,23 91,26.4 91.8,30.5', '#ffc04a') +
+        P('89.2,30.5 90,26.6 90.8,30.5', '#fff0b0') +
+        P('0,86 100,84 100,100 0,100', '#141a24') +
+        L('0,86 100,84', sh(stone, 1.4), 0.5, 0.6),
+    );
+    const limb = (x0: number, y0: number, x1: number, y1: number, w0: number, w1: number, c: string) => {
+      const dx = x1 - x0,
+        dy = y1 - y0,
+        l = Math.hypot(dx, dy),
+        nx = -dy / l,
+        ny = dx / l,
+        lit = -nx - ny > 0 ? 1 : -1;
+      const pt = (x: number, y: number, w: number, side: number) => `${f1(x + nx * w * side)},${f1(y + ny * w * side)}`;
+      return (
+        P(
+          `${pt(x0, y0, w0 + 0.7, 1)} ${pt(x1, y1, w1 + 0.7, 1)} ${pt(x1, y1, w1 + 0.7, -1)} ${pt(x0, y0, w0 + 0.7, -1)}`,
+          '#05080d',
+          0.4,
+        ) +
+        P(`${pt(x0, y0, w0, lit)} ${pt(x1, y1, w1, lit)} ${x1},${y1} ${x0},${y0}`, sh(c, 1.16)) +
+        P(`${pt(x0, y0, w0, -lit)} ${pt(x1, y1, w1, -lit)} ${x1},${y1} ${x0},${y0}`, sh(c, 0.74))
+      );
+    };
+    let f = '';
+    // legs in a wide, ready stance; steel at the knees
+    f +=
+      limb(40, 78, 33, 92, 4.2, 3.6, hose) +
+      limb(33, 92, 30, 104, 3.6, 3.2, sh(hose, 0.9)) +
+      limb(58, 78, 66, 92, 4.2, 3.6, sh(hose, 0.8)) +
+      limb(66, 92, 69, 104, 3.6, 3.2, sh(hose, 0.7)) +
+      P('29,88.5 33,86.6 37,88.6 36.4,93.4 33,95 29.6,93.4', steel) +
+      P('29,88.5 33,86.6 33,95 29.6,93.4', sh(steel, 1.2)) +
+      P('62,88.6 66,86.6 70,88.5 69.4,93.4 66,95 62.6,93.4', sh(steel, 0.8)) +
+      P('66,86.6 70,88.5 69.4,93.4 66,95', sh(steel, 0.62));
+    // jerkin and skirt, a mail collar and a leather mantle over the shoulders
+    f +=
+      P('33,68 67,68 70,84 50,86 30,84', lea) +
+      P('50,68 67,68 70,84 50,86', sh(lea, 0.68)) +
+      P('33,68 37,68 34,84.4 30,84', sh(lea, 1.25)) +
+      L('42,70 41,85', sh(lea, 0.6), 0.5, 0.7) +
+      L('58,70 59,85', sh(lea, 0.5), 0.5, 0.7) +
+      P('34,42 50,39 66,42 67,68 33,68', lea) +
+      P('50,39 66,42 67,68 50,68', sh(lea, 0.68)) +
+      P('34,42 39,41 37,68 33,68', sh(lea, 1.25)) +
+      [
+        [41, 50],
+        [44, 58],
+        [57, 52],
+        [59, 60],
+      ]
+        .map((p) => C(p[0], p[1], 0.55, sh(lea, 1.6), 0.8))
+        .join('') +
+      P('32,65.6 68,65.6 68,69.4 32,69.4', '#2a1c14') +
+      P('50,65.6 68,65.6 68,69.4 50,69.4', '#1c120c') +
+      C(46, 67.5, 1.3, '#c9a544') +
+      PA('M45.4,31 L54.6,31 L57.4,38.2 Q50,47 42.6,38.2 Z', sh(skin, 0.5)) +
+      PA('M50,31 L54.6,31 L57.4,38.2 Q54,44.6 50,45.4 Z', sh(skin, 0.42)) +
+      PA('M38.6,38.4 Q50,46 61.4,38.4 L63.4,41.6 Q50,50.6 36.6,41.6 Z', pad) +
+      PA('M50,46.2 Q56.6,44.4 61.4,38.4 L63.4,41.6 Q57.4,47.6 50,48.8 Z', sh(pad, 0.7)) +
+      PA('M38.6,38.4 Q50,46 61.4,38.4', 'none') +
+      `<path d="M38.8,38.6 Q50,46 61.2,38.6" fill="none" stroke="${sh(pad, 0.45)}" stroke-width=".6" opacity=".8"/>` +
+      PA('M30,46 L36,41 Q50,51 64,41 L70,46 L64,52 Q50,50 36,52 Z', sh(lea, 0.82)) +
+      PA('M30,46 L36,41 Q43,46.4 50,47.6 L50,50.2 Q43,50.6 36,52 Z', sh(lea, 1.05)) +
+      PA('M50,47.6 Q57,46.4 64,41 L70,46 L64,52 Q57,50.6 50,50.2 Z', sh(lea, 0.6)) +
+      L('30,46 36,52 50,50.2 64,52 70,46', sh(lea, 0.45), 0.6, 0.8) +
+      L('31,45.4 36,41.6', sh(lea, 1.6), 0.5, 0.6) +
+      P('62,40 72,46 70,50', fire, 0.14);
+    // head: wary, eyes on us; a sallet whose tail flares out behind the neck
+    f += hd(
+      50,
+      25,
+      0.44,
+      0,
+      P('24,46 32,38 68,38 76,46 70,50 30,50', sh(steel, 0.62)) +
+        P('24,46 32,38 50,38 50,50 30,50', sh(steel, 0.82)) +
+        face(skin) +
+        P('34,54 40,60 51,65 56,60 62,64 60,70 51,73 40,67', sh(skin, 0.82), 0.4) +
+        P('36,43 47,42 46,47 37,48', sh(skin, 0.94), 0.75) +
+        P('53,42 64,43 63,48 54,47', sh(skin, 0.82), 0.8) +
+        P('38,45.4 42,44.2 46,45.4 42,46.6', '#efe6d6') +
+        C(42, 45.4, 1.2, '#1a1a24') +
+        C(41.6, 45, 0.35, '#fff') +
+        P('54,45.4 58,44.2 62,45.4 58,46.6', '#ddd4c4') +
+        C(58, 45.4, 1.15, '#1a1a24') +
+        L('36,41.6 46,42.4', '#3a2418', 1.5) +
+        L('54,42.4 64,41.6', '#3a2418', 1.5) +
+        L('44,61.4 56,61', '#3a1c18', 0.9) +
+        P('29,39 32,22 50,12 68,22 71,39', steel) +
+        P('29,39 32,22 50,12 47,39', sh(steel, 1.25)) +
+        P('60,16 68,22 71,39 62,39', sh(steel, 0.62)) +
+        P('28,37 72,37 73,41 27,41', sh(steel, 0.84)) +
+        P('28,37 50,37 50,41 27,41', sh(steel, 1.06)) +
+        L('37,25 46,14.5', '#fff', 0.8, 0.55) +
+        [36, 50, 64].map((x) => C(x, 39, 0.9, sh(steel, 1.5))).join('') +
+        P('62,38 72,38 76,46 70,48', fire, 0.16),
+    );
+    // the far side of the crossbow first: the lower prod arm and the string drawn back to the nut
+    const sx = 28,
+      sy = 51,
+      ex = 76,
+      ey = 65,
+      nutx = 57,
+      nuty = 59.5;
+    const tipA = [76.4, 52.6],
+      tipB = [69.8, 76.6];
+    f +=
+      L(`${ex},${ey} 73.6,71 ${tipB[0]},${tipB[1]}`, sh(steel, 0.6), 1.8) +
+      L(`${tipB[0]},${tipB[1]} ${nutx},${nuty}`, '#ddd8cc', 0.45, 0.8);
+    // his far hand under the fore-end, the stock across his body, the near hand at the tiller
+    f +=
+      limb(64, 43, 71, 54, 3.4, 3, sh(pad, 0.8)) +
+      limb(71, 54, 67, 62, 2.6, 2.3, sh(steel, 0.78)) +
+      C(66.6, 63.4, 2.4, sh(glove, 0.85)) +
+      P(
+        `${sx},${sy - 2} 50,${f1(sy + 4.4)} ${ex},${ey - 1.8} ${ex + 1},${ey + 1.6} 50,${f1(sy + 8.4)} ${sx - 1},${sy + 3}`,
+        wood,
+      ) +
+      P(
+        `${sx},${sy - 2} 50,${f1(sy + 4.4)} ${ex},${ey - 1.8} ${ex},${f1(ey - 0.6)} 50,${f1(sy + 5.8)} ${sx},${f1(sy - 0.6)}`,
+        sh(wood, 1.5),
+      ) +
+      P(`50,${f1(sy + 7)} ${ex + 1},${ey + 0.4} ${ex + 1},${ey + 1.6} 50,${f1(sy + 8.4)}`, sh(wood, 0.62)) +
+      P(`${sx - 3},${sy - 3} ${sx + 1},${sy - 2.4} ${sx},${sy + 3.4} ${sx - 3.6},${sy + 2.6}`, sh(wood, 0.8)) +
+      L(`${nutx},${f1(nuty + 1.2)} ${nutx + 1},${f1(nuty + 5)}`, sh(steel, 0.7), 0.9) +
+      C(nutx, nuty, 1, sh(steel, 1.1));
+    // the loaded bolt, its head catching the light: the one in four that crits
+    f +=
+      L(`${nutx},${f1(nuty - 0.4)} ${f1(ex + 6)},${f1(ey + 0.6)}`, '#c9b89a', 0.7) +
+      P(`${f1(ex + 5)},${f1(ey - 0.6)} ${f1(ex + 9)},${f1(ey + 1.4)} ${f1(ex + 5)},${f1(ey + 2)}`, '#e8eef4') +
+      P(`${nutx},${f1(nuty - 0.4)} ${nutx - 3},${f1(nuty - 2.2)} ${nutx - 2},${f1(nuty - 0.4)}`, '#d8d0c0') +
+      L(`${ex},${ey} 77.4,59 ${tipA[0]},${tipA[1]}`, '#05080d', 3, 0.35) +
+      L(`${ex},${ey} 77.4,59 ${tipA[0]},${tipA[1]}`, steel, 1.9) +
+      L(`${ex - 0.5},${ey - 0.3} 76.8,59 ${tipA[0] - 0.5},${tipA[1]}`, '#fff', 0.45, 0.6) +
+      L(`${tipA[0]},${tipA[1]} ${nutx},${nuty}`, '#ddd8cc', 0.45, 0.9) +
+      L(
+        `${ex + 0.6},${ey - 1} ${ex + 4},${ey - 2.6} ${ex + 5.4},${ey + 0.6} ${ex + 3.6},${ey + 3.4} ${ex + 0.6},${ey + 2.2}`,
+        sh(steel, 0.8),
+        0.7,
+      ) +
+      glow(f1(ex + 8.4), f1(ey + 1.2), 1.2, hot) +
+      P(
+        `${f1(ex + 8.4)},${f1(ey - 5)} ${f1(ex + 8.9)},${f1(ey + 0.7)} ${f1(ex + 14.6)},${f1(ey + 1.2)} ${f1(ex + 8.9)},${f1(ey + 1.7)} ${f1(ex + 8.4)},${f1(ey + 7.4)} ${f1(ex + 7.9)},${f1(ey + 1.7)} ${f1(ex + 2.2)},${f1(ey + 1.2)} ${f1(ex + 7.9)},${f1(ey + 0.7)}`,
+        '#fff8e0',
+        0.85,
+      );
+    // near arm in a quilted sleeve, crossing in front of the jerkin with a dark edge, hand on the tiller
+    f +=
+      limb(36, 43, 30, 52, 3.6, 3.2, pad) +
+      C(30.4, 52, 2.6, sh(pad, 0.85)) +
+      limb(30.4, 52, 40, 55.6, 2.6, 2.3, steel) +
+      C(41, 55.6, 2.5, glove) +
+      C(40.2, 54.8, 0.8, sh(glove, 1.6));
+    s += f;
+    return s;
+  },
+
+  captain() {
+    const coat = '#2f4f86',
+      gold = '#e0b040',
+      red = '#8c2f2f',
+      skin = '#d4a07a',
+      hair = '#3a2a1c',
+      brass = '#d8a838',
+      steel = '#b4bec7',
+      shaft = '#5a3e24',
+      call = '#fff4d0';
+    const r = rnd(41);
+    // a battlefield ridge in warm brown, smoke going up beyond it
+    let s = sbg(
+      '#1e130d',
+      '#5a3820',
+      P('0,54 100,48 100,66 0,70', '#d07a34', 0.28) +
+        P('0,62 100,58 100,68 0,72', '#ffc070', 0.18) +
+        PA('M72,62 Q64,42 74,26 Q80,14 94,6 Q84,22 82,36 Q80,50 82,62 Z', '#2a1a12', 0.45) +
+        PA('M30,64 Q26,52 32,42 Q36,34 44,30 Q38,40 38,50 Q38,58 40,64 Z', '#2a1a12', 0.3) +
+        Array.from({ length: 16 }, () => {
+          const x = f1(r() * 100);
+          return L(`${x},${f1(67 - r() * 2)} ${f1(x - 1)},${f1(60 - r() * 3)}`, '#1a100a', 0.4, 0.8);
+        }).join('') +
+        P('0,70 30,64 60,67 100,62 100,100 0,100', '#2a1a10') +
+        L('0,70 30,64 60,67 100,62', '#8a5428', 0.6, 0.8),
+    );
+    // allies' spears at both edges, surging the way the horn points
+    const spear = (x0: number, y0: number, x1: number, y1: number) => {
+      const dx = x1 - x0,
+        dy = y1 - y0,
+        l = Math.hypot(dx, dy),
+        ux = dx / l,
+        uy = dy / l,
+        nx = -uy,
+        ny = ux,
+        bx = x1 - ux * 7,
+        by = y1 - uy * 7,
+        mx2 = x1 - ux * 3.5,
+        my2 = y1 - uy * 3.5;
+      return (
+        L(`${x0},${y0} ${f1(bx)},${f1(by)}`, shaft, 1.3) +
+        L(`${x0},${y0} ${f1(bx)},${f1(by)}`, sh(shaft, 1.6), 0.35, 0.6) +
+        P(
+          `${f1(bx)},${f1(by)} ${f1(mx2 + nx * 1.8)},${f1(my2 + ny * 1.8)} ${x1},${y1} ${f1(mx2)},${f1(my2)}`,
+          sh(steel, 1.15),
+        ) +
+        P(
+          `${f1(bx)},${f1(by)} ${f1(mx2 - nx * 1.8)},${f1(my2 - ny * 1.8)} ${x1},${y1} ${f1(mx2)},${f1(my2)}`,
+          sh(steel, 0.65),
+        ) +
+        P(
+          `${f1(x1 - 0.6)},${f1(y1)} ${x1},${f1(y1 - 1.6)} ${f1(x1 + 0.6)},${f1(y1)} ${x1},${f1(y1 + 1.6)}`,
+          '#fff6d8',
+          0.8,
+        ) +
+        L(
+          `${f1(x1 - ux * 9 + nx * 2.6)},${f1(y1 - uy * 9 + ny * 2.6)} ${f1(x1 - ux * 17 + nx * 2.6)},${f1(y1 - uy * 17 + ny * 2.6)}`,
+          call,
+          0.35,
+          0.35,
+        )
+      );
+    };
+    s +=
+      spear(14, 104, 1, 57) +
+      spear(24, 104, 9, 64) +
+      spear(6, 106, -5, 66) +
+      spear(112, 86, 88, 16) +
+      spear(106, 104, 79, 30) +
+      spear(116, 100, 95, 30);
+    // the red cloak hangs from the far shoulder and streams out behind, its pale lining turned out at the edge
+    const lining = '#d8c8a0';
+    s +=
+      PA('M58,55 Q76,48 100,34 L106,46 Q94,58 102,72 L106,100 L66,100 Q64,80 62,62 Z', red) +
+      PA('M58,55 Q76,48 100,34 L102,38 Q82,52 66,60 Z', sh(red, 1.22)) +
+      P('70,64 88,52 94,70 80,100 72,100', sh(red, 0.72)) +
+      P('88,52 102,46 96,60 102,74 94,70', sh(red, 0.55)) +
+      PA('M100,34 L106,46 Q100,50 98,56 Q96,46 100,34 Z', lining) +
+      PA('M94,70 Q98,72 102,74 L104,84 Q98,78 94,70 Z', sh(lining, 0.7)) +
+      L('58,55 76,48 100,34', sh(red, 1.6), 0.5, 0.6) +
+      PA('M36,60 Q31,72 30,100 L37,100 Q36,76 40,62 Z', sh(red, 0.62)) +
+      PA('M36,60 Q31,72 30,100 L32,100 Q32,76 37.6,61 Z', sh(lining, 0.6));
+    // a fitted coat, narrow at the waist, belted, with gold frogging
+    s +=
+      P('36,59 50,54.5 63,56 64.5,64 61,80 41,80 38,67', coat) +
+      P('36,59 42,57.5 43,80 41,80 38,67', sh(coat, 1.25)) +
+      P('56,55.4 63,56 64.5,64 61,80 56,80', sh(coat, 0.65)) +
+      P('42,58 50,55 53,62 46,68', sh(coat, 1.12)) +
+      P('40.6,82 61.4,82 65,100 37,100', coat) +
+      P('40.6,82 44,82 41,100 37,100', sh(coat, 1.22)) +
+      P('54,82 61.4,82 65,100 56,100', sh(coat, 0.62)) +
+      L('51,82 51.6,100', sh(coat, 0.45), 0.7) +
+      [62, 67, 72].map((y) => L(`${44},${y} ${55},${y - 1}`, gold, 1, 0.9) + C(55.5, y - 1, 0.9, gold)).join('') +
+      L('50,58 50.6,80', gold, 1.2) +
+      P('40.4,78.6 61.6,78.6 61.4,83 40.6,83', '#2a1a12') +
+      P('51,78.6 61.6,78.6 61.4,83 51,83', '#1c120c') +
+      P('48.4,78.2 52.8,78.2 52.8,83.4 48.4,83.4', gold) +
+      P('49.6,79.6 51.6,79.6 51.6,82 49.6,82', '#2a1a12') +
+      L('40,61 62,58.6', sh(gold, 0.85), 0.6, 0.8) +
+      P('34,60 40,56.5 47,57.5 44,62 36,64', gold) +
+      P('34,60 40,56.5 41,58 36,62', sh(gold, 1.25)) +
+      [35, 37.5, 40, 42.5].map((x) => L(`${x},63 ${x - 0.6},67`, sh(gold, 0.8), 0.6)).join('') +
+      P('58,56.5 63,55.5 68,59 64,61.5 58,60', sh(gold, 0.72)) +
+      [60, 62.5, 65].map((x) => L(`${x},61 ${x + 0.4},64.5`, sh(gold, 0.55), 0.6)).join('');
+    // gorget and neck, the head thrown back
+    s +=
+      P('47,46 55,45 57,52 47,53', sh(skin, 0.5)) +
+      P('42,52.5 50,50.5 60,51.5 63,55 52,57 43,56', gold) +
+      P('42,52.5 50,50.5 51,56.6 43,56', sh(gold, 1.2)) +
+      P('55,51 60,51.5 63,55 56,56.4', sh(gold, 0.62)) +
+      L('42.5,53 50,51', '#fff', 0.5, 0.6);
+    const head = (inner: string) => hd(52, 36, 0.55, 12, inner);
+    s += head(
+      face(skin) +
+        shortHair(hair) +
+        P('33,40 31,48 34,52 35,44', hair) +
+        P('67,40 69,48 66,52 65,44', sh(hair, 0.7)) +
+        P('34,52 39,48 46,51 46,58 40,62 34,59', sh(skin, 1.07)) +
+        P('55,51 62,48 67,52 66,59 60,62 54,58', sh(skin, 0.82)) +
+        P('36,43 47,42 46,47 37,48', sh(skin, 0.9), 0.7) +
+        P('53,42 64,43 63,48 54,47', sh(skin, 0.78), 0.75) +
+        L('37,45.4 41.5,46.8 46,45.4', '#3a2418', 0.9) +
+        L('54,45.4 58.5,46.8 63,45.4', '#3a2418', 0.9) +
+        L('36,40 46,42.4', hair, 1.7) +
+        L('54,42.4 64,40', sh(hair, 0.8), 1.7),
+    );
+    // the war horn, a long brass curve up and away; each facet shaded by which way it faces
+    const M0 = [50.5, 43],
+      Q = [33, 47],
+      E1 = [12, 27];
+    const B = (t: number) => [
+      (1 - t) ** 2 * M0[0] + 2 * (1 - t) * t * Q[0] + t * t * E1[0],
+      (1 - t) ** 2 * M0[1] + 2 * (1 - t) * t * Q[1] + t * t * E1[1],
+    ];
+    const T = (t: number) => {
+      const x = 2 * (1 - t) * (Q[0] - M0[0]) + 2 * t * (E1[0] - Q[0]),
+        y = 2 * (1 - t) * (Q[1] - M0[1]) + 2 * t * (E1[1] - Q[1]),
+        l = Math.hypot(x, y);
+      return [x / l, y / l];
+    };
+    const W = (t: number) => 0.7 + 4.6 * t ** 2.4;
+    const edge = (t: number, side: number) => {
+      const p = B(t),
+        d = T(t),
+        w = W(t) * side;
+      return [p[0] - d[1] * w, p[1] + d[0] * w];
+    };
+    const pp = (a: number[]) => `${f1(a[0])},${f1(a[1])}`;
+    const N = 14;
+    let horn = '';
+    for (let i = 0; i < N; i++) {
+      const t0 = i / N,
+        t1 = (i + 1) / N;
+      [1, -1].forEach((side) => {
+        const d = T((t0 + t1) / 2),
+          nx = -d[1] * side,
+          ny = d[0] * side,
+          k = 1 + 0.4 * (-nx * 0.7 - ny * 0.7);
+        horn += P(`${pp(B(t0))} ${pp(edge(t0, side))} ${pp(edge(t1, side))} ${pp(B(t1))}`, sh(brass, k));
+      });
+    }
+    const band = (t: number, c: string) => L(`${pp(edge(t, 1))} ${pp(edge(t, -1))}`, c, 1.1);
+    const end = B(1),
+      dE = T(1);
+    horn +=
+      band(0.12, sh(gold, 0.8)) +
+      band(0.5, sh(brass, 0.6)) +
+      band(0.86, sh(gold, 1.2)) +
+      P(
+        `${pp(edge(1, 1))} ${f1(end[0] + dE[0] * 1.6)},${f1(end[1] + dE[1] * 1.6)} ${pp(edge(1, -1))} ${f1(end[0] - dE[0] * 0.8)},${f1(end[1] - dE[1] * 0.8)}`,
+        '#2a1a08',
+      ) +
+      L(
+        `${pp(edge(1, 1))} ${f1(end[0] + dE[0] * 1.6)},${f1(end[1] + dE[1] * 1.6)} ${pp(edge(1, -1))}`,
+        '#fff3c0',
+        0.5,
+        0.8,
+      ) +
+      L(Array.from({ length: 9 }, (_, i) => pp(edge(0.15 + i * 0.09, -1))).join(' '), '#fff6d8', 0.4, 0.55);
+    s += horn;
+    // moustache over the mouthpiece, in the head's own frame
+    s += head(
+      P('38,58 44,55 50,57 50,61 44,61 37,62', hair) +
+        P('38,58 44,55 46,56 40,60', sh(hair, 1.4)) +
+        P('50,57 56,55 63,58 63,62 56,61 50,61', sh(hair, 0.75)),
+    );
+    // both hands on the horn, as a player holds one: the far hand by the mouthpiece, the near hand out along it
+    const g = B(0.62),
+      h = B(0.33),
+      gl = '#5a3a24';
+    const sleeve = (pts: string, c: string, w: number) =>
+      L(pts, '#0a0e18', w + 1.6, 0.5) + L(pts, c, w) + L(pts, sh(c, 1.4), w * 0.2, 0.6);
+    s +=
+      sleeve(`61,60 57,64 ${f1(h[0] + 1.6)},${f1(h[1] + 3.4)}`, sh(coat, 0.62), 3.8) +
+      C(57, 64, 2.2, sh(coat, 0.55)) +
+      L(`${f1(h[0] + 0.6)},${f1(h[1] + 5.6)} ${f1(h[0] + 4)},${f1(h[1] + 4.2)}`, sh(gold, 0.8), 1.8) +
+      C(h[0] + 0.4, h[1] + 0.6, 2.5, sh(gl, 0.9)) +
+      C(h[0] - 0.3, h[1], 0.8, sh(gl, 1.6)) +
+      L(`${f1(h[0] - 1.4)},${f1(h[1] - 1.4)} ${f1(h[0] + 1.8)},${f1(h[1] + 0.8)}`, sh(gl, 0.6), 0.4);
+    s +=
+      sleeve(`38,61 26,59 ${f1(g[0] - 0.4)},${f1(g[1] + 3.2)}`, coat, 4.4) +
+      C(26, 59, 2.6, sh(coat, 0.9)) +
+      L(`${f1(g[0] - 2.4)},${f1(g[1] + 5.6)} ${f1(g[0] + 1.8)},${f1(g[1] + 5.4)}`, gold, 2) +
+      C(g[0], g[1] + 1.6, 2.8, gl) +
+      C(g[0] - 0.8, g[1] + 0.8, 1, sh(gl, 1.7)) +
+      L(`${f1(g[0] - 2)},${f1(g[1] + 0.4)} ${f1(g[0] + 2.2)},${f1(g[1] - 0.4)}`, sh(gl, 1.2), 0.6, 0.8);
+    // the call: thin rings rolling out of the bell
+    const ang = Math.atan2(dE[1], dE[0]);
+    const ring = (rad: number, w: number, o: number) => {
+      const a0 = ang - 0.8,
+        a1 = ang + 0.8,
+        cx = end[0],
+        cy = end[1];
+      return `<path d="M${f1(cx + rad * Math.cos(a0))},${f1(cy + rad * Math.sin(a0))} A${rad},${rad} 0 0 1 ${f1(cx + rad * Math.cos(a1))},${f1(cy + rad * Math.sin(a1))}" fill="none" stroke="${call}" stroke-width="${w}" stroke-linecap="round" opacity="${o}"/>`;
+    };
+    s += ring(4.5, 0.9, 0.75) + ring(8.5, 0.8, 0.55) + ring(13, 0.7, 0.36) + ring(18, 0.6, 0.22) + ring(24, 0.5, 0.12);
+    s += C(end[0], end[1], 9, call, 0.08);
+    return s;
+  },
+
+  sharpshooter() {
+    const hoodc = '#2a3238',
+      cl = '#39424a',
+      skin = '#b88a6a',
+      glove = '#8a6a44',
+      wing = '#5e4632',
+      cov = '#9a7a52',
+      tip = '#2a1e16',
+      breast = '#cdb994',
+      nape = '#b89254',
+      yel = '#e0b040',
+      fire = '#ff9a3c',
+      fog = '#9fb2c4',
+      rock = '#2a323a';
+    const r = rnd(53);
+    const camp = (x: number, y: number, k: number) =>
+      C(x, y, 4 * k, fire, 0.1) + C(x, y, 1.5 * k, fire, 0.55) + C(x, y, 0.6 * k, '#ffe0a0', 0.9);
+    // night over a mountain valley, the enemy's campfires down in the fog
+    let s = sbg(
+      '#0a0f15',
+      '#18232e',
+      Array.from({ length: 14 }, () =>
+        C(f1(r() * 100), f1(r() * 50), f2(0.25 + r() * 0.35), '#e8eeff', f2(0.25 + r() * 0.45)),
+      ).join('') +
+        P('0,62 14,46 26,54 40,40 54,52 70,36 86,50 100,42 100,70 0,70', '#141d27') +
+        P('40,40 44,45 38,47 34,46', '#8a9aac', 0.35) +
+        P('70,36 75,42 68,44 64,42', '#8a9aac', 0.35) +
+        P('14,46 18,50 11,50', '#8a9aac', 0.3) +
+        P('0,66 100,62 100,100 0,100', '#080c11') +
+        P('0,64 100,60 100,72 0,74', fog, 0.08) +
+        camp(8, 82, 0.8) +
+        camp(16, 78, 1.15) +
+        `<circle cx="16" cy="78" r="3.6" fill="none" stroke="${fire}" stroke-width=".35" opacity=".6"/>` +
+        camp(24, 84, 0.8) +
+        camp(82, 80, 0.8) +
+        camp(92, 84, 0.9) +
+        P('0,76 100,72 100,86 0,88', fog, 0.06),
+    );
+    // the stoop to come: a faint line from the hawk down to one fire
+    s += `<path d="M42,22 Q8,26 16,74" fill="none" stroke="${fog}" stroke-width=".4" stroke-dasharray="1.2 1.6" opacity=".45"/>`;
+    // the rock he stands on
+    s +=
+      P('26,100 32,92 42,87 58,86 70,89 78,100', rock) +
+      P('26,100 32,92 42,87 44,92 36,100', sh(rock, 1.4)) +
+      P('58,86 70,89 78,100 64,100 60,92', sh(rock, 0.62)) +
+      L('32,92 42,87 58,86', sh(rock, 1.8), 0.5, 0.6);
+    // the falconer, small beneath the bird: cloaked, hood up, left fist raised straight overhead
+    s +=
+      P('53,90 56,90 56,95 52,95', '#14181c') +
+      P('60,90 63,90 64,95 60,95', '#0e1114') +
+      P('50,66 66,65 72,92 46,92', cl) +
+      P('50,66 54,65.6 50,92 46,92', sh(cl, 1.3)) +
+      P('62,65.2 66,65 72,92 64,92', sh(cl, 0.6)) +
+      L('56,68 55,92', sh(cl, 0.7), 0.5, 0.7) +
+      P('62,66 68,70 70,80 66,82 64,72', sh(cl, 0.8)) +
+      C(55.5, 68, 0.8, '#c9ced6');
+    const H = hood(hoodc);
+    s += hd(58, 59, 0.24, 6, H.back + face(skin) + H.front);
+    // raised arm: cloak sleeve to the elbow, then the long gauntlet up to the fist
+    s +=
+      L('52,67 48.6,55', '#05080d', 6, 0.45) +
+      L('52,67 48.6,55', sh(cl, 1.1), 4.6) +
+      L('51,67 47.6,55.4', sh(cl, 1.45), 0.9, 0.6) +
+      P('46,57 51.6,56 51.8,43 48.4,43', glove) +
+      P('46,57 48.8,56.5 49.6,43 48.4,43', sh(glove, 1.3)) +
+      P('50.2,56.2 51.6,56 51.8,43 50.6,43', sh(glove, 0.68)) +
+      L('45.6,57.4 52,56.2', sh(glove, 0.5), 1.1) +
+      C(50, 41.6, 2.6, glove) +
+      C(49.2, 40.8, 1, sh(glove, 1.5));
+    // the hawk, front-on, wings spread nearly edge to edge; its far wing is the one on the right, a shade darker
+    const wingF = (k: number) =>
+      P(
+        '45,19 34,13 22,11 12,14 2,20 4,23 8,22 9,26 13,24 14,28 18,26 20,30 26,30 32,33 38,34 44,32 46,28',
+        sh(wing, k),
+      ) +
+      P('45,19 34,13 22,11 24,17 34,20 44,24', sh(cov, k)) +
+      P('45,19 34,13 22,11 30,13.6', sh(cov, 1.3 * k)) +
+      P('2,20 12,14 18,16 20,30 18,26 14,28 13,24 9,26 8,22 4,23', sh(tip, k)) +
+      [
+        [12, 15.4, 9, 25],
+        [15, 15.8, 13.6, 27],
+        [18, 16.4, 18.6, 28.6],
+        [24, 18, 25, 30],
+        [30, 19.6, 31.4, 32.4],
+        [36, 21.4, 37.6, 33.6],
+      ]
+        .map((l) => L(`${l[0]},${l[1]} ${l[2]},${l[3]}`, '#140e0a', 0.4, 0.7))
+        .join('') +
+      L('45,19 34,13 22,11 12,14 2,20', sh(cov, 1.6 * k), 0.45, 0.6);
+    s += wingF(1) + `<g transform="translate(100,0) scale(-1,1)">${wingF(0.74)}</g>`;
+    // fanned tail behind the fist, then body, legs gripping the glove, and the head turned toward the target
+    s +=
+      P('45,35 55,35 59,44 50,46.5 41,44', sh(wing, 0.8)) +
+      P('41,44 44,45.6 45.4,44 47.6,46.2 50,46.5 52.4,46.2 54.6,44 56,45.6 59,44 58,42.4 42,42.4', sh(tip, 1.2)) +
+      L('50,36 50,46', sh(wing, 0.55), 0.4, 0.7) +
+      L('47,36 44,44.6', sh(wing, 0.55), 0.35, 0.6) +
+      L('53,36 56,44.6', sh(wing, 0.55), 0.35, 0.6) +
+      P('44,18 50,15 56,18 58,28 54,37 46,37 42,28', sh(wing, 1.05)) +
+      P('44,18 50,15 50,37 46,37 42,28', sh(wing, 1.25)) +
+      P('46,21 54,21 55.4,29 51.4,36 48.6,36 44.6,29', breast) +
+      P('50,21 54,21 55.4,29 51.4,36 50,36', sh(breast, 0.8)) +
+      [
+        [47.4, 24],
+        [50.6, 25],
+        [53, 24.4],
+        [46.6, 28],
+        [49.4, 29.4],
+        [52.4, 28.6],
+        [48.4, 32.6],
+        [51.4, 32.4],
+      ]
+        .map((p) => P(`${p[0]},${p[1]} ${p[0] + 0.6},${p[1] + 1.4} ${p[0] - 0.6},${p[1] + 1.4}`, sh(wing, 0.8)))
+        .join('') +
+      P('45.6,33 49,33.6 48.6,39 46,38.4', sh(breast, 0.9)) +
+      P('51,33.6 54.4,33 54,38.4 51.4,39', sh(breast, 0.7)) +
+      L('47.4,38.6 48.4,41', yel, 1.1) +
+      L('52.6,38.6 51.6,41', sh(yel, 0.8), 1.1) +
+      L('46.4,41 47.6,40.6 48.8,41.6', '#1a140c', 0.5) +
+      L('53.6,41 52.4,40.6 51.2,41.6', '#1a140c', 0.5) +
+      // the head, square to us: eyes on the viewer, beak hooked down the middle
+      P('44.4,13 45.4,9 48.4,6.8 51.6,6.8 54.6,9 55.6,13 54.4,16.8 50,18.6 45.6,16.8', sh(nape, 1.05)) +
+      P('45.4,9 48.4,6.8 50,6.8 50,10 46,11.6', sh(nape, 1.3)) +
+      P('50,6.8 51.6,6.8 54.6,9 55.6,13 54.4,16.8 50,18.6', sh(nape, 0.74)) +
+      P('44.8,12.4 46.4,14 46.6,17.2 45.6,16.8', '#3a2a1c') +
+      P('55.2,12.4 53.6,14 53.4,17.2 54.4,16.8', sh('#3a2a1c', 0.8)) +
+      P('48.4,14.8 51.6,14.8 51.2,17.6 50,18.4 48.8,17.6', sh(breast, 1.05)) +
+      L('45.4,10.4 48.8,10.8', '#3a2a1c', 0.7) +
+      L('54.6,10.4 51.2,10.8', sh('#3a2a1c', 0.8), 0.7) +
+      C(47.2, 12, 1.15, yel) +
+      C(47.2, 12, 0.8, '#0a0806') +
+      C(46.9, 11.7, 0.25, '#fff') +
+      C(52.8, 12, 1.15, sh(yel, 0.85)) +
+      C(52.8, 12, 0.8, '#0a0806') +
+      C(52.5, 11.7, 0.25, '#fff') +
+      P('48.6,11.6 51.4,11.6 51.2,13.2 48.8,13.2', yel) +
+      PA('M48.8,13.2 L51.2,13.2 Q51.4,15.2 50,16.6 Q48.6,15.2 48.8,13.2 Z', sh(yel, 0.75)) +
+      PA('M49.4,15.4 L50.6,15.4 L50,16.6 Z', '#1a140c') +
+      L('48.9,13.4 49.6,15.4', sh(yel, 1.2), 0.3, 0.7);
+    return s;
+  },
 };
 
 /* Wide units need a wider window onto their scene to fill a two-slot tile. */
