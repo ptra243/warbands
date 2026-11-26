@@ -8,7 +8,7 @@ You pick one faction and a leader, buy units over a series of rounds, and try to
 
 Open `index.html` in a browser. Everything is in that one file; it needs no server and no install. Fonts load from Google Fonts and fall back to system fonts offline.
 
-Run logs are saved automatically only when the page is hosted as a Claude artifact with storage. Opened from disk, use **Copy run log** on the end screen instead. The post-game then uses generated opponents, since it has no saved boards to read.
+Run logs are saved automatically only when the page is hosted as a Claude artifact with storage. There, **Download saved runs** on the start and end screens writes every saved run to one JSON file. Opened from disk, use **Copy run log** on the end screen instead. The post-game then uses generated opponents, since it has no saved boards to read.
 
 ## Layout
 
