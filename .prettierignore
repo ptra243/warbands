@@ -1,0 +1,8 @@
+dist
+node_modules
+runs
+tests/golden/baseline.json
+package-lock.json
+tests/shots
+test-results
+playwright-report
