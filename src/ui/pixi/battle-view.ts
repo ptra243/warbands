@@ -677,7 +677,9 @@ function paintHud(B: Battle, dt = 0) {
     if (k > 0 && k < 1) h.hp.rect(edge - 1.5, 0, 3, HEIGHT).fill({ color: L.edge, alpha: 0.9 });
     h.t.text = `${Math.max(0, Math.round(B.hero[s].hp))} / ${B.hero[s].max}`;
   }
-  clock.text = (B.sudden ? 'Sudden death · ' : '') + Math.floor(B.time) + 's';
+  /* the playback speed shows beside the timer, so it reads without looking up at the buttons */
+  clock.text =
+    (B.sudden ? 'Sudden death · ' : '') + Math.floor(B.time) + 's' + (S.speed !== 1 ? `  ▶ ${S.speed}×` : '');
 }
 
 /* ---- events -> animation ---- */

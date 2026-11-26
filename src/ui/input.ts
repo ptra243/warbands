@@ -163,9 +163,10 @@ export function command(c: string): void {
     return;
   } else if (c.startsWith('speed:')) {
     S.speed = +c.slice(6);
-    document
-      .querySelectorAll<HTMLElement>('[data-act^="speed:"]')
-      .forEach((b) => b.classList.toggle('active', b.dataset.act === c));
+    document.querySelectorAll<HTMLElement>('[data-act^="speed:"]').forEach((b) => {
+      b.classList.toggle('active', b.dataset.act === c);
+      b.setAttribute('aria-pressed', String(b.dataset.act === c));
+    });
     return;
   } else if (c === 'view:pixi' || c === 'view:classic') {
     setBattleView(c === 'view:pixi' ? 'pixi' : 'classic');

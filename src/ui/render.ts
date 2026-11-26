@@ -56,10 +56,14 @@ export function render0() {
       foe = S.foeTitle || W.FACTIONS[S.foe].name,
       pixi = usePixi();
     const vs = `<div class="vs"><h2>${S.campFight ? 'Camp' : 'Round ' + B.round}</h2><p><b>${S.run!.leader ? W.LEADERS[S.run!.leader].name : 'Your warband'}</b> against <b>${foe}</b>${!S.campFight && S.foeTitle && S.foe !== 'N' ? ' (' + W.FACTIONS[S.foe].name + ')' : ''}</p></div>`;
+    /* speed is one segmented control, so the selected speed reads as a filled button among outlined ones */
     const controls =
-      [1, 2, 4]
-        .map((x) => `<button data-act="speed:${x}" class="${S.speed === x ? 'active' : ''}">${x}×</button>`)
-        .join('') +
+      `<span class="speed" role="group" aria-label="Battle speed"><span class="lbl">Speed</span>${[1, 2, 4]
+        .map(
+          (x) =>
+            `<button data-act="speed:${x}" class="${S.speed === x ? 'active' : ''}" aria-pressed="${S.speed === x}">${x}×</button>`,
+        )
+        .join('')}</span>` +
       '<button data-act="skip">Skip to result</button>' +
       (pixi
         ? '<button data-act="view:classic" title="Use the plain HTML battle screen">Classic view</button>'
