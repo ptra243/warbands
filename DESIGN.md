@@ -1,6 +1,6 @@
 # Design notes
 
-The state of the game, why the main rules are the way they are, and what is still open. Numbers here are the ones in `src/engine.js` at the time of writing; the code is the authority.
+The state of the game, why the main rules are the way they are, and what is still open. Numbers here are the ones in `src/engine/` at the time of writing; the code is the authority.
 
 ## The run
 
@@ -29,6 +29,7 @@ The state of the game, why the main rules are the way they are, and what is stil
 ## Factions
 
 ### Humans
+
 A mixed party. Four classes, each with three levels at 2, 4 and 6 units: Tank (health), DPS (attack and crit), Mage (attack speed and burn), Cleric (regeneration and smite). One of each gives Full party.
 
 Humans scale through items, which only they find. An item goes on one unit, gives a stat or effect, and most grant a class, so any unit can count toward a second class. Three of the same item merge into a Fine version at 1.5 times the effect. Selling a unit returns its item.
@@ -36,6 +37,7 @@ Humans scale through items, which only they find. An item goes on one unit, give
 Leaders: Quartermaster (items), Marshal (Full party), Warden (end units).
 
 ### Elves
+
 Strong individuals that grow permanently after every battle, win or lose, and buff what stands beside them. Each tribe has a building.
 
 Tribes at 2 and 4: Grove (regeneration), Sun (attack for all), Drow (crit, attack speed and flanking), Moon (shields).
@@ -47,6 +49,7 @@ The three 1-cost Elves have 8 extra health that does not multiply with tier. It 
 Leaders: Grovekeeper (growth), Architect (buildings), Bladesinger (fastest attacker).
 
 ### Undead
+
 Summons, death effects and weakening the enemy.
 
 Tribes at 2 and 4: Reborn (rise after dying), Blight (Rot), Necromancer (stronger summons that soak damage for their summoner), Cultist (attack on ally death).
@@ -80,9 +83,10 @@ Past boards come from the artifact's storage when the page runs inside Claude, a
 
 Bot runs won, 300 per faction, last full run: Humans about 30%, Elves 20 to 30%, Undead about 48%.
 
-The real winning boards in `tools/boards.js` tell a different story at the top: Humans and Undead are even against each other, and Elves grow strongest of all in a long run. The bot's Undead figure comes mostly from very strong opening rounds (over 80% of round 1 fights) since Gravediggers and Necromancers began starting with a minion.
+The real winning boards in `tools/boards.ts` tell a different story at the top: Humans and Undead are even against each other, and Elves grow strongest of all in a long run. The bot's Undead figure comes mostly from very strong opening rounds (over 80% of round 1 fights) since Gravediggers and Necromancers began starting with a minion.
 
 Watch list:
+
 - Undead openings, and generated enemy summoners, which received the same minion changes.
 - Elves at the round 5 boss, where most of the bot's Elf runs end.
 - Drow health growth. Drow hit hard at the top level but die in the first few seconds late on.

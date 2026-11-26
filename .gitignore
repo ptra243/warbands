@@ -1,4 +1,7 @@
 tests/shots/
 __pycache__/
 node_modules/
+dist/
+test-results/
+playwright-report/
 *.bak*

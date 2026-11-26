@@ -2,7 +2,7 @@
 
 Run logs exported from play sessions, one file per run, oldest first. Times are UTC.
 
-Each file is the log the game writes at the end of a run: every round's purchases, board, bench, opponent, result and per-unit battle figures. `ghostFrom` in `src/engine.js` turns a winning log into a post-game opponent, and the boards in `tools/boards.js` were transcribed from these.
+Each file is the log the game writes at the end of a run: every round's purchases, board, bench, opponent, result and per-unit battle figures. `ghostFrom` in `src/engine/postgame.ts` turns a winning log into a post-game opponent, and the boards in `tools/boards.ts` were transcribed from these.
 
 The `balance` column is the rules version the run was played under. Runs marked 1 predate the version stamp, so they span several early rule sets.
 
