@@ -2,7 +2,7 @@
 
 How to draw a unit illustration that matches the ones already approved. Read this before adding or changing anything in `src/ui/card-art.ts`.
 
-The card art is a study. It is not wired into the game yet: the game still shows the small icons in `src/ui/art.ts`. Four units are drawn so far, the Human mages. `card-art.ts` also still holds three earlier busts (Knight, Lich, Assassin) from a concept that was dropped: don't use them or build on them.
+The card art is a study. It is not wired into the game yet: the game still shows the small icons in `src/ui/art.ts`. Eight units are drawn so far, the Human mages and the Human tanks. `card-art.ts` also still holds two earlier busts (Lich, Assassin) from a concept that was dropped: don't use them or build on them.
 
 ## Where things are
 
@@ -65,6 +65,30 @@ Within a group, let cost show as mastery. The 1-cost Apprentice barely controls 
 - **Faces.** Scene figures have simple eyes and a mouth where the expression matters: wide eyes on the Apprentice, a grin on the Fire Mage. The owner approved this on the mages. Draw an eye as a small almond shape with a dark iris and a highlight, and lay a lighter skin tone over the kit's dark eye sockets first, or the sockets read as a mask. Glowing slits for eyes were rejected on the Fire Mage. The leader portraits have no drawn features. Whether to reconcile the two is not decided, so ask before changing either.
 - **Arms.** A bare arm drawn as one thick line reads as a stick. Give it a sleeve, a second tone, or a bend.
 - **Hands on effects.** Draw the effect over the hand, with a glow, so the join is hidden.
+- **Arms across the body.** An arm the same colour as the torso it crosses disappears into it. The owner could not tell the Halberdier's arms from his gambeson. Give the arm a different material, such as a mail sleeve over a cloth body, a dark edge where it crosses the torso, and a visible elbow. Put the hand out past the body's outline where the pose allows.
+
+## Side-on figures and depth
+
+The owner caught the same mistake twice in the tanks: a far limb drawn in front of the body. In a side-on or three-quarter figure, decide first which side faces the viewer. Then put every part on the near or far side before drawing it.
+
+- **Near and far.** A figure facing right shows its left side. Its left arm and leg are near and its right arm and leg are far. A figure facing left is the mirror.
+- **Far parts go behind.** Draw a far arm or leg before the body, a shade darker (`sh` around 0.6 to 0.75), and let it show only where it comes out past the body's outline. The Halberdier faces right, so his right arm, the lead hand on the pole, starts behind his torso.
+- **Held things follow the hand.** Whatever a far hand holds is on the far side too. The Knight's sword is in his far hand, so the blade passes behind his body and his horse's head and neck. A shield on the near arm sits in front of everything.
+- **Keep the grip in view.** When a far-side weapon passes behind something, keep the hand and hilt clear of the overlap. If the hilt is hidden, the blade seems to grow out of whatever covers it: a sword behind a horse's forehead read as a unicorn's horn.
+- **Drawing order.** Far limbs and what they hold, then the mount or other large forms in front of them, then the body, then near limbs and what they hold, then the head. Some parts of one object sit on both sides of another, such as a pole held in both hands. Draw the object once in the middle of the order, and draw each hand over it or under it to match its side.
+
+## Shapes that read as something else
+
+Check the render for a shape that reads as a different object. The SVG source will not show it.
+
+- **Spikes on heads read as horns.** A steel spike on a horse's faceplate made a unicorn. Keep points off the tops of heads unless a horn is meant.
+- **Solid arcs read as objects.** One filled crescent for the Halberdier's swing read as a bow. Show motion as several thin trails of falling opacity, brightest where the weapon is.
+- **Mounts.** A horse needs a long head with a jaw, a thick neck, a visible chest and at least one leg with a clear joint. Cloth draped over the body must stop short of the chest and legs, or the horse becomes a coloured block with a head.
+
+## Separating a figure from the background
+
+- **Rim light only on edges that face the light.** When a figure is close to the background colour, as the brown horse was against the sunset, a thin rim of the light's colour on its lit edges separates it. Keep it under 0.5 wide and below full opacity. A heavier rim reads as an outline, and one on edges that face away from the light looks wrong.
+- **Lighten the base before adding effects.** Raising the base colour of the figure a shade often does more than any rim.
 
 ## Frames
 
@@ -76,7 +100,7 @@ Every drawing must work in each frame the unit can appear in. `tools/cards.ts` r
 | One-slot tile   | 113 by 132     | The same square, with a little trimmed from each side.                         |
 | Two-slot tile   | 231 by 132     | A wider window set per unit in `WIDE`. The scene must be drawn out to fill it. |
 
-Units with `size: 2` need background and props beyond the 0 to 100 square on both sides. The Archmage's sky, moon and towers run from -45 to 145. A bust cannot do this: it crops badly in a two-slot tile (`art/reference/rejected-busts-in-wide-tiles.png`), which is one reason the bust concept was dropped. Two-slot units such as the Knight and Lich need wide scenes drawn from scratch.
+Units with `size: 2` need background and props beyond the 0 to 100 square on both sides. The Archmage's sky, moon and towers run from -45 to 145. A bust cannot do this: it crops badly in a two-slot tile (`art/reference/rejected-busts-in-wide-tiles.png`), which is one reason the bust concept was dropped. Two-slot units such as the Lich need wide scenes drawn from scratch.
 
 A wide unit should also look bigger than its neighbours. The Archmage does not yet: he is the same height as the one-slot mages with empty sky beside him. That is an open problem.
 
@@ -96,14 +120,18 @@ The owner may name a character from another game or show as a reference. Take th
 
 ## Drawn so far
 
-| Unit       | Notes                                                                  |
-| ---------- | ---------------------------------------------------------------------- |
-| Apprentice | Approved as a good start. The raised arm is thin.                      |
-| Fire Mage  | Approved as a good start. Reads less clearly as a woman than intended. |
-| Storm Mage | Approved as a good start. Sleeves bunch around the head.               |
-| Archmage   | Approved as a good start. Needs more presence in the two-slot tile.    |
+| Unit       | Notes                                                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Apprentice | Approved as a good start. The raised arm is thin.                                                                              |
+| Fire Mage  | Approved as a good start. Reads less clearly as a woman than intended.                                                         |
+| Storm Mage | Approved as a good start. Sleeves bunch around the head.                                                                       |
+| Archmage   | Approved as a good start. Needs more presence in the two-slot tile.                                                            |
+| Footman    | First draft, awaiting review. Stocky body; sword arm is crowded.                                                               |
+| Halberdier | First draft, awaiting review. Torso too upright for a lunge; thin legs. Arms redrawn in mail sleeves, far arm behind the body. |
+| Knight     | Second draft. Horse redrawn: nose tucked, chest and raised foreleg shown, sun rim on crest and head. Rider sits stiffly.       |
+| Paladin    | First draft, awaiting review. Mace head reads as a star.                                                                       |
 
-The Knight, Lich and Assassin busts in `card-art.ts` predate the move to scenes. The owner dropped the bust concept, so treat those units as not drawn: start their scenes fresh rather than adapting the busts.
+The Lich and Assassin busts in `card-art.ts` predate the move to scenes. The owner dropped the bust concept, so treat those units as not drawn: start their scenes fresh rather than adapting the busts.
 
 ## Battle tiles
 
