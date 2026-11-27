@@ -417,6 +417,45 @@ export interface BattleUnit {
   taken: number;
   healed: number;
   died: number | null;
+  /** who set the burn it is suffering, for stats */
+  burnBy?: BattleUnit | null;
+  /** battle stats only: nothing in the rules reads it */
+  tally: Tally;
+}
+
+/** what a blow came from, for battle stats */
+export type HitKind = 'attack' | 'crit' | 'splash' | 'reach' | 'smite' | 'ability' | 'thorns' | 'rot' | 'burn';
+export type ByKind = Partial<Record<HitKind, number>>;
+
+/** a unit's battle stats. Kept apart from `dealt` and the rest so the battle report, and the golden baseline, stay as they are */
+export interface Tally {
+  /** damage to enemy units by kind, before shields (attacks, abilities and thorns add up to `dealt`; Rot and burn are extra) */
+  dmg: ByKind;
+  /** damage to the enemy hero by kind */
+  hero: ByKind;
+  /** damage taken by kind, before its own shield */
+  took: ByKind;
+  /** of `dmg`, the extra from flanking */
+  flank: number;
+  /** of `hero`, the extra because the hero had no units left */
+  rout: number;
+  /** of `dmg`, what enemy shields soaked up */
+  shielded: number;
+  /** damage past what it took to kill */
+  overkill: number;
+  kills: number;
+  /** of `took`, what its own shield soaked up */
+  blocked: number;
+  /** of `took`, damage taken guarding an adjacent ally */
+  guarded: number;
+  /** of `took`, damage taken for its summoner */
+  soaked: number;
+  /** healing on allies (and itself) that landed */
+  heal: number;
+  /** healing wasted on full health */
+  overheal: number;
+  /** health it regenerated */
+  regen: number;
 }
 
 export interface Hero {
@@ -497,4 +536,8 @@ export interface DamageOptions {
   soak?: number;
   crit?: boolean;
   flank?: boolean;
+  /** what the blow came from, for stats; an ability if not given */
+  kind?: HitKind;
+  /** stats only: the target is taking this for an ally, as a guard or a summon soaking for its summoner */
+  as?: 'guarded' | 'soaked';
 }

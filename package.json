@@ -23,6 +23,7 @@
     "postgame": "node tools/postgame.ts",
     "roundrobin": "node tools/roundrobin.ts",
     "board-vs-field": "node tools/board-vs-field.ts",
+    "stats": "node tools/stats.ts",
     "cards": "node tools/cards.ts"
   },
   "devDependencies": {

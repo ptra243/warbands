@@ -1,8 +1,9 @@
 /* Battle primitives shared by the simulation and unit abilities: targeting, damage, death, healing, Rot and summons. */
-import type { Battle, BattleUnit, DamageOptions } from '../types.ts';
+import type { Battle, BattleUnit, DamageOptions, HitKind } from '../types.ts';
 import { SLOTS } from '../constants.ts';
 import { U } from '../data/units.ts';
 import { mkBU } from './sim.ts';
+import { addKind, creditKill } from './stats.ts';
 
 /* ---- battle helpers ---- */
 export const foes = (B: Battle, side: number): BattleUnit[] => B.units.filter((x) => x.alive && x.side !== side);
@@ -46,14 +47,23 @@ export function heal(B: Battle, t: BattleUnit | null | undefined, v: number): vo
   if (!t || !t.alive) return;
   const h0 = t.hp;
   t.hp = Math.min(t.maxhp, t.hp + v);
-  if (B.src) B.src.healed += t.hp - h0;
+  if (B.src) {
+    B.src.healed += t.hp - h0;
+    B.src.tally.heal += t.hp - h0;
+    B.src.tally.overheal += v - (t.hp - h0);
+  }
   B.ev.push({ t: 'heal', b: t.bid, v });
 }
-export function hitHero(B: Battle, side: number, v: number): void {
+export function hitHero(B: Battle, side: number, v: number, kind: HitKind = 'ability'): void {
   if (B.rel[side].aegis) v *= 0.8;
-  if (!B.units.some((x) => x.alive && x.side === side)) v *= 3;
+  const routed = !B.units.some((x) => x.alive && x.side === side);
+  if (routed) v *= 3;
   /* rout: an undefended hero takes triple damage */ B.hero[side].hp -= v;
-  if (B.src) B.src.heroDmg += v;
+  if (B.src) {
+    B.src.heroDmg += v;
+    addKind(B.src.tally.hero, kind, v);
+    if (routed) B.src.tally.rout += (v * 2) / 3;
+  }
   B.ev.push({ t: 'hero', side, v });
 }
 export function weaken(t: BattleUnit | null | undefined, v: number): void {
@@ -87,10 +97,11 @@ export const effAtk = (u: BattleUnit): number => u.atk * (1 - Math.min(0.6, u.we
 export function dmg(B: Battle, t: BattleUnit, v: number, o?: DamageOptions): void {
   if (!t.alive || v <= 0) return;
   o = o || {};
+  const kind = o.kind || 'ability';
   if (!o.redir) {
     const g = adj(B, t).find((x) => x.d.guard);
     if (g) {
-      dmg(B, g, v * 0.3, { redir: 1 });
+      dmg(B, g, v * 0.3, { redir: 1, kind, as: 'guarded' });
       v *= 0.7;
     }
   }
@@ -106,25 +117,38 @@ export function dmg(B: Battle, t: BattleUnit, v: number, o?: DamageOptions): voi
     if (ss.length) {
       const share = v * (nl === 2 ? 0.5 : 0.25);
       v -= share;
-      for (const x of ss) dmg(B, x, share / ss.length, { redir: 1, soak: 1 });
+      for (const x of ss) dmg(B, x, share / ss.length, { redir: 1, soak: 1, kind, as: 'soaked' });
     }
   }
-  if (B.src && B.src.side !== t.side) B.src.dealt += v;
+  const foe = B.src && B.src.side !== t.side ? B.src : null;
+  if (foe) {
+    foe.dealt += v;
+    addKind(foe.tally.dmg, kind, v);
+  }
   t.taken += v;
+  addKind(t.tally.took, kind, v);
+  if (o.as) t.tally[o.as] += v;
   if (t.shield > 0) {
     const a = Math.min(t.shield, v);
     t.shield -= a;
     v -= a;
+    t.tally.blocked += a;
+    if (foe) foe.tally.shielded += a;
   }
   t.hp -= v;
   B.ev.push({ t: 'hit', b: t.bid, v, crit: o.crit, flank: o.flank });
   if (t.d.thorns && B.src && B.src.alive && B.src.side !== t.side && !o.redir && !o.soak) {
     const a = B.src;
     B.src = t;
-    dmg(B, a, t.d.thorns * t.m, { redir: 1, soak: 1 });
+    dmg(B, a, t.d.thorns * t.m, { redir: 1, soak: 1, kind: 'thorns' });
     B.src = a;
   }
-  if (t.hp <= 0) die(B, t);
+  if (t.hp <= 0) {
+    const over = -t.hp,
+      by = B.src;
+    die(B, t);
+    creditKill(by, t, over);
+  }
 }
 export function die(B: Battle, u: BattleUnit): void {
   if (!u.alive) return;

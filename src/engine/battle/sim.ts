@@ -1,5 +1,5 @@
 /* Unit stats, synergies and the battle simulation itself. */
-import type { Battle, BattleOptions, BattleUnit, SynergyLevels, UnitSpec } from '../types.ts';
+import type { Battle, BattleOptions, BattleUnit, HitKind, SynergyLevels, UnitSpec } from '../types.ts';
 import { SUDDEN, openArr } from '../constants.ts';
 import { TRIBES } from '../data/tribes.ts';
 import { ITEMS } from '../data/items.ts';
@@ -23,6 +23,7 @@ import {
 } from './effects.ts';
 import { U } from '../data/units.ts';
 import { random } from '../rng.ts';
+import { addKind, creditKill, newTally } from './stats.ts';
 
 /* stats of an owned unit outside battle */
 export function stats(o: UnitSpec): { hp: number; atk: number; m: number; tribes: string[]; cd: number } {
@@ -90,6 +91,7 @@ export function mkBU(_B: Battle, o: UnitSpec, side: number, slot: number, mOver?
     taken: 0,
     healed: 0,
     died: null,
+    tally: newTally(),
   };
 }
 
@@ -281,8 +283,9 @@ export function attack(B: Battle, u: BattleUnit): void {
   }
   if (u.d.mod) v = u.d.mod(B, u, v);
   B.ev.push({ t: 'atk', b: u.bid, to: (u.d.all ? foes(B, u.side) : A.ts).map((x) => x.bid), hero: !f, diag: A.diag });
-  const hit = (t: BattleUnit, val: number, c: boolean) => {
+  const hit = (t: BattleUnit, val: number, c: boolean, kind: HitKind) => {
     if (u.burnHit) {
+      if (u.burnHit >= t.burn) t.burnBy = u;
       t.burn = Math.max(t.burn, u.burnHit);
       t.burnT = 3;
     }
@@ -293,21 +296,23 @@ export function attack(B: Battle, u: BattleUnit): void {
       val *= 1 + u.flank;
       fl = true;
       u.flanks = (u.flanks || 0) + 1;
+      u.tally.flank += val - val / (1 + u.flank);
     }
-    dmg(B, t, val, { crit: c, flank: fl });
+    dmg(B, t, val, { crit: c, flank: fl, kind });
   };
+  const k: HitKind = crit ? 'crit' : 'attack';
   if (u.d.all) {
     const fs = foes(B, u.side);
-    fs.forEach((t) => hit(t, v, crit));
-    if (!f) hitHero(B, 1 - u.side, v);
+    fs.forEach((t) => hit(t, v, crit, k));
+    if (!f) hitHero(B, 1 - u.side, v, k);
   } else if (f) {
     // a wide unit strikes every enemy opposite any of its slots, splitting its damage evenly
     const ts = A.ts,
       each = u.d.noSplit ? v : v / ts.length,
       near: BattleUnit[] = [];
     if (u.splash) for (const t of ts) for (const x of adj(B, t)) if (!ts.includes(x) && !near.includes(x)) near.push(x);
-    ts.forEach((t) => hit(t, each, crit));
-    near.forEach((t) => hit(t, each * u.splash, false));
+    ts.forEach((t) => hit(t, each, crit, k));
+    near.forEach((t) => hit(t, each * u.splash, false, 'splash'));
     if (u.d.reach && !A.diag) {
       const l = u.slot - 1,
         r2 = u.slot + u.size;
@@ -319,10 +324,10 @@ export function attack(B: Battle, u: BattleUnit): void {
             !ts.includes(x) &&
             ((x.slot <= l && x.slot + x.size > l) || (x.slot <= r2 && x.slot + x.size > r2)),
         )
-        .forEach((t) => hit(t, v * u.d.reach!, false));
+        .forEach((t) => hit(t, v * u.d.reach!, false, 'reach'));
     }
-  } else hitHero(B, 1 - u.side, v);
-  if (u.d.boss && f) hitHero(B, 1 - u.side, v * 0.25);
+  } else hitHero(B, 1 - u.side, v, k);
+  if (u.d.boss && f) hitHero(B, 1 - u.side, v * 0.25, k);
   if (u.d.after) u.d.after(B, u);
   if (u.healHit) heal(B, weakest(friends(B, u.side)), v * u.healHit);
 }
@@ -333,14 +338,22 @@ export function step(B: Battle, dt: number): void {
   for (const u of B.units.slice()) {
     if (!u.alive) continue;
     B.src = u;
-    if (u.regen && u.hp < u.maxhp) u.hp = Math.min(u.maxhp, u.hp + u.maxhp * u.regen * dt);
+    if (u.regen && u.hp < u.maxhp) {
+      const h0 = u.hp;
+      u.hp = Math.min(u.maxhp, u.hp + u.maxhp * u.regen * dt);
+      u.tally.regen += u.hp - h0;
+    }
     if (u.burnT > 0) {
       u.burnT -= dt;
       u.hp -= u.burn * dt;
       u.taken += u.burn * dt;
       B.fx[1 - u.side].burn += u.burn * dt;
+      addKind(u.tally.took, 'burn', u.burn * dt);
+      if (u.burnBy && u.burnBy.side !== u.side) addKind(u.burnBy.tally.dmg, 'burn', u.burn * dt);
       if (u.hp <= 0) {
+        const over = -u.hp;
         die(B, u);
+        creditKill(u.burnBy, u, over);
         if (!u.alive) continue;
       }
     }
@@ -349,6 +362,8 @@ export function step(B: Battle, dt: number): void {
       u.hp -= r0;
       u.taken += r0;
       B.fx[1 - u.side].rot += r0;
+      addKind(u.tally.took, 'rot', r0);
+      if (u.rotBy && u.rotBy.side !== u.side) addKind(u.rotBy.tally.dmg, 'rot', r0);
       /* a stack fades every ROTFADE seconds, twice as fast once whoever applied it is dead (leader Rot: once no enemy unit is left) */
       u.rotT =
         (u.rotT || 0) + dt * ((u.rotBy ? !u.rotBy.alive : !B.units.some((x) => x.alive && x.side !== u.side)) ? 2 : 1);
@@ -357,7 +372,9 @@ export function step(B: Battle, dt: number): void {
         u.rot--;
       }
       if (u.hp <= 0) {
+        const over = -u.hp;
         die(B, u);
+        creditKill(u.rotBy, u, over);
         if (!u.alive) continue;
       }
     }
@@ -376,8 +393,8 @@ export function step(B: Battle, dt: number): void {
         const t = front(B, u),
           v = effAtk(u) * u.smite;
         B.ev.push({ t: 'smite', b: u.bid });
-        if (t) dmg(B, t, v);
-        else hitHero(B, 1 - u.side, v);
+        if (t) dmg(B, t, v, { kind: 'smite' });
+        else hitHero(B, 1 - u.side, v, 'smite');
       }
     }
     if (u.atk > 0 && !u.d.building) {
