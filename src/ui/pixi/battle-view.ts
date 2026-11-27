@@ -492,6 +492,7 @@ async function makeView(B: Battle, u: BattleUnit, pop: boolean): Promise<void> {
   if (pop) {
     root.scale.set(0);
     tween(0.45, (k) => {
+      if (root.destroyed) return; // a summon can die before it has finished appearing
       const e = 1 + 2.7 * Math.pow(k - 1, 3) + 1.7 * Math.pow(k - 1, 2); // back-out
       root.scale.set(e * (1 + 0.15 * Math.sin(k * Math.PI)), e * (1 - 0.1 * Math.sin(k * Math.PI)));
     });
@@ -584,7 +585,8 @@ function addDamage(v: View, amount: number) {
     .stroke({ width: 1, color: 0x0b0d0f });
   d.c.visible = true;
   d.c.alpha = 1;
-  tween(0.15, (k) => d.c.scale.set(1 + 0.3 * Math.sin(k * Math.PI)));
+  /* the unit may die and be destroyed before the pop finishes */
+  tween(0.15, (k) => d.c.destroyed || d.c.scale.set(1 + 0.3 * Math.sin(k * Math.PI)));
 }
 
 function floatText(x: number, y: number, text: string, color: number, size = 22) {
@@ -841,7 +843,7 @@ function onEvent(f: PlaybackFrame, e: BattleEvent) {
   } else if (e.t === 'buff' && v) {
     const c = center(v.u);
     floatText(c.x, c.y - 40, `+${Math.round(e.a!)}/+${Math.round(e.h!)}`, 0x9fe0ff, 18);
-    tween(0.35, (k) => v.body.scale.set(1 + 0.12 * Math.sin(k * Math.PI)));
+    tween(0.35, (k) => v.body.destroyed || v.body.scale.set(1 + 0.12 * Math.sin(k * Math.PI)));
   } else if (e.t === 'revive' && v) {
     const c = center(v.u);
     floatText(c.x, c.y - 30, 'Rises', 0xd8c8ff, 26);
@@ -1082,10 +1084,17 @@ function frame(f: PlaybackFrame, real: number): boolean {
     }
     t.t += dt;
     const k = Math.min(1, t.t / t.dur);
-    t.fn(k);
-    if (k >= 1) {
-      tweens.splice(tweens.indexOf(t), 1);
-      t.end?.();
+    try {
+      t.fn(k);
+      if (k >= 1) {
+        tweens.splice(tweens.indexOf(t), 1);
+        t.end?.();
+      }
+    } catch (err) {
+      /* a tween that throws would throw every frame and stop the field being drawn: drop it */
+      const i = tweens.indexOf(t);
+      if (i >= 0) tweens.splice(i, 1);
+      report(err);
     }
   }
   for (const p of particles.slice()) {
