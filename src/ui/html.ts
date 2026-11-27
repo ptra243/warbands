@@ -53,6 +53,12 @@ export const mulText = (mul: number | undefined): string =>
 /** an opponent's name as the battle screens show it */
 export const oppName = (o: W.Opponent): string =>
   (o.title || W.FACTIONS[o.faction].name) + (o.post ? mulText(o.mul) : '');
+/** the battle screen's header: the round (or camp), and who fights whom. A named foe from a player faction also
+ *  shows that faction; monsters and camps don't. */
+export function vsHTML(leader: string | null, o: W.Opponent, round: number): string {
+  const faction = !o.camp && (o.title || o.post) && o.faction !== 'N' ? ' (' + W.FACTIONS[o.faction].name + ')' : '';
+  return `<div class="vs"><h2>${o.camp ? 'Camp' : 'Round ' + round}</h2><p><b>${leader ? W.LEADERS[leader].name : 'Your warband'}</b> against <b>${oppName(o)}</b>${faction}</p></div>`;
+}
 /* the shop view: only your own board. The opponent stays hidden until the fight starts. */
 export function boardHTML() {
   S.aims = null;
