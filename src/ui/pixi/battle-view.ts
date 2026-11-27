@@ -89,7 +89,28 @@ const artTex = (u: BattleUnit, w: number, h: number) =>
 const SWORD = `<svg viewBox="0 0 24 24"><path fill="#f0b25a" d="M19 2l3 0 0 3-10.5 10.5 2 2-1.5 1.5-2.5-2.5-3.2 3.2 .7 2.3-2 0-3-3 0-2 2.3 .7 3.2-3.2-2.5-2.5 1.5-1.5 2 2z"/></svg>`;
 const HEART = `<svg viewBox="0 0 24 24"><path fill="#e2675d" d="M12 21C5 15.5 2 12 2 8.2 2 5.3 4.3 3 7.1 3c1.9 0 3.7 1 4.9 2.7C13.2 4 15 3 16.9 3 19.7 3 22 5.3 22 8.2 22 12 19 15.5 12 21z"/></svg>`;
 const itemTex = (id: string) => svgTex('item:' + id, ART.item(id).replace('<svg ', '<svg color="#e8e2d0" '), 24, 24);
-const tribeTex = (t: string) => svgTex('tribe:' + t, ART.tribe(t).replace('<svg ', '<svg color="#e8e2d0" '), 12, 12);
+/* a tribe's colour, read from its .tb-* rule in style.css so the battle and the shop agree */
+const tribeColors: Record<string, string> = {};
+function tribeColor(t: string): string {
+  if (!(t in tribeColors)) {
+    const el = document.createElement('i');
+    el.className = 'tb-' + t;
+    el.style.cssText = 'position:absolute;visibility:hidden;color:var(--c, #b9b3a3)';
+    document.body.appendChild(el);
+    const m = getComputedStyle(el).color.match(/\d+/g);
+    el.remove();
+    tribeColors[t] = m
+      ? '#' +
+        m
+          .slice(0, 3)
+          .map((v) => (+v).toString(16).padStart(2, '0'))
+          .join('')
+      : '#b9b3a3';
+  }
+  return tribeColors[t];
+}
+const tribeTex = (t: string) =>
+  svgTex('tribe:' + t, ART.tribe(t).replace('<svg ', `<svg color="${tribeColor(t)}" `), 12, 12);
 
 /* ---- tiny tween and particle systems ---- */
 interface Tween {
@@ -392,17 +413,18 @@ async function makeView(B: Battle, u: BattleUnit, pop: boolean): Promise<void> {
   } else socket.addChild(new Graphics().circle(0, 0, 8).stroke({ width: 1, color: 0xb9b3a3, alpha: 0.35 }));
   body.addChild(socket);
 
-  /* tribe badge in the art window's top-left corner */
-  const tribe = u.d.tribes[0];
-  if (tribe) {
+  /* tribe badges down the art window's left edge, in their tribe colours: every tribe the unit counts for, an
+     item's class included; a unit that counts twice shows its tribe twice */
+  const tribes = u.d.counts ? [...Array<string>(u.d.counts).fill(u.tribes[0]), ...u.tribes.slice(1)] : u.tribes;
+  for (const [i, tribe] of tribes.entries()) {
     const badge = new Container();
-    badge.position.set(x0 + FRAME + 11, y0 + FRAME + 11);
+    badge.position.set(x0 + FRAME + 11, y0 + FRAME + 11 + i * 20);
     badge.addChild(
       new Graphics()
         .circle(0, 0, 9)
         .fill({ color: 0x0b0d0f, alpha: 0.8 })
         .circle(0, 0, 9)
-        .stroke({ width: 1.2, color: 0xb9b3a3 }),
+        .stroke({ width: 1.2, color: parseInt(tribeColor(tribe).slice(1), 16) }),
     );
     const glyph = await sharpSprite(() => tribeTex(tribe), 11, 11);
     glyph.anchor.set(0.5);

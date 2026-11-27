@@ -2,7 +2,7 @@
 
 How to draw a unit illustration that matches the ones already approved. Read this before adding or changing anything in `src/ui/card-art.ts`.
 
-The card art is in the game on the PixiJS battle screen, on the battle tiles and the inspect card. A unit with a scene in `card-art.ts` shows it there; every other unit still shows its small icon from `src/ui/art.ts`, as does the classic battle screen. Drawing a scene therefore puts it in the game, drafts included. Seventeen units are drawn so far: the Human mages, tanks, DPS and clerics. `card-art.ts` also still holds two earlier busts (Lich, Assassin) from a concept that was dropped: `DROPPED` keeps them out of the game. Don't use them or build on them.
+The card art is in the game on the shop screen (the tall shop cards, the board and bench tiles, and the hover card) and on the PixiJS battle screen (the battle tiles and the inspect card). A unit with a scene in `card-art.ts` shows it in all of these; every other unit still shows its small icon from `src/ui/art.ts`, as does the classic battle screen. Drawing a scene therefore puts it in the game, drafts included. Seventeen units are drawn so far: the Human mages, tanks, DPS and clerics. `card-art.ts` also still holds two earlier busts (Lich, Assassin) from a concept that was dropped: `DROPPED` keeps them out of the game. Don't use them or build on them.
 
 ## Where things are
 

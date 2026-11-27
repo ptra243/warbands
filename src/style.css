@@ -788,6 +788,9 @@ button.primary:hover {
 .tb-Reborn {
   --c: #d9d3bd;
 }
+.tb-Blight {
+  --c: #b4d65a;
+}
 .tb-Necromancer {
   --c: #7ddfa8;
 }
