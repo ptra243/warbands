@@ -28,9 +28,22 @@ export async function startRun(page: Page, faction: 'H' | 'E' | 'U', leaderIndex
   await page.locator('[data-act^="leader:"]').nth(leaderIndex).click();
 }
 
+/** buy what the shop offers, units before items, so the gold goes on a unit for the board first (with a leader
+ *  such as the Quartermaster the shop is mostly items) */
 export async function buyShop(page: Page): Promise<void> {
-  for (let i = 0; i < 4; i++) {
-    const card = page.locator(`button[data-shop="${i}"]`);
+  /* the slots still for sale, by their own index: a sold slot leaves a gap */
+  const forSale = () =>
+    page
+      .locator('button[data-shop]')
+      .evaluateAll((els) => els.map((e) => ({ i: e.getAttribute('data-shop')!, item: e.classList.contains('item') })));
+  let slots = await forSale();
+  /* a shop of nothing but items: reroll (while there's gold for it) until a unit turns up */
+  for (let n = 0; n < 4 && !slots.some((s) => !s.item); n++) {
+    await page.click('[data-act="reroll"]');
+    slots = await forSale();
+  }
+  for (const s of [...slots.filter((s) => !s.item), ...slots.filter((s) => s.item)]) {
+    const card = page.locator(`button[data-shop="${s.i}"]`);
     if (await card.count()) await card.click();
   }
 }

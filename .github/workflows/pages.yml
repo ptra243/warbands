@@ -16,12 +16,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  # Artifacts belong to the run, not the attempt, and deploy-pages refuses to choose between two of the same
+  # name. So each build attempt uploads under its own name and hands that name to the deploy job: "Re-run all
+  # jobs" builds and deploys a new one, and "Re-run failed jobs" deploys the one its earlier build uploaded.
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      artifact: ${{ steps.name.outputs.artifact }}
     steps:
+      - id: name
+        run: echo "artifact=github-pages-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -32,6 +36,16 @@ jobs:
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
+          name: ${{ steps.name.outputs.artifact }}
           path: dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: ${{ needs.build.outputs.artifact }}
