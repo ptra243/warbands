@@ -184,6 +184,8 @@ export function command(c: string): void {
     return;
   } else if (c.startsWith('sort:')) {
     S.sumSort = c.slice(5);
+  } else if (c === 'sumtab:you' || c === 'sumtab:enemy') {
+    S.sumTab = c === 'sumtab:you' ? 'you' : 'enemy';
   } else if (c.startsWith('row:')) {
     S.sumOpen = S.sumOpen === c.slice(4) ? null : c.slice(4);
   } else if (c === 'continue') {

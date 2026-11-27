@@ -43,6 +43,8 @@ export interface UiState {
   /** summary table: the column it is sorted by, and the unit row opened to show its breakdown */
   sumSort?: string;
   sumOpen?: string | null;
+  /** which side's table the summary shows */
+  sumTab?: 'you' | 'enemy';
 }
 
 export const S: UiState = {

@@ -471,13 +471,17 @@ export function summaryHTML() {
     notes.push(
       `The fight went to sudden death, which cost your hero ${num(Z.st.sudden[0])} and theirs ${num(Z.st.sudden[1])}.`,
     );
+  const foe = S.sumTab === 'enemy';
+  const tab = (k: 'you' | 'enemy', label: string, list: SumRow[]) => {
+    const on = (k === 'enemy') === foe;
+    return `<button role="tab" class="stab${k === 'enemy' ? ' foe' : ''}${on ? ' on' : ''}" data-act="sumtab:${k}" aria-selected="${on}" aria-controls="stab-panel">${label}<small>${num(list.reduce((a, r) => a + SORTS.dmg[1](r), 0))} damage</small></button>`;
+  };
   const hero = (label: string, i: number) =>
     `<div class="tile"><small>${label}</small><b>${num(b.heroHp[i])} <i>/ ${num(b.heroMax)}</i></b><span class="hpb"><i style="width:${Math.max(0, (b.heroHp[i] / b.heroMax) * 100).toFixed(1)}%"></i></span></div>`;
   return `<div class="wrap battle">${headHTML()}
 <section class="result ${Z.res}"><div><h2>${Z.title}</h2><p>${Z.bits.join(' ')}</p></div><span class="grow"></span><button class="primary" data-act="continue" id="sumgo">${Z.go}</button></section>
 <div class="tiles"><div class="tile"><small>${Z.round}</small><b>${S.run!.leader ? W.LEADERS[S.run!.leader].name.replace('The ', '') : 'You'} <i>against</i> ${Z.foe}</b></div>${hero('Your hero', 0)}${hero('Enemy hero', 1)}<div class="tile"><small>Length</small><b>${b.time}s</b></div></div>
 ${notes.length ? `<section class="panel"><h2>What decided it</h2><ul class="notes">${notes.map((x) => `<li>${x}</li>`).join('')}</ul></section>` : ''}
-<section class="panel"><div class="bar"><h2>Your warband</h2><span class="grow"></span><span class="key"><i class="du"></i>to units <i class="dh"></i>to their hero</span></div><p class="odds">Choose a unit to see where its damage came from, or a column to sort by it.</p>${table(me)}</section>
-<section class="panel side s1"><h2>The enemy</h2>${table(en)}</section>
+<section class="panel stabbed"><div class="bar"><div class="stabs" role="tablist" aria-label="Whose stats">${tab('you', 'Your warband', me)}${tab('enemy', 'The enemy', en)}</div><span class="grow"></span><span class="key"><i class="du"></i>to units <i class="dh"></i>to ${foe ? 'your' : 'their'} hero</span></div><p class="odds">Choose a unit to see where its damage came from, or a column to sort by it.</p><div role="tabpanel" id="stab-panel" class="${foe ? 'side s1' : ''}">${table(foe ? en : me)}</div></section>
 <p><button class="primary" data-act="continue">${Z.go}</button></p></div>`;
 }

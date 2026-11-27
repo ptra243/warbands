@@ -192,6 +192,7 @@ export function endBattle() {
     st = W.battleStats(B),
     foe = foeName();
   S.sumOpen = null;
+  S.sumTab = 'you';
   if (S.opp!.camp) {
     const c = W.finishCamp(S.run!, B);
     S.result = { camp: true };
