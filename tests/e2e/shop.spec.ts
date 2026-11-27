@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
-import { PAGE, startRun, trackErrors, ui } from './helpers.ts';
+import { expect } from '@playwright/test';
+import { PAGE, test, startRun, trackErrors, ui } from './helpers.ts';
 
 // The shop screen: what it tells you about the next opponent, the shop cards' details, and selling from the
 // status line.

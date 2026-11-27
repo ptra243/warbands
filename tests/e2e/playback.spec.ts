@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
-import { PAGE, buyShop, startRun, trackErrors, ui } from './helpers.ts';
+import { expect } from '@playwright/test';
+import { PAGE, test, buyShop, startRun, trackErrors, ui } from './helpers.ts';
 
 // Watch a fight through to the summary without skipping, on each battle screen, at 4x speed. Without a GPU
 // (headless Chrome) the Pixi screen refuses to start, so that check also covers the fall back to classic.

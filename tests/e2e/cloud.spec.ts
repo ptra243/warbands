@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
-import { expect, test } from '@playwright/test';
-import { PAGE, buyShop, startRun, trackErrors, ui } from './helpers.ts';
+import { expect } from '@playwright/test';
+import { DB_HOST, PAGE, test, buyShop, startRun, trackErrors, ui } from './helpers.ts';
 
 // The copy of the game hosted outside Claude: runs and post-game boards go to the hosted database.
 // The database is replaced by a stand-in here, so this checks the requests the page makes, not the real service.
-const HOST = 'https://tuotzykmnxmmksabdlsy.supabase.co/';
+const HOST = DB_HOST;
 
 type Row = Record<string, unknown> & { run_key: string };
 
