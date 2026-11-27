@@ -23,5 +23,24 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     },
   },
+  {
+    /* the browser checks get the empty stand-in for the hosted database only through the test in helpers.ts */
+    files: ['tests/e2e/**/*.ts'],
+    ignores: ['tests/e2e/helpers.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@playwright/test',
+              importNames: ['test'],
+              message: 'Import test from ./helpers.ts, so the check never reaches the hosted database.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   prettier,
 );

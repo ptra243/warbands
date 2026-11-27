@@ -4,7 +4,6 @@ import { DB_HOST, PAGE, test, buyShop, startRun, trackErrors, ui } from './helpe
 
 // The copy of the game hosted outside Claude: runs and post-game boards go to the hosted database.
 // The database is replaced by a stand-in here, so this checks the requests the page makes, not the real service.
-const HOST = DB_HOST;
 
 type Row = Record<string, unknown> & { run_key: string };
 
@@ -50,9 +49,9 @@ test('saves runs and boards and downloads them', async ({ page }) => {
   ];
   const savedRuns: Row[] = [];
   const requests = new Set<string>();
-  await page.route(HOST + '**', async (route) => {
+  await page.route(DB_HOST + '**', async (route) => {
     const rq = route.request(),
-      path = rq.url().slice(HOST.length).split('?')[0];
+      path = rq.url().slice(DB_HOST.length).split('?')[0];
     requests.add(`${rq.method()} ${path} key:${!!rq.headers()['apikey']}`);
     const cors = {
       'access-control-allow-origin': '*',
