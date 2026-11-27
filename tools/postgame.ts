@@ -18,15 +18,15 @@ interface BossStat {
 function play(f: W.PlayerFaction, i: number, stat?: BossStat): W.Run {
   const run = W.newRun(f, leadersOf(f)[i % 3]);
   let enc = 0;
-  while (!run.over && run.round < 60) {
-    if (run.offer) {
-      const cs = run.offer.cards;
+  while (W.phase(run) !== 'over' && run.round < 60) {
+    if (W.phase(run) === 'encounter') {
+      const cs = run.offer!.cards;
       let k = cs.findIndex((c) => c.type === 'relic');
       if (k < 0) k = enc % 3 === 0 ? 0 : cs.findIndex((c) => c.type === 'event');
       if (k < 0) k = 0;
       enc++;
-      const r0 = W.chooseOffer(run, k);
-      if (r0?.fight) W.finishCamp(run, fight(W.startCamp(run)));
+      W.chooseOffer(run, k);
+      if (W.phase(run) === 'camp') W.finishCamp(run, fight(W.startCamp(run)));
     }
     const boss = run.enemy.boss;
     bot(run);
@@ -43,7 +43,7 @@ function play(f: W.PlayerFaction, i: number, stat?: BossStat): W.Run {
 
 function post(run: W.Run, ghosts: W.Ghost[]): W.Run {
   W.continueRun(run, ghosts);
-  while (!run.over && run.round < 80) {
+  while (W.phase(run) !== 'over' && run.round < 80) {
     bot(run);
     W.finishBattle(run, fight(W.startBattle(run)));
   }

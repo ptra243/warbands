@@ -23,17 +23,17 @@ for (const f of ['H', 'E', 'U'] as const) {
     draws = 0;
   for (let i = 0; i < N; i++) {
     const run = W.newRun(f, leadersOf(f)[i % 3]);
-    while (!run.over && run.round < 40) {
-      if (run.offer) {
-        const cs = run.offer.cards;
+    while (W.phase(run) !== 'over' && run.round < 40) {
+      if (W.phase(run) === 'encounter') {
+        const cs = run.offer!.cards;
         let k = cs.findIndex((c) => c.type === 'relic');
         if (k < 0)
           k = enc % 3 === 0 ? 0 : enc % 3 === 1 && cs[2].type === 'camp' ? 2 : cs.findIndex((c) => c.type === 'event');
         if (k < 0) k = 0;
         enc++;
         const hard = cs[k].hard;
-        const r0 = W.chooseOffer(run, k);
-        if (r0?.fight) {
+        W.chooseOffer(run, k);
+        if (W.phase(run) === 'camp') {
           const cr = W.finishCamp(run, fight(W.startCamp(run)));
           camp[hard ? 1 : 0][cr.win ? 0 : 1]++;
         }

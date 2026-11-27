@@ -35,7 +35,7 @@ const h = vi.hoisted(() => ({
 vi.mock('../src/ui/state.ts', () => ({ S: h.S, root: null }));
 vi.mock('../src/ui/render.ts', () => ({ render: vi.fn() }));
 vi.mock('../src/ui/storage.ts', () => ({ saveLog: vi.fn() }));
-vi.mock('../src/ui/html.ts', () => ({ foeMul: () => '', inspTarget: () => null }));
+vi.mock('../src/ui/html.ts', () => ({ oppName: (o: W.Opponent) => o.title, inspTarget: () => null }));
 vi.mock('../src/ui/pixi/battle-view.ts', () => ({
   pixiScreen: {
     mount: (B: W.Battle, foe: string) => h.pixi.mount(B, foe),
@@ -82,7 +82,8 @@ function battle(seed: number): W.Battle {
 }
 /** put battle B on screen, as startBattle does, and draw it on the given screen */
 function show(B: W.Battle, view: 'pixi' | 'classic'): void {
-  Object.assign(h.S, { B, screen: 'battle', result: null, speed: 1, foe: 'H', foeTitle: 'Test foe' });
+  const opp: W.Opponent = { faction: 'H', title: 'Test foe', leader: null, camp: false, mul: 1, post: false };
+  Object.assign(h.S, { B, screen: 'battle', result: null, speed: 1, opp });
   setBattleView(view);
 }
 

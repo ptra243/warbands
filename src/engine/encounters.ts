@@ -193,6 +193,8 @@ export function chooseOffer(run: Run, i: number): { fight?: boolean; msg?: strin
   if (!c) return null;
   run.offer = null;
   if (c.type === 'camp') {
+    /* a camp with nobody on the board is passed by, not fought */
+    if (!boardUnits(run).length) return { msg: 'You had no units on the board, so you passed the camp by.' };
     run.camp = c as CampCard;
     return { fight: true };
   }

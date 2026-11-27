@@ -1,5 +1,5 @@
 /* The UI's own state. Everything about the run itself lives in S.run and is changed only through the engine. */
-import type { Battle, BattleReport, FactionId, PlayerFaction, Run } from '../engine/index.ts';
+import type { Battle, BattleReport, Opponent, PlayerFaction, Run } from '../engine/index.ts';
 
 export type Screen = 'pick' | 'leader' | 'shop' | 'encounter' | 'battle' | 'summary' | 'end';
 
@@ -15,8 +15,6 @@ export interface Summary {
 
 export interface UiState {
   pickF: PlayerFaction | null;
-  campFight: boolean;
-  foeTitle: string;
   screen: Screen;
   run: Run | null;
   /** uid of the selected owned thing */
@@ -27,11 +25,11 @@ export interface UiState {
   speed: number;
   msg: string;
   result: object | null;
-  foe: FactionId;
+  /** who the battle on screen is against; kept until the summary is closed, since the run has moved on by then */
+  opp: Opponent | null;
   quitArm: boolean;
   save: string;
   aims?: Record<number, string> | null;
-  foeLead?: string | null;
   helpOpen?: boolean;
   dlmsg?: string;
   dling?: boolean;
@@ -45,8 +43,6 @@ export interface UiState {
 
 export const S: UiState = {
   pickF: null,
-  campFight: false,
-  foeTitle: '',
   screen: 'pick',
   run: null,
   sel: null,
@@ -55,7 +51,7 @@ export const S: UiState = {
   speed: 1,
   msg: '',
   result: null,
-  foe: 'H',
+  opp: null,
   quitArm: false,
   save: '',
 };
