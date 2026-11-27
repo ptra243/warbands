@@ -6,19 +6,18 @@ import { ART } from './art.ts';
 import { CARD_ART } from './card-art.ts';
 import { PORTRAIT } from './portraits.ts';
 import { S } from './state.ts';
-import { cells, nameOf, thing, unlockLevel } from './html.ts';
+import { cells, mulText, nameOf, ownAttrs, thing, unlockLevel } from './html.ts';
 
 const RNAME = ['', 'Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
 const n = (v: number): number => Math.max(0, Math.round(v));
 const rare = (cost: number): string => `--rare:var(--r${Math.max(1, Math.min(5, cost))})`;
 
 /* ---- icons ---- */
-export const ICON = {
+const ICON = {
   sword: `<svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path fill="currentColor" d="M19 2l3 0 0 3-10.5 10.5 2 2-1.5 1.5-2.5-2.5-3.2 3.2 .7 2.3-2 0-3-3 0-2 2.3 .7 3.2-3.2-2.5-2.5 1.5-1.5 2 2z"/></svg>`,
   heart: `<svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path fill="currentColor" d="M12 21C5 15.5 2 12 2 8.2 2 5.3 4.3 3 7.1 3c1.9 0 3.7 1 4.9 2.7C13.2 4 15 3 16.9 3 19.7 3 22 5.3 22 8.2 22 12 19 15.5 12 21z"/></svg>`,
   /* hero health: a shield, so hearts only ever mean lives */
   shield: `<svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path fill="currentColor" d="M12 2l8 3v6c0 5-3.4 9.2-8 11-4.6-1.8-8-6-8-11V5z"/><path fill="rgba(0,0,0,.35)" d="M12 2l8 3v6c0 5-3.4 9.2-8 11z"/></svg>`,
-  lock: `<svg viewBox="0 0 24 24" class="ico lock" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.4" d="M7.5 11V8a4.5 4.5 0 0 1 9 0v3"/><rect x="5" y="11" width="14" height="10" rx="2" fill="currentColor"/><circle cx="12" cy="16" r="1.6" fill="#0d1113"/></svg>`,
 };
 const coin = (v: number, kind: 'buy' | 'sell' | 'poor' = 'buy'): string =>
   `<span class="coin ${kind}" title="${kind === 'sell' ? 'Sells for' : 'Price'}">${v}</span>`;
@@ -39,8 +38,6 @@ function socket(id: string | null | undefined): string {
 }
 
 /* ---- tiles (B2) for the board and bench ---- */
-const ownAttrs = (t: W.Thing): string =>
-  `data-own="${t.uid}" data-insp="own:${t.uid}" draggable="true" tabindex="0" role="button" aria-label="${nameOf(t)}"`;
 /* tribe badges down the art window's left edge: every class or tribe the unit counts for, an item's included; a
    unit that counts twice shows its tribe twice */
 function badges(d: W.UnitDef, tribes: string[]): string {
@@ -81,12 +78,12 @@ function shopCard(s: W.ShopCard | null, i: number): string {
     cls = `scard${s.frozen ? ' frozen' : ''}${poor ? ' poor' : ''}`;
   if (s.kind === 'item') {
     const it = W.ITEMS[s.id];
-    return `<button class="${cls} item" data-shop="${i}" style="${rare(it.cost)}" aria-label="Buy ${it.name} for ${price} gold">
+    return `<button class="${cls} item" data-shop="${i}" data-insp="shop:${i}" style="${rare(it.cost)}" aria-label="Buy ${it.name} for ${price} gold">
 <span class="window">${itemArt(s.id)}${ice}</span>${cost}<span class="body"><b class="name">${it.name}</b><span class="chips"><span class="tb">Item</span></span><span class="txt">${it.text}</span></span></button>`;
   }
   const d = W.U[s.id],
     own = run.things.filter((t) => t.kind === 'unit' && t.id === s.id && t.tier === 1).length;
-  return `<button class="${cls}${own >= 2 ? ' up' : ''}" data-shop="${i}" style="${rare(d.cost)}" aria-label="Buy ${d.name} for ${price} gold">
+  return `<button class="${cls}${own >= 2 ? ' up' : ''}" data-shop="${i}" data-insp="shop:${i}" style="${rare(d.cost)}" aria-label="Buy ${d.name} for ${price} gold">
 <span class="window">${art(s.id, d.size > 1)}${ice}${own >= 2 ? '<span class="upflag">Upgrade ★★</span>' : ''}</span>${cost}${pips(own)}
 <span class="body"><b class="name">${d.name}</b><span class="chips">${d.tribes.map(tribe).join('')}${d.size > 1 ? `<span class="tb">${d.size} slots</span>` : ''}</span>
 <span class="txt">${d.txt(1)}</span><span class="nums">${d.building ? '' : `<span class="atk">${ICON.sword}${d.atk}</span>`}<span class="hp">${ICON.heart}${d.hp + (d.flat || 0)}</span></span></span></button>`;
@@ -184,7 +181,7 @@ function roundBadge(): string {
   const tag = run.enemy.boss
     ? '<b class="rtag boss">Boss round</b>'
     : run.post
-      ? `<b class="rtag">${run.enemy.ghost ? 'Past warband' : 'Post-game opponent'}</b>`
+      ? `<b class="rtag">${run.enemy.ghost ? 'Past warband' : 'Post-game opponent'}${mulText(run.enemy.mul)}</b>`
       : '';
   const progress = run.post
     ? `<span class="wins"><b>${run.post.n}</b> past warbands beaten</span>`
@@ -288,10 +285,10 @@ function bench(): string {
 function status(): string {
   const run = S.run!,
     sel = S.sel != null ? thing(S.sel) : null;
-  if (S.msg) return `<span class="note">${S.msg}</span>`;
+  const note = S.msg ? `<span class="note">${S.msg}</span>` : '';
   if (sel)
-    return `<span><b>${nameOf(sel)}</b> selected: ${sel.kind === 'item' ? 'choose a unit to equip it.' : 'choose a slot, or drag it.'}</span><button class="mbtn sellbtn" data-act="sell">Sell ${coin(W.sellValue(sel, run), 'sell')}</button>`;
-  return '<span>Select a unit to move or sell it, or drag it. Hover any unit to read its card.</span>';
+    return `${note}<span><b>${nameOf(sel)}</b> selected: ${sel.kind === 'item' ? 'choose a unit to equip it.' : 'choose a slot, or drag it.'}</span><button class="mbtn sellbtn" data-act="sell">Sell ${coin(W.sellValue(sel, run), 'sell')}</button>`;
+  return note || '<span>Select a unit to move or sell it, or drag it. Hover any unit to read its card.</span>';
 }
 
 export function marketHTML(): string {

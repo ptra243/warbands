@@ -164,7 +164,7 @@ export const port = (k: string | null, cls?: string): string =>
   hasPort(k) ? `<span class="port ${cls || ''}" title="${W.LEADERS[k].name}">${PORTRAIT.leader(k)}</span>` : '';
 export const hport = (k: string | null | undefined): string =>
   hasPort(k) ? `<span class="hport" title="${W.LEADERS[k].name}">${PORTRAIT.head(k)}</span>` : '';
-export function leaderPanel() {
+function leaderPanel() {
   const run = S.run!,
     L = run.leader && W.LEADERS[run.leader];
   return `<section class="panel"><h2>Leader and relics</h2>${L ? `<div class="lead">${port(run.leader, 'sm')}<p><b class="lname">${L.name}.</b> ${L.text}</p></div>` : '<p class="hint">No leader.</p>'}
