@@ -32,8 +32,9 @@ export {
   buyXp,
   reroll,
 } from './run.ts';
-export { ghostFrom, yardstick, spreadGhosts, nextFoe, continueRun } from './postgame.ts';
-export { startBattle, battleReport, exportLog, finishBattle } from './round.ts';
+export { ghostFrom, yardstick, spreadGhosts, nextFoe } from './postgame.ts';
+export { startBattle, battleReport, exportLog, finishBattle, continueRun, phase, opponent } from './round.ts';
+export type { Phase, Opponent } from './round.ts';
 export { EVENTS, genCamp, genOffer, chooseOffer, startCamp, finishCamp, restore } from './encounters.ts';
 export { preview, aimDir, previewAll } from './preview.ts';
 export { createPlayback, runToEnd, unitSnapshot, isRanged } from './playback.ts';

@@ -10,6 +10,7 @@ import {
   helpHTML,
   leaderHTML,
   leaderPanel,
+  vsHTML,
   pickHTML,
   shopHTML,
   sideHTML,
@@ -53,9 +54,8 @@ export function render0() {
   }
   if (S.screen === 'battle') {
     const B = S.B!,
-      foe = S.foeTitle || W.FACTIONS[S.foe].name,
       pixi = usePixi();
-    const vs = `<div class="vs"><h2>${S.campFight ? 'Camp' : 'Round ' + B.round}</h2><p><b>${S.run!.leader ? W.LEADERS[S.run!.leader].name : 'Your warband'}</b> against <b>${foe}</b>${!S.campFight && S.foeTitle && S.foe !== 'N' ? ' (' + W.FACTIONS[S.foe].name + ')' : ''}</p></div>`;
+    const vs = vsHTML(S.run!.leader, S.opp!, B.round);
     /* speed is one segmented control, so the selected speed reads as a filled button among outlined ones */
     const controls =
       `<span class="speed" role="group" aria-label="Battle speed"><span class="lbl">Speed</span>${[1, 2, 4]

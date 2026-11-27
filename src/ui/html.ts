@@ -48,8 +48,17 @@ export const unlockLevel = (i: number): number => {
   return 9;
 };
 
-export const foeMul = (run: W.Run): string =>
-  run.enemy.mul! > 1 ? ` · +${Math.round((run.enemy.mul! - 1) * 100)}% health and attack` : '';
+export const mulText = (mul: number | undefined): string =>
+  mul! > 1 ? ` · +${Math.round((mul! - 1) * 100)}% health and attack` : '';
+/** an opponent's name as the battle screens show it */
+export const oppName = (o: W.Opponent): string =>
+  (o.title || W.FACTIONS[o.faction].name) + (o.post ? mulText(o.mul) : '');
+/** the battle screen's header: the round (or camp), and who fights whom. A named foe from a player faction also
+ *  shows that faction; monsters and camps don't. */
+export function vsHTML(leader: string | null, o: W.Opponent, round: number): string {
+  const faction = !o.camp && (o.title || o.post) && o.faction !== 'N' ? ' (' + W.FACTIONS[o.faction].name + ')' : '';
+  return `<div class="vs"><h2>${o.camp ? 'Camp' : 'Round ' + round}</h2><p><b>${leader ? W.LEADERS[leader].name : 'Your warband'}</b> against <b>${oppName(o)}</b>${faction}</p></div>`;
+}
 /* the shop view: only your own board. The opponent stays hidden until the fight starts. */
 export function boardHTML() {
   S.aims = null;
@@ -61,7 +70,7 @@ export function boardHTML() {
   const tag = run.enemy.boss
     ? '<b class="rtag boss">Boss round</b>'
     : run.post
-      ? `<b class="rtag">${run.enemy.ghost ? 'Past warband' : 'Post-game opponent'}${foeMul(run)}</b>`
+      ? `<b class="rtag">${run.enemy.ghost ? 'Past warband' : 'Post-game opponent'}${mulText(run.enemy.mul)}</b>`
       : '';
   return `<section class="field shopfield" id="field">
 <div class="hero p"><span class="ftitle">Your board</span><span>Round ${run.round}</span>${tag}<span class="grow"></span><span class="hid">Your opponent is revealed when the fight starts</span></div>
@@ -73,7 +82,7 @@ export function boardHTML() {
 export function sideHTML(B: W.Battle, side: number): string {
   const lv = B.syn[side],
     ks = Object.keys(lv).filter((k) => lv[k] && W.TRIBES[k] && W.TRIBES[k].text[lv[k] - 1]);
-  const lead = side === 0 ? S.run!.leader : S.foeLead,
+  const lead = side === 0 ? S.run!.leader : S.opp?.leader,
     L = lead && W.LEADERS[lead];
   return `<section class="panel side s${side}"><h2>${side === 0 ? 'Your warband' : 'The enemy'}</h2>${L ? `<p><b class="lname">${L.name}.</b> ${L.text}</p>` : ''}
 ${ks.length ? `<ul class="syn">${ks.map((k) => `<li class="on"><span class="tb tb-${k}">${ART.tribe(k)}${k === 'Party' ? 'Full party' : k}</span><span class="ct">${lv[k]}<i>/${W.TRIBES[k].th.length}</i></span><small>${W.TRIBES[k].text[lv[k] - 1]}</small></li>`).join('')}</ul>` : '<p class="hint">No bonuses active.</p>'}</section>`;
@@ -99,12 +108,12 @@ export function fieldHTML() {
         .map((o) => card(o, `${span(o.slot, W.U[o.id].size)} ${ownAttrs(o)}`))
         .join('');
   const foe = B
-    ? S.foeTitle || W.FACTIONS[S.foe].name
+    ? oppName(S.opp!)
     : (run.enemy.title
         ? run.enemy.title + (run.enemy.boss ? '' : ' (' + W.FACTIONS[run.enemy.faction].name + ')')
-        : W.FACTIONS[run.enemy.faction].name) + foeMul(run);
+        : W.FACTIONS[run.enemy.faction].name) + mulText(run.enemy.mul);
   return `<section class="field" id="field">
-<div class="hero e${!B && run.enemy.boss ? ' boss' : ''}" id="hero1">${hport(B ? S.foeLead : run.enemy.leader)}<span>${B ? 'Enemy hero' : 'Next opponent'} · ${foe}</span><div class="hbar"><i></i></div><b>${hp}</b></div>
+<div class="hero e${!B && run.enemy.boss ? ' boss' : ''}" id="hero1">${hport(B ? S.opp!.leader : run.enemy.leader)}<span>${B ? 'Enemy hero' : 'Next opponent'} · ${foe}</span><div class="hbar"><i></i></div><b>${hp}</b></div>
 <div class="scroll"><div class="rows"><div class="row e" id="row1">${cells(1, B ? B.open[1] : W.openArr(run.enemy.open))}${en}</div>
 <div class="mid"><span>vs</span></div>
 <div class="row p" id="row0">${cells(0, B ? B.open[0] : W.openArr(W.openCount(run.level)), unlockLevel)}${me}</div>

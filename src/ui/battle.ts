@@ -1,6 +1,6 @@
 /* Attack lines, shop previews, and the playback driver behind both battle screens. */
 import * as W from '../engine/index.ts';
-import { foeMul, inspTarget } from './html.ts';
+import { inspTarget, oppName } from './html.ts';
 import { saveLog } from './storage.ts';
 import { render } from './render.ts';
 import { S, root } from './state.ts';
@@ -130,40 +130,17 @@ async function mountScreen(B: W.Battle): Promise<void> {
   raf = requestAnimationFrame(loop);
 }
 
-export function startBattle() {
-  const run = S.run!;
-  if (!W.boardUnits(run).length) {
+/** start the fight the run is waiting for: the chosen camp in the camp phase, otherwise the round's battle */
+export function startFight() {
+  const run = S.run!,
+    camp = W.phase(run) === 'camp';
+  if (!camp && !W.boardUnits(run).length) {
     S.msg = 'Put at least one unit on the board first.';
     render();
     return;
   }
-  S.campFight = false;
-  S.foeLead = run.enemy.leader || null;
-  S.foeTitle =
-    (run.enemy.title || (run.post ? W.FACTIONS[run.enemy.faction].name : '')) + (run.post ? foeMul(run) : '');
-  S.foe = run.enemy.faction;
-  S.B = W.startBattle(run);
-  S.screen = 'battle';
-  S.sel = null;
-  S.insp = null;
-  S.result = null;
-  S.msg = '';
-  showBattle();
-}
-export function startCamp() {
-  const run = S.run!;
-  if (!W.boardUnits(run).length) {
-    run.camp = null;
-    S.msg = 'You had no units on the board, so you passed the camp by.';
-    S.screen = 'shop';
-    render();
-    return;
-  }
-  S.campFight = true;
-  S.foeLead = null;
-  S.foeTitle = run.camp!.name;
-  S.foe = 'N';
-  S.B = W.startCamp(run);
+  S.opp = W.opponent(run);
+  S.B = camp ? W.startCamp(run) : W.startBattle(run);
   S.screen = 'battle';
   S.sel = null;
   S.insp = null;
@@ -202,7 +179,7 @@ export function setBattleView(view: 'pixi' | 'classic'): void {
     showBattle();
   }
 }
-export const foeName = (): string => S.foeTitle || W.FACTIONS[S.foe].name;
+export const foeName = (): string => oppName(S.opp!);
 /* draw the battle screen and start the fight playing in whichever view is in use */
 function showBattle(): void {
   stopBattleLoop();
@@ -212,8 +189,8 @@ function showBattle(): void {
 export function endBattle() {
   const B = S.B!;
   const rep = W.battleReport(B),
-    foe = S.foeTitle || W.FACTIONS[S.foe].name;
-  if (S.campFight) {
+    foe = foeName();
+  if (S.opp!.camp) {
     const c = W.finishCamp(S.run!, B);
     S.result = { camp: true };
     S.sum = {

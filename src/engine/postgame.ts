@@ -5,9 +5,7 @@ import { ITEMS } from './data/items.ts';
 import { U } from './data/units.ts';
 import { createBattle, stats } from './battle/sim.ts';
 import { runToEnd } from './playback.ts';
-import { rollShop } from './shop.ts';
 import { genEnemy } from './enemies.ts';
-import { addXp, has } from './run.ts';
 import { LEADERS, RELICS } from './data/leaders.ts';
 import { nextUid } from './ids.ts';
 import { random, seeded, setRandom } from './rng.ts';
@@ -97,6 +95,8 @@ export function yardstick(g: Ghost): number {
   }
 }
 const scoreOf = (g: Ghost): number => (g.score == null ? (g.score = yardstick(g)) : g.score);
+/** score each board once, up front, so the post-game's choices don't pause mid-run */
+export const scoreGhosts = (pool: Ghost[]): void => pool.forEach(scoreOf);
 /* n boards spread from weakest to strongest: one drawn from each of n equal bands of the scored list */
 export function spreadGhosts(pool: Ghost[], n: number): Ghost[] {
   const all = pool.slice().sort((a, b) => scoreOf(a) - scoreOf(b));
@@ -134,22 +134,4 @@ export function nextFoe(run: Run): Enemy {
   const e = genEnemy(run.round, SLOTS, true);
   e.mul = mul;
   return e;
-}
-/* after the tenth win: keep the board and fight past winning boards, each stronger than the last, until the lives run out */
-export function continueRun(run: Run, ghosts: (Ghost | null)[] | null | undefined): boolean {
-  if (run.over !== 'won' || run.post) return false;
-  run.post = { n: 0, faced: [], pool: (ghosts || []).filter((g): g is Ghost => Boolean(g)) };
-  run.post.pool.forEach(scoreOf);
-  run.over = null;
-  run.saved = false;
-  run.offer = null;
-  run.lives = Math.max(run.lives, 3);
-  const last = run.log[run.log.length - 1];
-  run.gold += last ? last.income! : 0;
-  run.round++;
-  addXp(run, 2 + (has(run, 'scholar') ? 2 : 0));
-  run.freeRoll = has(run, 'seal');
-  rollShop(run);
-  run.enemy = nextFoe(run);
-  return true;
 }

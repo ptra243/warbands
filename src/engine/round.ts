@@ -1,12 +1,12 @@
 /* Starting and finishing a round's battle, and the run log. */
-import type { Battle, BattleReport, RoundLog, Run, RunLog, UnitReport, UnitThing } from './types.ts';
+import type { Battle, BattleReport, FactionId, Ghost, RoundLog, Run, RunLog, UnitReport, UnitThing } from './types.ts';
 import { BALANCE, LOCK, MAXWINS, openCount } from './constants.ts';
 import { U } from './data/units.ts';
 import { createBattle, synergy } from './battle/sim.ts';
 import { rollShop } from './shop.ts';
 import { genEnemy } from './enemies.ts';
 import { addXp, boardUnits, bopt, brief, has, income, occOf } from './run.ts';
-import { nextFoe } from './postgame.ts';
+import { nextFoe, scoreGhosts } from './postgame.ts';
 import { genOffer } from './encounters.ts';
 import { rnd } from './rng.ts';
 
@@ -166,15 +166,59 @@ export function finishBattle(run: Run, B: Battle): { res: 'win' | 'loss' | 'draw
     run.over = run.post ? 'won' : 'lost';
     if (run.post) run.post.done = true;
   } else if (run.wins >= MAXWINS && !run.post) run.over = 'won';
-  const beatBoss = res === 'win' && run.enemy.boss;
-  if (!run.over) {
-    run.gold += inc;
-    run.round++;
-    addXp(run, 2 + (has(run, 'scholar') ? 2 : 0));
-    run.freeRoll = has(run, 'seal');
-    rollShop(run);
-    run.enemy = run.post ? nextFoe(run) : genEnemy(run.round, openCount(run.level));
-    run.offer = run.post ? null : genOffer(run, beatBoss);
-  }
+  if (!run.over) advanceRound(run, inc, res === 'win' && run.enemy.boss);
   return { res, income: inc, grown: grown.length };
+}
+/* the start of the next round: income, xp, a fresh shop, the next opponent and, before the post-game, an offer.
+ The one place a round ends, so a new round-end rule is one edit. */
+function advanceRound(run: Run, income: number, beatBoss: boolean | undefined): void {
+  run.gold += income;
+  run.round++;
+  addXp(run, 2 + (has(run, 'scholar') ? 2 : 0));
+  run.freeRoll = has(run, 'seal');
+  rollShop(run);
+  run.enemy = run.post ? nextFoe(run) : genEnemy(run.round, openCount(run.level));
+  run.offer = run.post ? null : genOffer(run, beatBoss);
+}
+/* after the tenth win: keep the board and fight past winning boards, each stronger than the last, until the lives run out */
+export function continueRun(run: Run, ghosts: (Ghost | null)[] | null | undefined): boolean {
+  if (run.over !== 'won' || run.post) return false;
+  run.post = { n: 0, faced: [], pool: (ghosts || []).filter((g): g is Ghost => Boolean(g)) };
+  scoreGhosts(run.post.pool);
+  run.over = null;
+  run.saved = false;
+  run.offer = null;
+  run.lives = Math.max(run.lives, 3);
+  const last = run.log[run.log.length - 1];
+  advanceRound(run, last ? last.income! : 0, false);
+  return true;
+}
+
+/** what the run is waiting for: an offer to choose from, a camp to fight, the shop and the next battle, or nothing */
+export type Phase = 'encounter' | 'camp' | 'shop' | 'over';
+export function phase(run: Run): Phase {
+  return run.over ? 'over' : run.camp ? 'camp' : run.offer ? 'encounter' : 'shop';
+}
+/** who the next fight is against: the camp in the camp phase, otherwise the round's opponent */
+export interface Opponent {
+  faction: FactionId;
+  /** the opponent's own name, when it has one (a camp, a boss, a past warband) */
+  title: string | null;
+  leader: string | null;
+  camp: boolean;
+  /** post-game opponents only: their health and attack multiplier */
+  mul: number;
+  post: boolean;
+}
+export function opponent(run: Run): Opponent {
+  if (run.camp) return { faction: 'N', title: run.camp.name, leader: null, camp: true, mul: 1, post: false };
+  const e = run.enemy;
+  return {
+    faction: e.faction,
+    title: e.title || null,
+    leader: e.leader || null,
+    camp: false,
+    mul: e.mul || 1,
+    post: !!run.post,
+  };
 }

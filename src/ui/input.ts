@@ -5,8 +5,9 @@ import { setSave } from './status.ts';
 import { downloadRuns, keepGoing } from './storage.ts';
 import { hideTip, showTip } from './tooltip.ts';
 import { render } from './render.ts';
-import { drawPreview, endBattle, setBattleView, startBattle, startCamp, stopBattleLoop } from './battle.ts';
+import { drawPreview, endBattle, setBattleView, startFight, stopBattleLoop } from './battle.ts';
 import { S, root } from './state.ts';
+import type { Screen } from './state.ts';
 
 /* ---- input ---- */
 /* which board slot the pointer is over, from the player row's geometry */
@@ -83,6 +84,9 @@ export function act(a: HTMLElement): void {
   }
   render();
 }
+/** the screen for the run's phase between fights */
+const PHASE_SCREEN: Record<W.Phase, Screen> = { over: 'end', encounter: 'encounter', shop: 'shop', camp: 'battle' };
+export const screenOf = (run: W.Run): Screen => PHASE_SCREEN[W.phase(run)];
 export function command(c: string): void {
   const run = S.run!;
   S.msg = '';
@@ -101,11 +105,11 @@ export function command(c: string): void {
     const r = W.chooseOffer(run, +c.slice(4));
     if (!r) return;
     if (r.fight) {
-      startCamp();
+      startFight();
       return;
     }
     S.msg = r.msg || '';
-    S.screen = 'shop';
+    S.screen = screenOf(run);
   } else if (c === 'keepgoing') {
     keepGoing();
     return;
@@ -159,7 +163,7 @@ export function command(c: string): void {
       if (S.sel === t.uid) S.sel = null;
     }
   } else if (c === 'fight') {
-    startBattle();
+    startFight();
     return;
   } else if (c.startsWith('speed:')) {
     S.speed = +c.slice(6);
@@ -182,8 +186,8 @@ export function command(c: string): void {
     S.B = null;
     S.result = null;
     S.sum = null;
-    S.campFight = false;
-    S.screen = run.over ? 'end' : run.offer ? 'encounter' : 'shop';
+    S.opp = null;
+    S.screen = screenOf(run);
   }
   render();
 }
