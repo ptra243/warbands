@@ -2921,7 +2921,7 @@ const CARDS: Record<string, () => string> = {
         L(`${p(a, 14)} ${p(a, 20)}`, ward, 0.3, 0.25);
     }
     for (let i = 0; i < 16; i++) {
-      const a = r() * Math.PI * 1.3, // right, below and left of the ward, never up under the rarity label
+      const a = Math.PI * (r() * 0.85 - 0.1), // right of and below the ward: clear of his face and of the rarity label
         d = 21 + r() * 6,
         x = f1(73 + Math.cos(a) * d),
         y = f1(32 + Math.sin(a) * d),
