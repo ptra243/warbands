@@ -6,6 +6,7 @@ import prettier from 'eslint-config-prettier';
 export default tseslint.config(
   {
     ignores: [
+      '.claude',
       'dist',
       'node_modules',
       'runs',
@@ -25,7 +26,7 @@ export default tseslint.config(
   },
   {
     /* the browser checks get the empty stand-in for the hosted database only through the test in helpers.ts */
-    files: ['tests/e2e/**/*.ts'],
+    files: ['tests/e2e/**/*.{ts,js,mjs}'],
     ignores: ['tests/e2e/helpers.ts'],
     rules: {
       '@typescript-eslint/no-restricted-imports': [
