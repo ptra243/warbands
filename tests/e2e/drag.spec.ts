@@ -92,3 +92,28 @@ test('drop preview matches where units land', async ({ page }) => {
   expect((await dropmark(page))?.bad).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('dragging a unit onto the shop sells it', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto(PAGE);
+  await startRun(page, 'H');
+  await ui(page, (S) => {
+    const r = S.run;
+    r.gold = 0;
+    r.things = [{ uid: 900, kind: 'unit', id: 'knight', tier: 1, item: null, gAtk: 0, gHp: 0, slot: 4, bench: null }];
+  });
+  await page.click('[data-act="xp"]'); // forces a render
+  const knight = (await page.locator('[data-own="900"]').boundingBox())!;
+  const shelf = (await page.locator('[data-sellzone]').boundingBox())!;
+  await page.mouse.move(knight.x + knight.width / 2, knight.y + knight.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(shelf.x + shelf.width / 2, shelf.y + shelf.height / 2, { steps: 6 });
+  await expect(page.locator('[data-sellzone].selling')).toHaveCount(1);
+  await page.mouse.up();
+  expect(await ui(page, (S) => ({ n: S.run.things.length, gold: S.run.gold, drag: !!S.drag }))).toEqual({
+    n: 0,
+    gold: 2,
+    drag: false,
+  });
+  expect(errors).toEqual([]);
+});

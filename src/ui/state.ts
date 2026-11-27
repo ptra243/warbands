@@ -30,7 +30,6 @@ export interface UiState {
   quitArm: boolean;
   save: string;
   aims?: Record<number, string> | null;
-  helpOpen?: boolean;
   dlmsg?: string;
   dling?: boolean;
   loading?: boolean;

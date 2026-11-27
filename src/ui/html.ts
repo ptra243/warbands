@@ -30,18 +30,19 @@ export function card(o: W.UnitSpec, attrs: string, battle?: boolean): string {
 ${battle ? '<span class="rotb" hidden></span><div class="bars"><div class="hpb"><i></i><u></u></div><div class="cdb"><i></i></div></div>' : ''}
 <div class="st"><b class="a">${d.building ? '' : n(st.atk)}</b><b class="h">${n(st.hp)}</b></div></div>`;
 }
-export const itemCard = (t: W.ItemThing, attrs: string): string =>
-  `<div class="u item${S.sel === t.uid ? ' sel' : ''}" ${attrs}><div class="art">${itemArt(t.id)}</div><div class="st"><b class="lbl">Item</b></div></div>`;
 export const ownAttrs = (o: W.Thing): string =>
   `data-own="${o.uid}" data-insp="own:${o.uid}" draggable="true" tabindex="0" role="button" aria-label="${nameOf(o)}"`;
 export const span = (slot: number, size: number): string => `style="grid-column:${slot + 1}/span ${size}"`;
 export const buHTML = (u: W.BattleUnit): string =>
   card(u.o, `id="bu${u.bid}" ${span(u.slot, u.size)} data-insp="def:${u.d.id}:${u.o.tier || 1}"`, true);
+const LOCK = `<svg viewBox="0 0 24 24" class="lock" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.4" d="M7.5 11V8a4.5 4.5 0 0 1 9 0v3"/><rect x="5" y="11" width="14" height="10" rx="2" fill="currentColor"/></svg>`;
 export const cells = (side: number, open: boolean[] | null, lvl?: (i: number) => number): string =>
   ROMAN.map((r, i) =>
     !open || open[i]
       ? `<div class="cell" style="grid-column:${i + 1}" ${side === 0 ? `data-slot="${i}"` : ''}><span>${r}</span></div>`
-      : `<div class="cell locked" style="grid-column:${i + 1}" title="${side === 0 ? 'Opens at a higher shop level' : 'Closed for this opponent'}"><span>${side === 0 && lvl ? 'Lv ' + lvl(i) : '·'}</span></div>`,
+      : side === 0 && lvl
+        ? `<div class="cell locked" style="grid-column:${i + 1}" title="Opens at shop level ${lvl(i)}">${LOCK}<span>Lv ${lvl(i)}</span></div>`
+        : `<div class="cell locked" style="grid-column:${i + 1}" title="${side === 0 ? 'Opens at a higher shop level' : 'Closed for this opponent'}"><span>·</span></div>`,
   ).join('');
 export const unlockLevel = (i: number): number => {
   for (let l = 1; l <= 9; l++) if (W.openArr(W.openCount(l))[i]) return l;
@@ -58,25 +59,6 @@ export const oppName = (o: W.Opponent): string =>
 export function vsHTML(leader: string | null, o: W.Opponent, round: number): string {
   const faction = !o.camp && (o.title || o.post) && o.faction !== 'N' ? ' (' + W.FACTIONS[o.faction].name + ')' : '';
   return `<div class="vs"><h2>${o.camp ? 'Camp' : 'Round ' + round}</h2><p><b>${leader ? W.LEADERS[leader].name : 'Your warband'}</b> against <b>${oppName(o)}</b>${faction}</p></div>`;
-}
-/* the shop view: only your own board. The opponent stays hidden until the fight starts. */
-export function boardHTML() {
-  S.aims = null;
-  const run = S.run!,
-    hp = W.heroHp(run.round);
-  const me = W.boardUnits(run)
-    .map((o) => card(o, `${span(o.slot, W.U[o.id].size)} ${ownAttrs(o)}`))
-    .join('');
-  const tag = run.enemy.boss
-    ? '<b class="rtag boss">Boss round</b>'
-    : run.post
-      ? `<b class="rtag">${run.enemy.ghost ? 'Past warband' : 'Post-game opponent'}${mulText(run.enemy.mul)}</b>`
-      : '';
-  return `<section class="field shopfield" id="field">
-<div class="hero p"><span class="ftitle">Your board</span><span>Round ${run.round}</span>${tag}<span class="grow"></span><span class="hid">Your opponent is revealed when the fight starts</span></div>
-<div class="scroll"><div class="rows"><div class="row p tall" id="row0">${cells(0, W.openArr(W.openCount(run.level)), unlockLevel)}${me}</div></div></div>
-<div class="hero p" id="hero0">${hport(run.leader)}<span>${run.leader ? W.LEADERS[run.leader].name : 'Your hero'}</span><div class="hbar"><i></i></div><b>${hp}</b></div>
-</section>`;
 }
 /* active bonuses of one side in a battle */
 export function sideHTML(B: W.Battle, side: number): string {
@@ -141,8 +123,6 @@ export function inspTarget(): { t: Shown; pv?: ReturnType<typeof W.preview> } | 
   if (a === 'def') return { t: { kind: 'unit', id: b, tier: +c } };
   return null;
 }
-export const helpHTML = () =>
-  `<details class="panel helpbox" id="helpbox"${S.helpOpen ? ' open' : ''}><summary>How it works</summary><ul class="help"><li>Drop a unit on the board and its neighbours slide aside to make room. The outline shows where it will land.</li><li>Each unit attacks whatever stands in the slot opposite it.</li><li>With nothing opposite, it attacks the weaker enemy one slot to either side. Only with nothing in reach does it hit the enemy hero. The first hero to fall loses.</li><li>A hero with no units left takes triple damage.</li><li>You do not see your opponent until the fight starts, so build a board that holds up against anything.</li><li>In battle, the small marker on a unit's edge shows where it is aiming: in the middle for straight ahead, in a corner for a diagonal attack, and white when it is hitting the hero.</li><li>A unit wider than one slot attacks every enemy opposite it and splits its damage evenly between them.</li><li>Buy three of the same unit to upgrade it. An upgraded unit is twice as strong.</li><li>Three of the same item combine into a stronger one. Selling a unit returns its item to your bench.</li><li>Select a unit, then a slot, to move it. Dragging works too.</li><li>Right-click one of your units to sell it. Right-click a shop card to freeze it, so it stays through rerolls and into the next round.</li><li>Raising your shop level opens more slots, for you and for your summons.</li><li>Between rounds you choose one encounter: a fight with no life at stake, an event, or a shrine. Every fifth round is a boss, and beating it earns a relic.</li><li>Against a boss, units with nothing in reach attack the boss, not the hero.</li><li>In battle, the gold bar under a unit is its attack timer.</li></ul></details>`;
 export function detailHTML() {
   const x = inspTarget();
   if (!x) return '';
@@ -172,52 +152,6 @@ ${d.size > 1 && !d.building && !d.all ? `<p class="hint">Wide: attacks every ene
 ${x.pv ? `<p class="hint aimline"><b>Attacks first:</b> ${x.pv.hero ? 'the enemy hero (nothing in reach)' : [...new Set(x.pv.names)].join(', ') + (x.pv.diag ? ' (diagonal, nothing opposite)' : '')}</p>` : ''}
 ${d.grow ? `<p class="hint">Grows +${d.grow[0] * st.m} attack and +${d.grow[1] * st.m} health after each battle${t.gAtk || t.gHp ? ` (+${t.gAtk}/+${t.gHp} so far)` : ''}.</p>` : ''}
 ${t.item ? `<p class="hint"><b>${W.ITEMS[t.item].name}.</b> ${W.ITEMS[t.item].text}</p>` : ''}`;
-}
-export function synHTML() {
-  const run = S.run!,
-    { cnt, lv } = W.synergy(W.boardUnits(run));
-  return Object.keys(W.TRIBES)
-    .filter((k) => W.TRIBES[k].f === run.faction && W.TRIBES[k].th.length)
-    .map((k) => {
-      const T = W.TRIBES[k],
-        c = cnt[k] || 0,
-        l = lv[k] || 0;
-      return `<li class="${l ? 'on' : ''}"><span class="tb tb-${k}">${ART.tribe(k)}${k === 'Party' ? 'Full party' : k}</span><span class="ct">${c}<i>/${T.th.find((x) => x > c) || T.th[T.th.length - 1]}</i></span><small>${T.text[Math.max(0, l - 1)]}</small>${T.note ? `<small class="note">${T.note}</small>` : ''}</li>`;
-    })
-    .join('');
-}
-export function shopHTML() {
-  const run = S.run!;
-  const cards = run.shop
-    .map((s, i) => {
-      if (!s) return `<div class="card sold">Sold</div>`;
-      if (s.kind === 'item') {
-        const it = W.ITEMS[s.id];
-        const ic = W.priceOf(run, s);
-        return `<button class="card item${run.gold < ic ? ' poor' : ''}${s.frozen ? ' frozen' : ''}" data-shop="${i}" data-insp="shop:${i}"><span class="cost">${ic}</span><span class="cart">${itemArt(s.id)}</span><b>${it.name}</b><small class="tribes">Item</small><small>${it.text}</small>${s.frozen ? '<em class="ice">Frozen</em>' : ''}</button>`;
-      }
-      const uc = W.priceOf(run, s),
-        d = W.U[s.id],
-        own = run.things.filter((t) => t.kind === 'unit' && t.id === s.id && t.tier === 1).length;
-      return `<button class="card f${d.f} r${d.cost}${own >= 2 ? ' up' : ''}${run.gold < uc ? ' poor' : ''}${s.frozen ? ' frozen' : ''}" data-shop="${i}" data-insp="shop:${i}"><span class="cost">${uc}</span><span class="cart">${ART.unit(s.id)}</span><b>${d.name}</b>
-<span class="chips">${d.tribes.map(chip).join('')}</span>${d.size > 1 ? `<small class="tribes">Takes ${d.size} slots</small>` : ''}<span class="nums">${d.building ? '' : `<i class="a">${d.atk}</i>`}<i class="h">${d.hp + (d.flat || 0)}</i></span><small>${d.txt(1)}</small>${own ? `<em>${own >= 2 ? 'Completes an upgrade' : 'You own one'}</em>` : ''}${s.frozen ? '<em class="ice">Frozen</em>' : ''}</button>`;
-    })
-    .join('');
-  const odds = W.ODDS[run.level - 1].map((p, i) => (p ? `<i class="r${i + 1}">${p}%</i>` : '')).join('');
-  const need = run.level < 9 ? `${run.xp}/${W.XPNEED[run.level - 1]} XP` : 'max';
-  return `<section class="panel"><div class="bar"><h2>Shop</h2><span class="odds" title="Chance of each rarity at this shop level">Level ${run.level} · ${W.openCount(run.level)} slots · ${need} · ${odds}</span>
-</div><div class="bar acts"><span class="purse"><b>${run.gold}</b> gold</span><button data-act="xp" ${run.level >= 9 ? 'disabled' : ''}>Buy 4 XP <b class="g">4</b></button><button data-act="reroll">Reroll <b class="g">2</b></button><span class="econ" title="Interest: 1 gold per 10 held when the battle ends, up to 3. Winning adds 1 more.">+${W.income(run)} next round (${W.income(run) - W.interest(run)} base, ${W.interest(run)} interest${W.interest(run) < 3 ? `; ${10 - (run.gold % 10)} more gold for +1` : ''})</span><button class="primary" data-act="fight">Fight</button></div>
-<div class="shop">${cards}</div></section>`;
-}
-export function benchHTML() {
-  const run = S.run!;
-  let h = '';
-  for (let i = 0; i < W.BENCH; i++) {
-    const t = run.things.find((x) => x.bench === i);
-    h += `<div class="bcell" data-bench="${i}">${t ? (t.kind === 'item' ? itemCard(t, ownAttrs(t)) : card(t, ownAttrs(t))) : ''}</div>`;
-  }
-  const sel = S.sel != null ? thing(S.sel) : null;
-  return `<section class="panel"><div class="bar"><h2>Bench</h2><span class="grow"></span>${sel ? `<button data-act="sell">Sell ${nameOf(sel)} for <b class="g">${W.sellValue(sel, run)}</b></button>` : '<span class="odds">Select a unit to move or sell it</span>'}</div><div class="bench">${h}</div></section>`;
 }
 export function headHTML() {
   const run = S.run!;

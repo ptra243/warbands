@@ -1,22 +1,17 @@
 /* Draws the current screen. */
 import * as W from '../engine/index.ts';
 import {
-  benchHTML,
-  boardHTML,
   encounterHTML,
   endHTML,
   fieldHTML,
   headHTML,
-  helpHTML,
   leaderHTML,
-  leaderPanel,
   vsHTML,
   pickHTML,
-  shopHTML,
   sideHTML,
   summaryHTML,
-  synHTML,
 } from './html.ts';
+import { marketHTML } from './market.ts';
 import { saveLog } from './storage.ts';
 import { afterRender } from './tooltip.ts';
 import { drawPreview, pixiAvailable, usePixi } from './battle.ts';
@@ -84,8 +79,6 @@ ${fieldHTML()}
 <div class="sides">${sideHTML(B, 0)}${sideHTML(B, 1)}</div></div>`;
     return;
   }
-  root.innerHTML = `<div class="wrap">${headHTML()}<p class="msg" role="status">${S.msg || '&nbsp;'}</p><div class="cols"><main>${boardHTML()}
-${benchHTML() + shopHTML()}</main>
-<aside>${leaderPanel()}<section class="panel"><h2>${W.FACTIONS[S.run!.faction].name} bonuses</h2><ul class="syn">${synHTML()}</ul></section>${helpHTML()}</aside></div></div>`;
+  root.innerHTML = marketHTML();
   drawPreview();
 }

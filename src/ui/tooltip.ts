@@ -1,5 +1,6 @@
 /* Unit details float beside whatever is hovered, focused or (on touch) selected. */
-import { detailHTML } from './html.ts';
+import { detailHTML, thing } from './html.ts';
+import { ownedCard } from './market.ts';
 import { S, root } from './state.ts';
 
 let tipT: ReturnType<typeof setTimeout> | undefined;
@@ -23,12 +24,15 @@ export function hideTip() {
 }
 export function placeTip(a: HTMLElement | null): void {
   const t = tipEl(),
-    html = a && a.isConnected ? detailHTML() : '';
+    own = S.screen === 'shop' && a?.dataset.own ? thing(+a.dataset.own) : undefined,
+    html = !a || !a.isConnected ? '' : own ? ownedCard(own) : detailHTML();
   if (!html || !a) {
     t.hidden = true;
     return;
   }
   t.innerHTML = html;
+  /* on the shop screen your own units show their tall card, bare, above the tile */
+  t.classList.toggle('cardtip', !!own);
   t.hidden = false;
   t.style.left = '0px';
   t.style.top = '0px';
@@ -39,6 +43,11 @@ export function placeTip(a: HTMLElement | null): void {
     vh = window.innerHeight,
     g = 10;
   let x, y;
+  if (own) {
+    t.style.left = Math.round(Math.max(8, Math.min(vw - w - 8, r.left + r.width / 2 - w / 2))) + 'px';
+    t.style.top = Math.round(r.top - g - h >= 8 ? r.top - g - h : Math.min(vh - h - 8, r.bottom + g)) + 'px';
+    return;
+  }
   if (a.closest('#row0') && r.bottom + g + h <= vh - 8) {
     t.style.left = Math.round(Math.max(8, Math.min(vw - w - 8, r.left + r.width / 2 - w / 2))) + 'px';
     t.style.top = Math.round(r.bottom + g) + 'px';

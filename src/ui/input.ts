@@ -310,14 +310,6 @@ export function installInput(): void {
     },
     true,
   );
-  root.addEventListener(
-    'toggle',
-    (e) => {
-      if ((e.target as HTMLElement) && (e.target as HTMLElement).id === 'helpbox')
-        S.helpOpen = (e.target as HTMLDetailsElement).open;
-    },
-    true,
-  );
   root.addEventListener('dragstart', (e) => {
     const a = (e.target as HTMLElement).closest && (e.target as HTMLElement).closest<HTMLElement>('[data-own]');
     if (!a || S.screen !== 'shop') return;
@@ -327,14 +319,29 @@ export function installInput(): void {
     a.classList.add('sel');
     S.drag = true;
     hideTip();
+    /* the shop shows itself as the place to sell what is held */
+    const t = thing(S.sel),
+      zone = root.querySelector('[data-sellzone]'),
+      veil = zone?.querySelector('.sellveil span');
+    if (t && zone && veil) {
+      veil.innerHTML = `Drop here to sell ${nameOf(t)} for <b>${W.sellValue(t, S.run!)}</b> gold`;
+      zone.classList.add('selling');
+    }
   });
-  root.addEventListener('dragover', (e) => {
+  /* Chromium sends dragenter rather than dragover on a move that lands on a new element, so both update the
+     preview: otherwise a drag across the tiles' many art elements could show no outline until it stops */
+  const dragOver = (e: DragEvent) => {
     if (S.sel == null) return;
     const s = slotAt(e);
-    if (s != null || (e.target as HTMLElement).closest<HTMLElement>('[data-own],[data-bench],[data-slot]'))
+    if (
+      s != null ||
+      (e.target as HTMLElement).closest<HTMLElement>('[data-own],[data-bench],[data-slot],[data-sellzone]')
+    )
       e.preventDefault();
     showDrop(s);
-  });
+  };
+  root.addEventListener('dragenter', dragOver);
+  root.addEventListener('dragover', dragOver);
   root.addEventListener('mousemove', (e) => {
     if (S.sel == null || S.screen !== 'shop') {
       if (S.hover != null) clearDrop();
@@ -344,9 +351,19 @@ export function installInput(): void {
   });
   root.addEventListener('drop', (e) => {
     e.preventDefault();
+    /* a drop usually re-renders, which detaches the dragged node, so its dragend never reaches root */
+    S.drag = false;
     if (S.sel == null || S.screen !== 'shop') return;
     const ds = slotAt(e),
       held = thing(S.sel);
+    if (held && (e.target as HTMLElement).closest('[data-sellzone]')) {
+      S.msg = `Sold ${nameOf(held)} for ${W.sellValue(held, S.run!)} gold.`;
+      W.sell(S.run!, held);
+      S.sel = null;
+      clearDrop();
+      render();
+      return;
+    }
     if (ds != null && held && held.kind === 'unit') {
       S.msg = W.moveTo(S.run!, held, { slot: ds }) ? '' : "There's no room to fit it there. Clear a slot first.";
       S.sel = null;
@@ -365,6 +382,7 @@ export function installInput(): void {
   });
   root.addEventListener('dragend', () => {
     S.drag = false;
+    root.querySelector('[data-sellzone]')?.classList.remove('selling');
     clearDrop();
     if (S.sel != null && S.screen === 'shop') {
       S.sel = null;

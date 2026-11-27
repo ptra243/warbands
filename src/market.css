@@ -1,0 +1,1261 @@
+/* The shop screen ("Market"), and the tall card that the hover tip shows for your own units.
+   Scoped under .mk, or .cardtip for the tip, which lives outside it. */
+
+.mk {
+  container-type: inline-size;
+  max-width: 2200px;
+  margin: 0 auto;
+  padding: 0 14px 28px;
+}
+.mk-in {
+  /* one unit of tile size: ten board slots of 113 plus gaps fill the board's width */
+  /* the board fills the width, unless the window is too short to show it and the bench under the shop (about
+     580px of the page is fixed, and the board and bench rows take 132 and 119 units). Short windows never go below the
+     original size of 1 and scroll a little instead. */
+  --s0: max(0.5px, min(calc((100cqw - 104px) / 1180), max(1px, calc((100vh - 580px) / 251))));
+  --s: var(--s0);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mk h3 {
+  font: 800 12px var(--body);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+:is(.mk, .cardtip) .ico {
+  width: 1em;
+  height: 1em;
+  flex: none;
+}
+
+/* ---- buttons ---- */
+.mbtn {
+  border: 0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-weight: 800;
+  color: var(--ink);
+  background: linear-gradient(180deg, #2b3a42, #1d272c);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 0 1px #3a4a52,
+    0 3px 6px rgba(0, 0, 0, 0.4);
+}
+.mbtn:hover:not(:disabled) {
+  background: linear-gradient(180deg, #334550, #222e34);
+}
+.mbtn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.mbtn .lbl {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.1;
+  font-size: 15px;
+  white-space: nowrap;
+}
+.mbtn .lbl small {
+  font-size: 11px;
+  color: var(--dim);
+}
+.mbtn.ghost {
+  background: none;
+  box-shadow: inset 0 0 0 1px #3a4a52;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--dim);
+}
+.mbtn.fight {
+  font: 700 26px/1 var(--display);
+  padding: 9px 24px 7px;
+  color: #2a1404;
+  background: linear-gradient(180deg, #f3c45a, #d48a24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 0 0 1px #6b3d0c,
+    0 4px 14px rgba(232, 160, 50, 0.35);
+}
+.mbtn.fight:hover {
+  background: linear-gradient(180deg, #f8d06c, #de9630);
+}
+.mbtn.level {
+  position: relative;
+  overflow: hidden;
+}
+.xpbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: #11181b;
+}
+.xpbar i {
+  display: block;
+  height: 100%;
+  background: #6fb7e8;
+}
+
+/* ---- coins ---- */
+:is(.mk, .cardtip) .coin {
+  position: absolute;
+  left: -6px;
+  top: -6px;
+  z-index: 3;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #2a1a02;
+  background: radial-gradient(circle at 35% 30%, #ffe7a0, #e8b23e 55%, #a8721a);
+  box-shadow:
+    0 0 0 1.5px #3b2606,
+    0 2px 4px rgba(0, 0, 0, 0.6);
+}
+:is(.mk, .cardtip) .coin.sell {
+  left: auto;
+  right: -6px;
+  width: 22px;
+  height: 22px;
+  font-size: 13px;
+  color: #1d2326;
+  background: radial-gradient(circle at 35% 30%, #fff, #c4ccd0 55%, #7d878c);
+  box-shadow:
+    0 0 0 1.5px #2a3236,
+    0 2px 4px rgba(0, 0, 0, 0.6);
+}
+:is(.mk, .cardtip) .coin.poor {
+  color: #ffd9d0;
+  background: radial-gradient(circle at 35% 30%, #c76a5a, #7a2c22 60%, #4a1812);
+  box-shadow: 0 0 0 1.5px #2a0b07;
+}
+.mbtn .coin,
+.mtile .coin {
+  flex: none;
+}
+.mbtn .coin {
+  position: static;
+}
+/* a tile's sell coin only shows when you point at the tile or hold it */
+.mk .mtile .coin.sell {
+  top: calc(-5 * var(--s));
+  right: calc(-5 * var(--s));
+  width: max(16px, calc(22 * var(--s)));
+  height: max(16px, calc(22 * var(--s)));
+  font-size: max(10px, calc(13 * var(--s)));
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.mk .mtile:hover .coin.sell,
+.mk .mtile.sel .coin.sell {
+  opacity: 1;
+}
+
+/* ---- top bar ---- */
+.mtop {
+  position: relative;
+  z-index: 20;
+  height: 66px;
+  margin: 0 -14px;
+  padding: 0 18px 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(180deg, #1a2226, #12181b);
+  border-bottom: 1px solid #2b363c;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+.tright {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pop-host {
+  position: relative;
+  outline: none;
+}
+.pop-host:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 30px;
+}
+.pop {
+  display: none;
+  position: absolute;
+  top: calc(100% + 10px);
+  z-index: 30;
+  width: 360px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #182024;
+  box-shadow:
+    inset 0 0 0 1px #3a4a52,
+    0 14px 40px rgba(0, 0, 0, 0.75);
+  cursor: default;
+}
+.pop-host:hover .pop,
+.pop-host:focus-within .pop {
+  display: block;
+}
+.pop::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: var(--arrow, 40px);
+  width: 12px;
+  height: 12px;
+  background: #182024;
+  transform: rotate(45deg);
+  box-shadow: -1px -1px 0 #3a4a52;
+}
+.pop h4 {
+  margin: 0 0 4px;
+  font: 700 22px var(--display);
+  color: var(--gold);
+}
+.pop h5 {
+  margin: 12px 0 6px;
+  font: 800 11px var(--body);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.pop p {
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #cfc8b6;
+}
+.pop .pnote {
+  font-size: 12px;
+  color: var(--dim);
+}
+.pop .pnote .ico {
+  display: inline;
+  vertical-align: -2px;
+  color: #9fb4c4;
+}
+/* commander */
+.cmd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px 4px 4px;
+  border-radius: 30px;
+}
+.cmd:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.chead {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #1f2a33;
+  box-shadow:
+    0 0 0 2px #c9a24e,
+    0 2px 6px rgba(0, 0, 0, 0.6);
+}
+.chead svg,
+.pport svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.cmeta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+.cmeta b {
+  font: 700 20px var(--display);
+  color: var(--ink);
+}
+.cmeta .hero {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 800;
+  font-size: 14px;
+  color: #dbe6ee;
+  font-variant-numeric: tabular-nums;
+}
+.cmeta .hero .ico {
+  color: #9fb4c4;
+}
+.gems {
+  display: flex;
+  gap: 5px;
+  margin-left: 6px;
+}
+.gem {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: #f2e6ff;
+  background: radial-gradient(circle at 35% 30%, #d2a8f5, #8a4fc4 55%, #4a2470);
+  box-shadow:
+    0 0 0 1.5px #24123a,
+    0 0 8px rgba(183, 123, 232, 0.45);
+}
+.cmd .pop {
+  left: 0;
+  --arrow: 24px;
+}
+.pop-lead {
+  display: flex;
+  gap: 12px;
+}
+.pport {
+  flex: none;
+  width: 92px;
+  height: 110px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1f2a33;
+  box-shadow: 0 0 0 2px #c9a24e;
+}
+.prel {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.prel + .prel {
+  margin-top: 8px;
+}
+.prel b {
+  font-size: 14px;
+}
+.prel p {
+  margin: 0;
+}
+/* round */
+.rnd {
+  position: absolute;
+  left: 50%;
+  top: 6px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 3px 14px 3px 3px;
+  border-radius: 30px;
+}
+.rnd:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.rnum {
+  width: 54px;
+  height: 54px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  color: #2a1a02;
+  clip-path: polygon(50% 0, 100% 18%, 100% 62%, 50% 100%, 0 62%, 0 18%);
+  background: linear-gradient(180deg, #f6d27a, #c88a24);
+}
+.rnum small {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.rnum b {
+  font-size: 26px;
+  margin-top: -2px;
+}
+.rmeta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  white-space: nowrap;
+}
+.mk .hearts i {
+  font-style: normal;
+  font-size: 17px;
+  color: #3a2a2a;
+}
+.mk .hearts i.on {
+  color: var(--hp);
+}
+.mk .wins {
+  color: var(--dim);
+  font-size: 13px;
+}
+.mk .wins b {
+  font-size: 20px;
+  color: var(--gold);
+}
+.rnd .rtag {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 9px;
+  color: var(--gold);
+  box-shadow: inset 0 0 0 1px #6b5a26;
+}
+.rnd .rtag.boss {
+  color: #ff9488;
+  box-shadow: inset 0 0 0 1px #7a2c22;
+}
+.rnd .pop {
+  left: 50%;
+  transform: translateX(-50%);
+  width: 410px;
+  --arrow: calc(50% - 6px);
+}
+.tracker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.tracker .pip {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 800;
+  background: #1c2428;
+  color: #59656b;
+  box-shadow: inset 0 0 0 1px #2c373d;
+}
+.tracker .win {
+  background: #2f6b3a;
+  color: #cdeccf;
+}
+.tracker .loss {
+  background: #7a2c22;
+  color: #f2c9c2;
+}
+.tracker .draw {
+  background: #5b5340;
+  color: #e6dcc0;
+}
+.tracker .now {
+  background: var(--gold);
+  color: #2a1a02;
+  box-shadow: 0 0 0 2px #fff3;
+}
+.tracker .boss {
+  color: #e07a6a;
+  box-shadow: inset 0 0 0 1px #7a2c22;
+}
+.pop dl {
+  margin: 12px 0 8px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 14px;
+  font-size: 13px;
+}
+.pop dt {
+  color: var(--dim);
+  font-weight: 800;
+}
+.pop dd {
+  margin: 0;
+  color: #cfc8b6;
+}
+.pop dd span {
+  color: var(--dim);
+  font-size: 12px;
+}
+/* help */
+.qmark {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 17px;
+  color: var(--dim);
+  box-shadow: inset 0 0 0 1.5px #3a4a52;
+  cursor: help;
+}
+.mhelp:hover .qmark {
+  color: var(--ink);
+}
+.mhelp .pop {
+  right: -8px;
+  width: 420px;
+}
+.mhelp .pop::before {
+  left: auto;
+  right: 18px;
+}
+.mhelp ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #cfc8b6;
+}
+.mhelp li + li {
+  margin-top: 5px;
+}
+
+/* ---- the shelf: shop cards and the economy ---- */
+.shelf {
+  position: relative;
+  z-index: 1;
+  padding: 14px 16px 14px 20px;
+  display: flex;
+  gap: 18px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #2a1f15, #1c1510);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 160, 0.12),
+    inset 0 -6px 0 #120d09,
+    0 8px 22px rgba(0, 0, 0, 0.5);
+}
+.shelf .cards {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 240px));
+  justify-content: center;
+  gap: 14px;
+}
+.mecon {
+  flex: none;
+  width: 230px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 16px;
+  border-left: 1px solid #3a2c1e;
+}
+.mecon .mbtn {
+  justify-content: space-between;
+}
+.mecon .hint {
+  margin-top: auto;
+  font-size: 12px;
+  line-height: 1.3;
+  color: #8c7a5e;
+}
+.mpurse {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: start;
+  align-items: center;
+  column-gap: 8px;
+}
+.mpurse b {
+  font-size: 30px;
+  line-height: 1;
+  color: #ffd36e;
+  font-variant-numeric: tabular-nums;
+}
+.mpurse small {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  color: var(--dim);
+}
+.gcoin {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe7a0, #e8b23e 55%, #a8721a);
+  box-shadow: 0 0 0 1.5px #3b2606;
+}
+.modds {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 2px;
+}
+.modds h3 {
+  font-size: 10px;
+  color: #8c7a5e;
+}
+.orow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #d8c6a0;
+}
+.orow > span:first-child {
+  width: 30px;
+}
+.oddsbar {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  height: 14px;
+  border-radius: 7px;
+  overflow: hidden;
+  gap: 1px;
+  background: #0b0f11;
+}
+.oddsbar i {
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #10161a;
+}
+.orow.next {
+  opacity: 0.5;
+}
+/* while a unit is dragged, the shop shows itself as the place to sell it */
+.sellveil {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: none;
+  place-items: center;
+  border-radius: 14px;
+  background: rgba(70, 14, 10, 0.8);
+  box-shadow: inset 0 0 0 3px var(--hp);
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffd9d0;
+  pointer-events: none;
+}
+.sellveil b {
+  color: #ffd36e;
+}
+.shelf.selling .sellveil {
+  display: grid;
+}
+
+/* ---- tall cards (shop and hover) ---- */
+:is(.mk, .cardtip) .scard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 2px;
+  border: 0;
+  border-radius: 9px;
+  text-align: left;
+  color: var(--ink);
+  font: inherit;
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--rare) 70%, #fff),
+    var(--rare) 30%,
+    color-mix(in srgb, var(--rare) 40%, #000)
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.25),
+    0 4px 12px rgba(0, 0, 0, 0.55);
+}
+.mk button.scard {
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+.mk button.scard:hover {
+  transform: translateY(-4px);
+}
+.mk .scard.sold {
+  border: 1px dashed #4a3a28;
+  background: none;
+  box-shadow: none;
+  display: grid;
+  place-items: center;
+  color: #6b5a45;
+  font-weight: 800;
+}
+:is(.mk, .cardtip) .scard .window {
+  position: relative;
+  display: block;
+  aspect-ratio: 172 / 128;
+  border-radius: 7px 7px 0 0;
+  overflow: hidden;
+  background: #111;
+}
+:is(.mk, .cardtip) .scard .body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 7px 9px 9px;
+  border-radius: 0 0 7px 7px;
+  background: #12171a;
+}
+:is(.mk, .cardtip) .scard .name {
+  font-weight: 800;
+  font-size: 15px;
+  line-height: 1.1;
+}
+:is(.mk, .cardtip) .scard .sub {
+  margin-top: -3px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--rare);
+}
+:is(.mk, .cardtip) .scard .chips {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+:is(.mk, .cardtip) .scard .tb {
+  font-size: 11px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+:is(.mk, .cardtip) .scard .tb svg {
+  width: 11px;
+  height: 11px;
+}
+:is(.mk, .cardtip) .scard .txt {
+  font-size: 12.5px;
+  line-height: 1.3;
+  color: #c4bdab;
+}
+:is(.mk, .cardtip) .scard .nums {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+:is(.mk, .cardtip) .scard .nums > span {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+:is(.mk, .cardtip) .atk {
+  color: var(--atk);
+}
+:is(.mk, .cardtip) .hp {
+  color: var(--ink);
+}
+:is(.mk, .cardtip) .hp .ico {
+  color: #e0605a;
+}
+:is(.mk, .cardtip) .scard .cd {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--dim);
+}
+/* can't afford: the coin turns red and the art dims, but the text stays readable */
+.mk .scard.poor .window {
+  filter: saturate(0.45) brightness(0.7);
+}
+.mk .scard.frozen {
+  background: linear-gradient(160deg, #e9f7ff, #8fd0f5 35%, #3f7ea6);
+  box-shadow:
+    0 0 0 1px #bfe8ff,
+    0 0 14px rgba(140, 210, 255, 0.55),
+    0 4px 12px rgba(0, 0, 0, 0.55);
+}
+.mk .ice {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(200, 235, 255, 0.35),
+    rgba(120, 190, 240, 0.12) 50%,
+    rgba(200, 235, 255, 0.4)
+  );
+  box-shadow: inset 0 0 18px rgba(220, 245, 255, 0.8);
+}
+.mk .ice span {
+  position: absolute;
+  right: 6px;
+  top: 4px;
+  font-size: 16px;
+  color: #eaf8ff;
+  text-shadow: 0 0 6px #5ab4f0;
+}
+/* completes an upgrade */
+.mk .scard.up {
+  box-shadow:
+    0 0 0 1px #ffe08a,
+    0 0 18px rgba(255, 205, 90, 0.7),
+    0 4px 12px rgba(0, 0, 0, 0.55);
+}
+.mk .upflag {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 2px 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #2a1a02;
+  background: linear-gradient(90deg, transparent, #ffd36e 20%, #ffd36e 80%, transparent);
+}
+.mk .pips {
+  position: absolute;
+  z-index: 3;
+  left: 24px;
+  top: -3px;
+  display: flex;
+  gap: 2px;
+  padding: 2px 4px;
+  border-radius: 8px;
+  background: #12171a;
+  box-shadow: 0 0 0 1px #3b464c;
+}
+.mk .pips i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2f393f;
+}
+.mk .pips i.on {
+  background: #ffd27a;
+}
+.mk .pips i.this {
+  background: none;
+  box-shadow: inset 0 0 0 1.5px #ffd27a;
+}
+/* the hover card for your own units */
+.tip.cardtip {
+  width: 210px;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.7));
+  --s: 1px;
+}
+.cardtip .scard .window {
+  aspect-ratio: 196 / 138;
+}
+.cardtip .scard .nums {
+  margin-top: 0;
+}
+.cardtip .more {
+  padding-top: 5px;
+  border-top: 1px solid #263036;
+  font-size: 12px;
+  line-height: 1.3;
+  color: #9a9484;
+}
+.cardtip .more b {
+  color: #e6d6a8;
+}
+.cardtip .more .isock {
+  float: left;
+  margin-right: 6px;
+}
+.cardtip .stars.big {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  font-size: 18px;
+  color: #ffd27a;
+  text-shadow: 0 0 3px #000;
+}
+
+/* ---- art ---- */
+:is(.mk, .cardtip) .art {
+  position: absolute;
+  inset: 0;
+}
+:is(.mk, .cardtip) .art.icon {
+  --bg: #2b4a72;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(
+    circle at 50% 40%,
+    color-mix(in srgb, var(--bg), #fff 18%),
+    color-mix(in srgb, var(--bg) 70%, #000)
+  );
+}
+:is(.mk, .cardtip) .art.icon.fE {
+  --bg: #2d5a3c;
+}
+:is(.mk, .cardtip) .art.icon.fU {
+  --bg: #4a3466;
+}
+:is(.mk, .cardtip) .art.icon.fN {
+  --bg: #5a4a2a;
+}
+:is(.mk, .cardtip) .art.icon.itm {
+  --bg: #3a3226;
+}
+:is(.mk, .cardtip) .art.icon svg {
+  width: 62%;
+  height: 62%;
+}
+
+/* ---- B2 tiles on the board and bench ---- */
+.mk .mtile {
+  position: relative;
+  min-width: 0;
+  height: 100%;
+  padding: calc(2 * var(--s)) calc(2 * var(--s)) 0;
+  border-radius: calc(7 * var(--s));
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--rare) 70%, #fff),
+    var(--rare) 30%,
+    color-mix(in srgb, var(--rare) 45%, #000)
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.25),
+    0 3px 8px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  cursor: grab;
+  user-select: none;
+  z-index: 1;
+}
+.mk .mtile .badges {
+  position: absolute;
+  z-index: 2;
+  left: calc(4 * var(--s));
+  top: calc(4 * var(--s));
+  display: flex;
+  flex-direction: column;
+  gap: calc(2 * var(--s));
+}
+.mk .mtile .badges i {
+  width: max(15px, calc(20 * var(--s)));
+  height: max(15px, calc(20 * var(--s)));
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--c, #e8e2d0);
+  background: rgba(11, 13, 15, 0.82);
+  box-shadow: inset 0 0 0 1.2px var(--c, #b9b3a3);
+}
+.mk .mtile .badges svg {
+  width: 62%;
+  height: 62%;
+}
+.mk .mtile .window {
+  position: relative;
+  flex: 1;
+  border-radius: calc(5 * var(--s)) calc(5 * var(--s)) 0 0;
+  overflow: hidden;
+  background: #111;
+}
+.mk .mtile .plate {
+  position: relative;
+  height: max(18px, calc(23 * var(--s)));
+  margin: 0 calc(-2 * var(--s));
+  padding: 0 calc(6 * var(--s));
+  border-radius: 0 0 calc(7 * var(--s)) calc(7 * var(--s));
+  background: #12171a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: max(11px, calc(14 * var(--s)));
+}
+.mk .mtile .hpline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: calc(3 * var(--s));
+  background: var(--good);
+}
+.mk .mtile .atk,
+.mk .mtile .hp {
+  display: flex;
+  align-items: center;
+  gap: calc(3 * var(--s));
+}
+:is(.mk, .cardtip) .sock {
+  width: max(14px, calc(18 * var(--s)));
+  height: max(14px, calc(18 * var(--s)));
+  border-radius: 50%;
+  border: 1px dashed #3d484e;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+:is(.mk, .cardtip) .sock.full {
+  border: 1.5px solid #c9a24e;
+  background: #241d12;
+}
+:is(.mk, .cardtip) .sock.fine {
+  border-color: #ffd27a;
+  box-shadow: 0 0 5px #ffd27a;
+}
+:is(.mk, .cardtip) .sock svg {
+  width: 80%;
+  height: 80%;
+}
+.mk .mtile .stars {
+  position: absolute;
+  right: calc(6 * var(--s));
+  bottom: max(20px, calc(26 * var(--s)));
+  z-index: 2;
+  font-size: max(10px, calc(12 * var(--s)));
+  color: #ffd27a;
+  letter-spacing: -1px;
+  text-shadow: 0 0 3px #000;
+}
+.mk .itile .plate {
+  justify-content: center;
+}
+.mk .iname {
+  font-size: max(10px, calc(11 * var(--s)));
+  color: #e6d6a8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mk .mtile.sel {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  z-index: 2;
+}
+
+/* ---- bonuses ---- */
+.bonusbar {
+  display: flex;
+  gap: 10px;
+}
+.bcard {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #161d21;
+  box-shadow: inset 0 0 0 1px #2b363c;
+  opacity: 0.6;
+}
+.bcard.on,
+.bcard.close {
+  opacity: 1;
+}
+.bcard.on {
+  box-shadow: inset 0 0 0 1px #6b5a26;
+  background: linear-gradient(180deg, #221f16, #161d21);
+}
+.bcard.close .nx b {
+  color: #ffd36e;
+}
+.bhead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bhead .tb {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11.5px;
+}
+.bhead .tb svg {
+  width: 12px;
+  height: 12px;
+}
+.steps {
+  display: flex;
+  gap: 2px;
+}
+.steps i {
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 800;
+  width: 14px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+  border-radius: 3px;
+  background: #1f282c;
+  color: #59656b;
+}
+.steps i.on {
+  background: var(--gold);
+  color: #2a1a02;
+}
+.bcount {
+  margin-left: auto;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.bcount i {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--dim);
+}
+.bline {
+  margin-top: 3px;
+  height: 30px;
+  font-size: 11.5px;
+  line-height: 1.3;
+  color: var(--dim);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.bline .now {
+  color: #e6d6a8;
+  margin-right: 6px;
+}
+.bline .nx b {
+  color: #cfc8b6;
+}
+
+/* ---- board ---- */
+.boardrow {
+  padding: 14px;
+  border-radius: 14px;
+  background: #121a1e;
+  box-shadow: inset 0 0 0 1px #223036;
+}
+.mk .mrow {
+  position: relative;
+  /* ten tiles and their gaps: when the window's height is what limits the tiles, they keep their shape */
+  max-width: calc(1175 * var(--s));
+  margin: 0 auto;
+  grid-auto-rows: calc(132 * var(--s));
+  gap: calc(5 * var(--s));
+}
+.mk .mrow .cell {
+  border-radius: calc(7 * var(--s));
+  font-size: max(14px, calc(20 * var(--s)));
+}
+.cell.locked {
+  flex-direction: column;
+  gap: 4px;
+}
+.cell.locked .lock {
+  width: 20px;
+  height: 20px;
+}
+
+/* ---- bench and status ---- */
+.foot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.mbench {
+  --s: calc(var(--s0) * 0.9);
+  display: grid;
+  grid-template-columns: repeat(6, calc(113 * var(--s)));
+  grid-auto-rows: calc(132 * var(--s));
+  gap: 6px;
+}
+.mk .mbench .bcell {
+  display: flex;
+  border-radius: calc(7 * var(--s));
+}
+.mk .mbench .bcell .mtile {
+  flex: 1;
+}
+.foot .status {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--dim);
+}
+.foot .status b {
+  color: var(--ink);
+}
+.foot .status .note {
+  color: var(--gold);
+  font-weight: 700;
+}
+.sellbtn {
+  padding: 4px 6px 4px 10px;
+  font-size: 13px;
+}
+.sellbtn .coin {
+  --s: 1px;
+}
+
+/* pushed units: outlined, with an arrow for where they go (see input.ts showDrop) */
+.mk .mtile[data-push] {
+  outline: 2px dashed var(--gold);
+  outline-offset: 2px;
+}
+.mk .mtile[data-push='b'] {
+  opacity: 0.7;
+}
+.mk .mtile[data-push]::after {
+  content: '\203A';
+  position: absolute;
+  z-index: 4;
+  top: 40%;
+  right: -10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  color: #2a1a02;
+  background: var(--gold);
+}
+.mk .mtile[data-push='l']::after {
+  right: auto;
+  left: -10px;
+  content: '\2039';
+}
+.mk .mtile[data-push='b']::after {
+  content: '\2193';
+}
+
+/* narrower windows: the economy column tucks under the cards */
+@container (max-width: 1000px) {
+  .shelf {
+    flex-direction: column;
+  }
+  .mecon {
+    width: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 12px 0 0;
+    border-left: 0;
+    border-top: 1px solid #3a2c1e;
+  }
+  .mecon .modds {
+    flex: 1;
+    min-width: 200px;
+  }
+  .mecon .hint {
+    margin: 0;
+    width: 100%;
+  }
+  .bonusbar {
+    flex-wrap: wrap;
+  }
+  .bcard {
+    flex-basis: 30%;
+  }
+}
