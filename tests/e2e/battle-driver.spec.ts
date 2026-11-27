@@ -1,5 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
-import { PAGE, buyShop, startRun, trackErrors, ui } from './helpers.ts';
+import { expect, type Page } from '@playwright/test';
+import { PAGE, test, buyShop, startRun, trackErrors, ui } from './helpers.ts';
 
 /* The playback driver in src/ui/battle.ts: it owns the one frame loop and hands each frame to whichever battle
    screen is showing. Headless Chrome has no GPU, so Pixi refuses to start here and these checks drive the

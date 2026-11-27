@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
-import { PAGE, trackErrors, ui } from './helpers.ts';
+import { expect } from '@playwright/test';
+import { PAGE, test, trackErrors, ui } from './helpers.ts';
 
 // A faction, a leader, encounters, camps and a boss, to the end of a run or twelve rounds, for all three factions.
 for (const [fi, f] of (['U', 'H', 'E'] as const).entries()) {

@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
-import { PAGE, buyShop, startRun, trackErrors, ui } from './helpers.ts';
+import { expect } from '@playwright/test';
+import { PAGE, test, buyShop, startRun, trackErrors, ui } from './helpers.ts';
 
 // Inside Claude: win a run, keep going against saved boards from the artifact's storage (stubbed here), finish.
 const OLD = {

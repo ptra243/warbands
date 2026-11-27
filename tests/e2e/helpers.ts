@@ -1,10 +1,34 @@
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
-import type { Page } from '@playwright/test';
+import { test as base, type Page } from '@playwright/test';
 import type { Run } from '../../src/engine/index.ts';
 import type { UiState } from '../../src/ui/state.ts';
 
 export const PAGE = process.env.PAGE_URL || pathToFileURL(resolve(import.meta.dirname, '../../dist/index.html')).href;
+
+/** the hosted database the page saves runs and boards to when it runs outside Claude */
+export const DB_HOST = 'https://tuotzykmnxmmksabdlsy.supabase.co/';
+
+/** every check runs with the hosted database answered by an empty stand-in, so no test run or board reaches the real
+ *  tables (a winning board there would become a post-game opponent for real players). A check that wants its own
+ *  stand-in registers it with page.route, which takes precedence over this one. */
+export const test = base.extend({
+  context: async ({ context }, use) => {
+    await context.route(DB_HOST + '**', (route) => {
+      const rq = route.request();
+      const headers = {
+        'access-control-allow-origin': '*',
+        'access-control-allow-headers': '*',
+        'access-control-allow-methods': '*',
+        'content-type': 'application/json',
+      };
+      if (rq.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
+      if (rq.method() === 'GET') return route.fulfill({ status: 200, headers, body: '[]' });
+      return route.fulfill({ status: 201, headers, body: '' });
+    });
+    await use(context);
+  },
+});
 
 /** collect uncaught page errors so each test can assert there were none */
 export function trackErrors(page: Page): string[] {

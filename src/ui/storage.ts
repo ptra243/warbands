@@ -28,6 +28,7 @@ interface CloudOptions {
 
 const timeout = (ms: number, reason: unknown) => new Promise<never>((_, no) => setTimeout(() => no(reason), ms));
 
+/* the host is also in tests/e2e/helpers.ts and playwright.config.ts, which keep the browser checks off it */
 export const CLOUD = {
   url: 'https://tuotzykmnxmmksabdlsy.supabase.co/rest/v1/',
   key: 'sb_publishable_dTHHsosk7xWlduOS9iYvZA_WO7MDPJ1',

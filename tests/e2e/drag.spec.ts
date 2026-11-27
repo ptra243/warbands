@@ -1,5 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
-import { PAGE, startRun, trackErrors, ui } from './helpers.ts';
+import { expect, type Page } from '@playwright/test';
+import { PAGE, test, startRun, trackErrors, ui } from './helpers.ts';
 
 // Drop preview and pushing units aside, by click-then-hover and by a real drag.
 const layout = (page: Page) =>
