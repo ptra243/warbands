@@ -182,6 +182,10 @@ export function command(c: string): void {
     W.runToEnd(B);
     endBattle();
     return;
+  } else if (c.startsWith('sort:')) {
+    S.sumSort = c.slice(5);
+  } else if (c.startsWith('row:')) {
+    S.sumOpen = S.sumOpen === c.slice(4) ? null : c.slice(4);
   } else if (c === 'continue') {
     S.B = null;
     S.result = null;
