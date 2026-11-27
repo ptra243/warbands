@@ -11,6 +11,12 @@ const PA = (d: string, fill: string, o?: number) =>
   `<path d="${d}" fill="${fill}"${o != null ? ` opacity="${o}"` : ''}/>`;
 const sbg = (dark: string, light: string, motif?: string) =>
   P('0,0 100,0 100,100 0,100', dark) + P('0,0 74,0 0,70', light) + (motif || '');
+/* a stroked curve, for light that should bend rather than zigzag */
+const SP = (d: string, stroke: string, w: number, o?: number) =>
+  `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="${w}" stroke-linecap="round"${o != null ? ` opacity="${o}"` : ''}/>`;
+/* scale part of a figure about a point, to resize it without redrawing it */
+const scl = (cx: number, cy: number, k: number, s: string) =>
+  `<g transform="translate(${cx},${cy}) scale(${k}) translate(${-cx},${-cy})">${s}</g>`;
 const bolt = (pts: string, c: string, w: number) =>
   L(pts, c, w * 4.5, 0.16) + L(pts, c, w * 2.2, 0.5) + L(pts, c, w, 1) + L(pts, '#ffffff', w * 0.4, 0.95);
 /* a fixed sequence, so scattered details (stars, embers, rain) are the same on every render */
@@ -2602,17 +2608,16 @@ const CARDS: Record<string, () => string> = {
       C(91.5, 41, 2.8, gold) +
       C(90.8, 40.3, 1, '#fff3c4', 0.8);
     // the prayer reaching one ally: a faint, unsteady thread that breaks up as it goes
-    const thread = (w: number, o: number) =>
-      `<path d="M62,44 C67,37 60,31 67,25 S73,16 80,13" fill="none" stroke="${light}" stroke-width="${w}" stroke-linecap="round" opacity="${o}"/>`;
+    const thread = (w: number, o: number) => SP('M62,44 C67,37 61,32 68,28 S76,22 82,22', light, w, o);
     const fx =
       thread(3.4, 0.14) +
       thread(1.4, 0.3) +
       thread(0.6, 0.95) +
       [
-        [83, 11.6, 0.6],
-        [87, 10, 0.45],
-        [91, 9, 0.3],
-        [95, 8.4, 0.2],
+        [86, 21.6, 0.6],
+        [90, 21.4, 0.45],
+        [94, 21.6, 0.3],
+        [98, 22, 0.2],
       ]
         .map((p) => C(p[0], p[1], 0.7, light, p[2]))
         .join('') +
@@ -2644,20 +2649,23 @@ const CARDS: Record<string, () => string> = {
       P('35,48 36,37 42,33 43,40 39,51', sh(robe, 1.18)) +
       P('53,36 58,44 56,53 50,51', sh(robe, 0.7)) +
       L('38,53 46,55 56,53', gold, 0.9) +
-      `<g transform="translate(58,44) scale(0.88) translate(-58,-44)">${
+      scl(
+        58,
+        44,
+        0.88,
         P('40,18 47,13 56,16 62,24 64,36 60,44 50,46 42,44 37,36 37,26', robe) +
-        P('40,18 47,13 50,15 44,24 41,34 37,36 37,26', sh(robe, 1.18)) +
-        P('44,24 50,15 56,16 62,24 64,36 60,44 54,40 52,28', sh(robe, 0.9)) +
-        L('37,26 40,18 47,13', sh(robe, 1.3), 0.6, 0.7) +
-        // the opening of the cowl, dark, with the brow, nose and chin lit from below by the light in his hands
-        P('55,22 62,24 65,36 61,44 55,42 53,30', '#100c0e') +
-        P('58,27 60.5,29 60.5,32 62.6,35.4 60.6,36.2 61,38.6 59,41.6 56,41 56,29', sh(skin, 0.6)) +
-        P('60.5,32 62.6,35.4 60.6,36.2 59.4,34', sh(skin, 0.95)) +
-        P('61,38.6 59,41.6 57,41.4 58.6,39', sh(skin, 0.85)) +
-        L('57.4,31.6 59.4,32.2', '#1a1012', 0.6) +
-        P('56,30 61,36 61,42 56,42', light, 0.18) +
-        L('62,24 65,36 61,44', gold, 0.8, 0.9)
-      }</g>`;
+          P('40,18 47,13 50,15 44,24 41,34 37,36 37,26', sh(robe, 1.18)) +
+          P('44,24 50,15 56,16 62,24 64,36 60,44 54,40 52,28', sh(robe, 0.9)) +
+          L('37,26 40,18 47,13', sh(robe, 1.3), 0.6, 0.7) +
+          // the opening of the cowl, dark, with the brow, nose and chin lit from below by the light in his hands
+          P('55,22 62,24 65,36 61,44 55,42 53,30', '#100c0e') +
+          P('58,27 60.5,29 60.5,32 62.6,35.4 60.6,36.2 61,38.6 59,41.6 56,41 56,29', sh(skin, 0.6)) +
+          P('60.5,32 62.6,35.4 60.6,36.2 59.4,34', sh(skin, 0.95)) +
+          P('61,38.6 59,41.6 57,41.4 58.6,39', sh(skin, 0.85)) +
+          L('57.4,31.6 59.4,32.2', '#1a1012', 0.6) +
+          P('56,30 61,36 61,42 56,42', light, 0.18) +
+          L('62,24 65,36 61,44', gold, 0.8, 0.9),
+      );
     // the near arm: a wide sleeve falling from the elbow, the hands pressed together before his face
     f +=
       P('38,59 47,65 55,65 55,69 45,70 37,63', sh(robe, 0.55), 0.7) +
@@ -2713,10 +2721,9 @@ const CARDS: Record<string, () => string> = {
     fx +=
       E(82, 38, 7, 7, 'none', 0.5, ` stroke="${light}" stroke-width=".5"`) +
       E(82, 38, 11, 11, 'none', 0.25, ` stroke="${light}" stroke-width=".4"`);
-    const heads = [4, 15, 27, 39, 52, 64, 76, 88, 98];
-    heads.forEach((x, i) => {
-      const y = 90 + (i % 2) * 2,
-        cx = (82 + x) / 2,
+    const crowd = [4, 15, 27, 39, 52, 64, 76, 88, 98].map((x, i) => [x, 80 + (i % 2) * 2]);
+    crowd.forEach(([x, y]) => {
+      const cx = (82 + x) / 2,
         cy = y - 44;
       [0.3, 0.5, 0.7, 0.86].forEach((t, k) => {
         const u = 1 - t,
@@ -2749,16 +2756,19 @@ const CARDS: Record<string, () => string> = {
       P('62,58 70,60 74,51 75,57 70,64 64,62', sh(robe, 0.62)) +
       L('72,45 74,51 70,60', stole, 1) +
       L('58,56 62,58 70,60', sh(robe, 0.45), 0.8, 0.7) +
-      `<g transform="translate(76,46) scale(1.3) translate(-76,-46)">${
+      scl(
+        76,
+        46,
+        1.3,
         P('72,45.6 79,43.4 79.6,46.4 73.6,49.6', sh(skin, 0.82)) +
-        P('72,45.6 79,43.4 79.2,44.6 72.6,47.2', skin) +
-        P('78.4,43.6 85.6,42.4 87,44.2 80,46.6', sh(skin, 0.78)) +
-        P('78.4,43.6 85.6,42.4 85.4,43.4 79,44.8', sh(skin, 1.12)) +
-        L('85.6,42.6 87.2,40.6', skin, 1.1) +
-        L('84,42.8 85.2,40.8', skin, 1) +
-        L('79.4,43.4 78.6,40.8', skin, 1.1) +
-        L('79,44.8 85.4,43.4', light, 0.4, 0.6)
-      }</g>`;
+          P('72,45.6 79,43.4 79.2,44.6 72.6,47.2', skin) +
+          P('78.4,43.6 85.6,42.4 87,44.2 80,46.6', sh(skin, 0.78)) +
+          P('78.4,43.6 85.6,42.4 85.4,43.4 79,44.8', sh(skin, 1.12)) +
+          L('85.6,42.6 87.2,40.6', skin, 1.1) +
+          L('84,42.8 85.2,40.8', skin, 1) +
+          L('79.4,43.4 78.6,40.8', skin, 1.1) +
+          L('79,44.8 85.4,43.4', light, 0.4, 0.6),
+      );
     // the pulpit in front of him, its book open, a red cloth with a gold sun
     f +=
       P('24,68 70,66 68,100 26,100', '#4a3020') +
@@ -2767,18 +2777,17 @@ const CARDS: Record<string, () => string> = {
       P('22,66 72,63 72,67 22,70', sh('#4a3020', 1.15)) +
       P('36,68 58,67 58,88 47,84 36,88', stole) +
       P('36,68 40,68 40,87 36,88', sh(stole, 1.2)) +
-      C(47, 76, 3.6, gold) +
-      C(46.2, 75.2, 1.2, '#fff3c4', 0.8) +
+      C(47, 73.6, 3.4, gold) +
+      C(46.2, 72.8, 1.1, '#fff3c4', 0.8) +
       P('29,66 46,62 46,64 29,68', '#efe6cc') +
       P('46,62 63,63 63,65 46,64', sh('#efe6cc', 0.78)) +
       L('46,62 46,64', '#8c8166', 0.4);
     // the crowd below, only the backs of their heads
-    heads.forEach((x, i) => {
-      const y = 90 + (i % 2) * 2;
+    crowd.forEach(([x, y], i) => {
       f +=
-        E(x, y + 6, 6.5, 6, '#140c10') +
+        E(x, y + 12, 7, 12, '#140c10') +
         E(x, y, 3.6, 4, i % 3 ? '#20141a' : '#2a1a14') +
-        PA(`M${x - 3.4},${y - 1} Q${x},${y - 5} ${x + 3.4},${y - 1}`, light, 0.2);
+        PA(`M${f1(x - 3.4)},${y - 1} Q${x},${y - 5} ${f1(x + 3.4)},${y - 1}`, light, 0.2);
     });
     // the head: bald, a grey fringe and beard, mouth open mid-sermon
     f += hd(
@@ -2820,7 +2829,7 @@ const CARDS: Record<string, () => string> = {
     // a cathedral nave: pillars either side, tall windows far down the aisle, candles on stands
     const pillar = (x: number, w: number, k: number) =>
       P(`${x},0 ${x + w},0 ${x + w},86 ${x},86`, sh(stone, k)) +
-      P(`${x},0 ${x + w * 0.35},0 ${x + w * 0.35},86 ${x},86`, sh(stone, k * 1.3)) +
+      P(`${x},0 ${f1(x + w * 0.35)},0 ${f1(x + w * 0.35)},86 ${x},86`, sh(stone, k * 1.3)) +
       P(`${x - 2},80 ${x + w + 2},80 ${x + w + 2},86 ${x - 2},86`, sh(stone, k * 1.15));
     const s = sbg(
       stone,
@@ -2861,7 +2870,7 @@ const CARDS: Record<string, () => string> = {
       L('33,53 51,66 51,100', '#fff3c4', 0.4, 0.6) +
       P('27,84 62,84 62,88 27,88', sh('#4a3020', 1.1)) +
       P('47,83.4 53,83.4 53,88.6 47,88.6', gold);
-    // the far arm: mail sleeve, bent at the elbow, the gloved hand thrusting the symbol forward
+    // the far arm, thrust forward toward us, so it crosses in front of his chest: mail sleeve, bent at the elbow
     f +=
       P('56,53 63,55 70,68 64,71 57,62', sh(mail, 0.9)) +
       P('56,53 60,54 61,64 57,62', sh(mail, 1.2)) +
@@ -2887,7 +2896,7 @@ const CARDS: Record<string, () => string> = {
         C(cx, cy + 27, 1.3, gold) +
         E(cx, cy, 8, 8, sh('#3a2a50', 0.8), 0.9) +
         E(cx, cy, 8, 8, 'none', null, ` stroke="${gold}" stroke-width="1.8"`) +
-        `<path d="M${cx - 6.6},${cy + 4.4} A8,8 0 0 1 ${cx + 4.4},${cy - 6.6}" fill="none" stroke="#fff3c4" stroke-width=".5" opacity=".8"/>` +
+        SP(`M${f1(cx - 6.6)},${f1(cy + 4.4)} A8,8 0 0 1 ${f1(cx + 4.4)},${f1(cy - 6.6)}`, '#fff3c4', 0.5, 0.8) +
         P(`${cx - 1.7},${cy - 10} ${cx + 1.7},${cy - 10} ${cx + 1.7},${cy + 10} ${cx - 1.7},${cy + 10}`, gold) +
         P(`${cx - 10},${cy - 1.7} ${cx + 10},${cy - 1.7} ${cx + 10},${cy + 1.7} ${cx - 10},${cy + 1.7}`, gold) +
         P(`${cx - 1.7},${cy - 10} ${cx},${cy - 10} ${cx},${cy + 10} ${cx - 1.7},${cy + 10}`, sh(gold, 1.25)) +
@@ -2912,7 +2921,7 @@ const CARDS: Record<string, () => string> = {
         L(`${p(a, 14)} ${p(a, 20)}`, ward, 0.3, 0.25);
     }
     for (let i = 0; i < 16; i++) {
-      const a = r() * Math.PI * 2,
+      const a = r() * Math.PI * 1.3, // right, below and left of the ward, never up under the rarity label
         d = 21 + r() * 6,
         x = f1(73 + Math.cos(a) * d),
         y = f1(32 + Math.sin(a) * d),
