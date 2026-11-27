@@ -22,19 +22,21 @@ const battleTime = (page: Page) => ui(page, (S) => S.B?.time ?? 0);
 /** a battle only ever moves in whole 0.05s ticks */
 const wholeTicks = (t: number) => Math.abs(t / 0.05 - Math.round(t / 0.05)) < 1e-6;
 
-test('a fight carries on where it was when the screen is switched mid-fight', async ({ page }) => {
+test('switching to the animated screen mid-fight falls back to classic and carries the fight on', async ({ page }) => {
+  /* Without a GPU only this one switch is real: once Pixi has failed its button goes. Repeated switches, and a
+     Pixi screen that does start, are covered by tests/battle-driver.test.ts. */
   const errors = trackErrors(page);
   await toFirstFight(page, 'classic');
   await page.click('[data-act="fight"]');
   await expect.poll(() => battleTime(page)).toBeGreaterThan(0.5);
-  for (const view of ['pixi', 'classic', 'pixi', 'classic'] as const) {
-    const before = await battleTime(page);
-    /* the Pixi button is gone once Pixi has failed, so click whichever switch is there */
-    await page.evaluate((v) => document.querySelector<HTMLElement>(`[data-act="view:${v}"]`)?.click(), view);
-    /* the units are drawn again from the battle as it stands, and the clock never goes back */
-    await expect(page.locator('#row0 .u').first()).toBeVisible();
-    expect(await battleTime(page)).toBeGreaterThanOrEqual(before);
-  }
+  const first = await page.locator('#row0 .u').first().elementHandle();
+  const before = await battleTime(page);
+  await page.click('[data-act="view:pixi"]');
+  /* the classic screen is drawn afresh from the battle as it stands, and the clock never goes back */
+  await expect(page.locator('[data-act="view:pixi"]')).toHaveCount(0);
+  await expect(page.locator('#row0 .u').first()).toBeVisible();
+  expect(await first!.evaluate((e) => e.isConnected)).toBe(false);
+  expect(await battleTime(page)).toBeGreaterThanOrEqual(before);
   await page.click('[data-act="speed:4"]');
   await expect(page.locator('.result h2')).toHaveText(/Victory|Defeat|Draw/, { timeout: 30_000 });
   const end = await ui(page, (S) => ({ screen: S.screen, over: S.B?.over, ev: S.B?.ev.length, t: S.B?.time ?? 0 }));
@@ -43,10 +45,11 @@ test('a fight carries on where it was when the screen is switched mid-fight', as
   expect(errors).toEqual([]);
 });
 
-test('skipping while the Pixi screen is still starting goes straight to the summary', async ({ page }) => {
+test('skipping while the Pixi screen is still starting lands on the summary and stays there', async ({ page }) => {
   const errors = trackErrors(page);
   await toFirstFight(page, 'pixi');
-  /* both clicks land before Pixi's start-up (or its refusal) resolves */
+  /* both clicks land before Pixi's start-up (here, its refusal) resolves. A Pixi start-up that succeeds after the
+     skip can't happen without a GPU; tests/battle-driver.test.ts covers it. */
   await page.evaluate(() => {
     document.querySelector<HTMLElement>('[data-act="fight"]')!.click();
     document.querySelector<HTMLElement>('[data-act="skip"]')!.click();
@@ -92,8 +95,9 @@ test('a battle screen that throws while drawing does not stop the fight', async 
   await toFirstFight(page, 'classic');
   await page.click('[data-act="fight"]');
   await expect.poll(() => battleTime(page)).toBeGreaterThan(0.2);
-  /* take a health bar out from under the classic screen, so painting that unit throws on every frame */
-  await page.evaluate(() => document.querySelector('#row0 .u .hpb')?.remove());
+  /* take your hero's health bar out from under the classic screen: it is painted on every frame, the last one
+     included, so drawing throws all the way to the end and the driver alone has to finish the fight */
+  await page.evaluate(() => document.querySelector('#hero0 i')!.remove());
   await page.click('[data-act="speed:4"]');
   await expect(page.locator('.result h2')).toHaveText(/Victory|Defeat|Draw/, { timeout: 30_000 });
   expect(await ui(page, (S) => ({ screen: S.screen, over: S.B?.over }))).toEqual({ screen: 'summary', over: true });

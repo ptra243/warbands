@@ -79,7 +79,10 @@ let raf = 0,
 
 /* the playback of the battle being fought; it outlives a switch between battle screens */
 function playback(B: W.Battle): W.Playback {
-  if (!play || play.battle !== B) play = W.createPlayback(B, S.speed);
+  if (!play || play.battle !== B) {
+    play = W.createPlayback(B, S.speed);
+    reported = false; // a drawing error is reported once per battle
+  }
   return play;
 }
 
