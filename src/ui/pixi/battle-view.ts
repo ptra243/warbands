@@ -445,7 +445,8 @@ async function makeView(B: Battle, u: BattleUnit, pop: boolean): Promise<void> {
   aim.position.set(0, u.side === 0 ? y0 - 6 : y0 + h + 6);
   body.addChild(aim);
 
-  if (gen !== generation) {
+  /* a summon can die before its art has loaded; its death has already been played, so don't put it on the field */
+  if (gen !== generation || !u.alive) {
     root.destroy({ children: true });
     return;
   }
@@ -984,6 +985,7 @@ async function setUp(b: Battle, foeName: string): Promise<boolean> {
   views = new Map();
   hitDelay.clear();
   banner.text = '';
+  reported = false; // a drawing error is reported once per battle
   endT = 0;
   overFor = 0;
   B = null;
@@ -1084,17 +1086,27 @@ function frame(f: PlaybackFrame, real: number): boolean {
     }
     t.t += dt;
     const k = Math.min(1, t.t / t.dur);
+    let ending = false;
     try {
       t.fn(k);
       if (k >= 1) {
         tweens.splice(tweens.indexOf(t), 1);
+        ending = true;
         t.end?.();
       }
     } catch (err) {
-      /* a tween that throws would throw every frame and stop the field being drawn: drop it */
-      const i = tweens.indexOf(t);
-      if (i >= 0) tweens.splice(i, 1);
       report(err);
+      /* a tween that throws would throw every frame and stop the field being drawn: drop it, but still clean up
+         after it, so a fade or a lunge isn't left half done */
+      if (!ending) {
+        const i = tweens.indexOf(t);
+        if (i >= 0) tweens.splice(i, 1);
+        try {
+          t.end?.();
+        } catch (e) {
+          report(e);
+        }
+      }
     }
   }
   for (const p of particles.slice()) {
