@@ -28,11 +28,15 @@ export async function startRun(page: Page, faction: 'H' | 'E' | 'U', leaderIndex
   await page.locator('[data-act^="leader:"]').nth(leaderIndex).click();
 }
 
+/** buy what the shop offers, units before items, so the gold goes on a unit for the board first (a leader such as
+ *  the Quartermaster can fill the shop with items) */
 export async function buyShop(page: Page): Promise<void> {
-  for (let i = 0; i < 4; i++) {
-    const card = page.locator(`button[data-shop="${i}"]`);
-    if (await card.count()) await card.click();
-  }
+  const slots = await page.locator('[data-shop]').count(); // a leader can add a slot
+  for (const kind of [':not(.item)', '.item'])
+    for (let i = 0; i < slots; i++) {
+      const card = page.locator(`button[data-shop="${i}"]${kind}`);
+      if (await card.count()) await card.click();
+    }
 }
 
 /** fight the current round and skip straight to the summary, then continue */

@@ -116,6 +116,8 @@ test('saves runs and boards and downloads them', async ({ page }) => {
     S.run.things.forEach((t) => {
       if (t.kind === 'unit') t.gAtk = t.gHp = 0;
     });
+    /* make the loss certain: a lucky shop could otherwise beat or draw with the saved board */
+    S.run.enemy.mul = 50;
   });
   await page.click('[data-act="fight"]');
   await page.click('[data-act="skip"]');
