@@ -419,6 +419,8 @@ export interface BattleUnit {
   died: number | null;
   /** who set the burn it is suffering, for stats */
   burnBy?: BattleUnit | null;
+  /** who gets the stats credit for its Rot. Like `rotBy`, but Rot spread by a death goes to the killer */
+  rotCredit?: BattleUnit | null;
   /** battle stats only: nothing in the rules reads it */
   tally: Tally;
 }
@@ -485,6 +487,10 @@ export interface Battle {
   syn: Pair<SynergyLevels>;
   /** the unit whose action is being resolved, for damage and healing credit */
   src?: BattleUnit | null;
+  /** stats only: whoever caused the death being resolved, so what the death sets off is credited to them */
+  blame?: BattleUnit | null;
+  /** stats only: hero damage from sudden death, by the side whose hero took it */
+  sdDmg?: Pair<number>;
   /** when sudden death began early because no unit was left */
   sdAt?: number;
   sudden?: boolean;

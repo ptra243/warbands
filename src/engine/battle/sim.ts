@@ -10,7 +10,7 @@ import {
   adj,
   aim,
   aura,
-  die,
+  killed,
   dmg,
   effAtk,
   foes,
@@ -23,7 +23,7 @@ import {
 } from './effects.ts';
 import { U } from '../data/units.ts';
 import { random } from '../rng.ts';
-import { addKind, creditKill, newTally } from './stats.ts';
+import { addKind, newTally } from './stats.ts';
 
 /* stats of an owned unit outside battle */
 export function stats(o: UnitSpec): { hp: number; atk: number; m: number; tribes: string[]; cd: number } {
@@ -351,9 +351,7 @@ export function step(B: Battle, dt: number): void {
       addKind(u.tally.took, 'burn', u.burn * dt);
       if (u.burnBy && u.burnBy.side !== u.side) addKind(u.burnBy.tally.dmg, 'burn', u.burn * dt);
       if (u.hp <= 0) {
-        const over = -u.hp;
-        die(B, u);
-        creditKill(u.burnBy, u, over);
+        killed(B, u, u.burnBy);
         if (!u.alive) continue;
       }
     }
@@ -363,7 +361,7 @@ export function step(B: Battle, dt: number): void {
       u.taken += r0;
       B.fx[1 - u.side].rot += r0;
       addKind(u.tally.took, 'rot', r0);
-      if (u.rotBy && u.rotBy.side !== u.side) addKind(u.rotBy.tally.dmg, 'rot', r0);
+      if (u.rotCredit && u.rotCredit.side !== u.side) addKind(u.rotCredit.tally.dmg, 'rot', r0);
       /* a stack fades every ROTFADE seconds, twice as fast once whoever applied it is dead (leader Rot: once no enemy unit is left) */
       u.rotT =
         (u.rotT || 0) + dt * ((u.rotBy ? !u.rotBy.alive : !B.units.some((x) => x.alive && x.side !== u.side)) ? 2 : 1);
@@ -372,9 +370,7 @@ export function step(B: Battle, dt: number): void {
         u.rot--;
       }
       if (u.hp <= 0) {
-        const over = -u.hp;
-        die(B, u);
-        creditKill(u.rotBy, u, over);
+        killed(B, u, u.rotCredit);
         if (!u.alive) continue;
       }
     }
@@ -410,7 +406,11 @@ export function step(B: Battle, dt: number): void {
   const sd0 = B.sdAt != null ? Math.min(B.sdAt, SUDDEN) : SUDDEN;
   if (B.time > sd0) {
     B.sudden = true;
-    for (const h of B.hero) h.hp -= h.max * (0.03 + 0.015 * (B.time - sd0)) * dt;
+    B.hero.forEach((h, i) => {
+      const v = h.max * (0.03 + 0.015 * (B.time - sd0)) * dt;
+      h.hp -= v;
+      (B.sdDmg = B.sdDmg || [0, 0])[i] += v;
+    });
   }
   const a = B.hero[0].hp <= 0,
     b = B.hero[1].hp <= 0;

@@ -60,4 +60,40 @@ describe('battle stats', () => {
     }
     expect(seen).toBeGreaterThan(100);
   });
+
+  const spec = (id: string, slot: number): W.UnitSpec => ({ id, slot, tier: 1, item: null, gAtk: 0, gHp: 0 });
+
+  it('credit a death set off inside another death once', () => {
+    /* a Plague Bearer hits a Briar Warden, dies to its thorns, and its death blast finishes the Warden off */
+    const B = W.createBattle([spec('plague', 0)], [spec('briar', 0)], 1, 10, 10);
+    const [pb, bw] = B.units;
+    bw.hp = W.effAtk(pb) + 1;
+    pb.hp = 1;
+    pb.t = pb.cd;
+    W.step(B, 0.05);
+    expect([pb.alive, bw.alive]).toEqual([false, false]);
+    expect(pb.tally.kills).toBe(1);
+    expect(bw.tally.kills).toBe(1);
+  });
+
+  it('credit Rot spread by Blight to whoever made the kill', () => {
+    const B = W.createBattle([spec('footman', 8)], [spec('footman', 0), spec('footman', 1)], 1, 10, 10);
+    const [a, x, y] = B.units;
+    B.syn[0].Blight = 1;
+    x.rot = 2;
+    x.rotDps = 5;
+    x.rotBy = a;
+    x.rotCredit = a;
+    x.hp = 0.01;
+    W.step(B, 0.05);
+    expect(x.alive).toBe(false);
+    expect(a.tally.kills).toBe(1);
+    expect(y.rot).toBeGreaterThan(0);
+    expect(y.rotCredit).toBe(a);
+    /* the summary has no unowned Rot to explain */
+    W.step(B, 0.5);
+    const S = W.battleStats(B);
+    expect(S.unowned[0].rot).toBeLessThan(1e-9);
+    expect(a.tally.dmg.rot).toBeGreaterThan(0);
+  });
 });

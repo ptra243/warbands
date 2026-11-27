@@ -75,6 +75,8 @@ export function addRot(B: Battle, t: BattleUnit | null | undefined, n: number, d
   t.rot = Math.min(cap, t.rot + n);
   t.rotDps = Math.max(t.rotDps, dps);
   t.rotBy = B.src && B.src.side !== t.side ? B.src : t.rotBy || null;
+  t.rotCredit =
+    B.src && B.src.side !== t.side ? B.src : B.blame && B.blame.side !== t.side ? B.blame : t.rotCredit || null;
   t.rotT = 0;
   B.ev.push({ t: 'rot', b: t.bid });
 }
@@ -143,12 +145,18 @@ export function dmg(B: Battle, t: BattleUnit, v: number, o?: DamageOptions): voi
     dmg(B, a, t.d.thorns * t.m, { redir: 1, soak: 1, kind: 'thorns' });
     B.src = a;
   }
-  if (t.hp <= 0) {
-    const over = -t.hp,
-      by = B.src;
-    die(B, t);
-    creditKill(by, t, over);
-  }
+  if (t.hp <= 0) killed(B, t, B.src);
+}
+/** die(), crediting `by` with the kill and with what the death sets off. A unit already killed further down the same
+ *  blow is not credited twice */
+export function killed(B: Battle, t: BattleUnit, by: BattleUnit | null | undefined): void {
+  if (!t.alive) return;
+  const over = -t.hp,
+    pb = B.blame;
+  B.blame = by || null;
+  die(B, t);
+  B.blame = pb;
+  creditKill(by, t, over);
 }
 export function die(B: Battle, u: BattleUnit): void {
   if (!u.alive) return;

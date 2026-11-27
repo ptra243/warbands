@@ -21,7 +21,11 @@ export function render() {
   render0();
   afterRender();
 }
+/** whether the last render drew the summary, so it takes focus only when it first appears */
+let onSummary = false;
 export function render0() {
+  const wasSummary = onSummary;
+  onSummary = S.screen === 'summary';
   if (S.screen === 'pick') {
     root.innerHTML = pickHTML();
     return;
@@ -44,7 +48,7 @@ export function render0() {
   if (S.screen === 'summary') {
     root.innerHTML = summaryHTML();
     const g = document.getElementById('sumgo');
-    if (g) g.focus();
+    if (g && !wasSummary) g.focus();
     return;
   }
   if (S.screen === 'battle') {

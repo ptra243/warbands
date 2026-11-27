@@ -41,6 +41,8 @@ export interface BattleStats {
   unowned: Pair<{ rot: number; burn: number }>;
   /** hero damage from sudden death, by the side whose hero took it */
   sudden: Pair<number>;
+  /** each side's leader */
+  lead: Pair<string | null>;
 }
 
 /** the full stats of a finished (or running) battle. Not rounded: round when showing them */
@@ -58,16 +60,12 @@ export function battleStats(B: Battle): BattleStats {
   }));
   const side = (s: number) => B.units.filter((u) => u.side === s);
   const owned = (s: number, k: 'rot' | 'burn') => side(s).reduce((a, u) => a + (u.tally.dmg[k] || 0), 0);
-  const heroBy = (s: number) => side(s).reduce((a, u) => a + sumKinds(u.tally.hero), 0);
   const unowned = [0, 1].map((s) => ({
     rot: Math.max(0, B.fx[s].rot - owned(s, 'rot')),
     burn: Math.max(0, B.fx[s].burn - owned(s, 'burn')),
   })) as Pair<{ rot: number; burn: number }>;
-  /* whatever a hero lost that no unit dealt came from sudden death */
-  const sudden = [0, 1].map((s) =>
-    Math.max(0, B.hero[s].max - Math.max(0, B.hero[s].hp) - heroBy(1 - s)),
-  ) as Pair<number>;
-  return { time: B.time, winner: B.winner, units, unowned, sudden };
+  const sudden: Pair<number> = B.sdDmg ? [B.sdDmg[0], B.sdDmg[1]] : [0, 0];
+  return { time: B.time, winner: B.winner, lead: [B.lead[0], B.lead[1]], units, unowned, sudden };
 }
 
 /** credit a kill to whoever dealt the blow that finished `t`, if it really died */
