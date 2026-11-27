@@ -11,6 +11,7 @@ npm run check         # tsc, ESLint, Prettier, Vitest: run before committing
 npm run test:e2e      # build + Playwright (needs `npx playwright install chromium` or CHROME=path)
 npm run golden:update # re-record the rules baseline after an intended rules change
 npm run bot -- 300    # balance bot; also roundrobin, board-vs-field, postgame
+npm run stats -- 300  # per-unit battle stats from bot runs: damage by source, overkill, overheal, win rate
 npm run cards -- <id> # render card art to art/out/ for review (needs Chromium, as above)
 ```
 

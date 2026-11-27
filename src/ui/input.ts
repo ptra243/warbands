@@ -182,6 +182,14 @@ export function command(c: string): void {
     W.runToEnd(B);
     endBattle();
     return;
+  } else if (c.startsWith('sort:') || c.startsWith('sumtab:') || c.startsWith('row:')) {
+    if (c.startsWith('sort:')) S.sumSort = c.slice(5);
+    else if (c.startsWith('sumtab:')) S.sumTab = c === 'sumtab:enemy' ? 'enemy' : 'you';
+    else S.sumOpen = S.sumOpen === c.slice(4) ? null : c.slice(4);
+    render();
+    /* the summary is redrawn: put focus back on the control that was used, without scrolling to it */
+    root.querySelector<HTMLElement>(`button[data-act="${c}"]`)?.focus({ preventScroll: true });
+    return;
   } else if (c === 'continue') {
     S.B = null;
     S.result = null;
@@ -217,6 +225,12 @@ export function installInput(): void {
     act(a);
   });
   root.addEventListener('keydown', (e) => {
+    /* the summary's tabs: arrow keys move between them */
+    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && (e.target as HTMLElement).matches('[role="tab"]')) {
+      e.preventDefault();
+      command(S.sumTab === 'enemy' ? 'sumtab:you' : 'sumtab:enemy');
+      return;
+    }
     if (
       (e.key === 'Enter' || e.key === ' ') &&
       (e.target as HTMLElement).matches('[data-own]') &&

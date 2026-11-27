@@ -7,6 +7,8 @@ export { U, POOL } from './data/units.ts';
 export { LEADERS, RELICS } from './data/leaders.ts';
 export { aim, effAtk } from './battle/effects.ts';
 export { stats, synergy, heroHp, createBattle, step } from './battle/sim.ts';
+export { battleStats, sumKinds } from './battle/stats.ts';
+export type { BattleStats, UnitStats } from './battle/stats.ts';
 export { toggleFreeze } from './shop.ts';
 export { budget, enemyLevel, genBoss, genEnemy } from './enemies.ts';
 export {

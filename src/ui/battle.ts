@@ -189,12 +189,16 @@ function showBattle(): void {
 export function endBattle() {
   const B = S.B!;
   const rep = W.battleReport(B),
+    st = W.battleStats(B),
     foe = foeName();
+  S.sumOpen = null;
+  S.sumTab = 'you';
   if (S.opp!.camp) {
     const c = W.finishCamp(S.run!, B);
     S.result = { camp: true };
     S.sum = {
       rep,
+      st,
       res: c.win ? 'win' : 'draw',
       title: c.win ? 'Camp cleared' : 'Driven off',
       bits: [c.msg, 'No life was at stake.'],
@@ -216,6 +220,7 @@ export function endBattle() {
     if (wasBoss && r.res === 'win' && !run.over) bits.push('The boss leaves a relic behind.');
     S.sum = {
       rep,
+      st,
       res: r.res,
       title: r.res === 'win' ? 'Victory' : r.res === 'loss' ? 'Defeat' : 'Draw',
       bits,

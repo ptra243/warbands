@@ -4,6 +4,7 @@ import { ART } from './art.ts';
 import { CARD_ART } from './card-art.ts';
 import { PORTRAIT } from './portraits.ts';
 import { S } from './state.ts';
+import type { Summary } from './state.ts';
 
 export const RAR = ['', 'Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'],
   ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
@@ -267,61 +268,112 @@ export function endHTML() {
 <div class="scroll"><table class="log"><thead><tr><th>Round</th><th>Opponent</th><th>Result</th><th>Your hero</th><th>Enemy hero</th><th>Length</th><th>Your top damage</th></tr></thead><tbody>${logRows()}</tbody></table></div>
 <p class="odds dlmsg" role="status">${S.dlmsg || ''}</p><details id="rawlog"><summary>Show the full log as text</summary><textarea id="rawtext" readonly rows="8" aria-label="Full run log"></textarea></details></section></div>`;
 }
-/* after every fight: who did what */
+/* after every fight: who did what. One table per side; a column header sorts both, a row opens its unit's breakdown */
+const KIND_NAME: Record<W.HitKind, string> = {
+  attack: 'Attacks',
+  crit: 'Critical hits',
+  splash: 'Splash',
+  reach: 'Reach',
+  smite: 'Smite',
+  ability: 'Abilities',
+  thorns: 'Thorns',
+  rot: 'Rot',
+  burn: 'Burn',
+};
+const KINDS = Object.keys(KIND_NAME) as W.HitKind[];
+const FLAT = [
+  'flank',
+  'rout',
+  'shielded',
+  'overkill',
+  'kills',
+  'blocked',
+  'guarded',
+  'soaked',
+  'heal',
+  'overheal',
+  'regen',
+] as const;
+type SumRow = Pick<W.Tally, 'dmg' | 'hero' | 'took' | (typeof FLAT)[number]> & {
+  key: string;
+  id: string;
+  tier: number;
+  sum: boolean;
+  n: number;
+  alive: number;
+  hp: number;
+  died: number;
+};
+const SORTS: Record<string, [string, (r: SumRow) => number]> = {
+  dmg: ['Damage', (r) => W.sumKinds(r.dmg) + W.sumKinds(r.hero)],
+  units: ['To units', (r) => W.sumKinds(r.dmg)],
+  hero: ['To hero', (r) => W.sumKinds(r.hero)],
+  kills: ['Kills', (r) => r.kills],
+  taken: ['Taken', (r) => W.sumKinds(r.took)],
+  blocked: ['Blocked', (r) => r.blocked],
+  healed: ['Healed', (r) => r.heal + r.regen],
+};
+/** one side's units, with summons of a kind folded into one row, in the chosen order */
+function sumRows(Z: Summary, side: 'you' | 'enemy'): SumRow[] {
+  const out: SumRow[] = [],
+    add = (a: W.ByKind, b: W.ByKind) => {
+      for (const k of KINDS) if (b[k]) a[k] = (a[k] || 0) + b[k]!;
+    };
+  Z.st.units.forEach((u, i) => {
+    if (u.side !== side) return;
+    const rep = Z.rep.units[i];
+    let g = u.summoned ? out.find((x) => x.sum && x.id === u.id) : undefined;
+    if (!g) {
+      g = {
+        key: side + '.' + (u.summoned ? 's' + u.id : i),
+        id: u.id,
+        tier: u.tier,
+        sum: u.summoned,
+        n: 0,
+        alive: 0,
+        hp: 0,
+        died: 0,
+        dmg: {},
+        hero: {},
+        took: {},
+        flank: 0,
+        rout: 0,
+        shielded: 0,
+        overkill: 0,
+        kills: 0,
+        blocked: 0,
+        guarded: 0,
+        soaked: 0,
+        heal: 0,
+        overheal: 0,
+        regen: 0,
+      };
+      out.push(g);
+    }
+    g.n++;
+    add(g.dmg, u.t.dmg);
+    add(g.hero, u.t.hero);
+    add(g.took, u.t.took);
+    for (const k of FLAT) g[k] += u.t[k];
+    if (u.alive) {
+      g.alive++;
+      g.hp += rep.hpLeft || 0;
+    } else g.died = Math.max(g.died, rep.died || 0);
+  });
+  const by = SORTS[S.sumSort || 'dmg'] || SORTS.dmg;
+  return out.sort((p, q) => by[1](q) - by[1](p));
+}
 export function summaryHTML() {
   const Z = S.sum!,
     b = Z.rep,
-    num = (v: number | undefined) => Math.round(v || 0).toLocaleString('en');
-  type Row = {
-    id: string;
-    tier?: number;
-    sum: boolean;
-    n: number;
-    dealt: number;
-    hero: number;
-    taken: number;
-    healed: number;
-    alive: number;
-    hp: number;
-    died: number;
-  };
-  const rows = (side: 'you' | 'enemy') => {
-    const out: Row[] = [];
-    for (const u of b.units.filter((x) => x.side === side)) {
-      let g = u.summoned ? out.find((x) => x.sum && x.id === u.id) : undefined;
-      if (!g) {
-        g = {
-          id: u.id,
-          tier: u.tier,
-          sum: !!u.summoned,
-          n: 0,
-          dealt: 0,
-          hero: 0,
-          taken: 0,
-          healed: 0,
-          alive: 0,
-          hp: 0,
-          died: 0,
-        };
-        out.push(g);
-      }
-      g.n++;
-      g.dealt += u.dealt;
-      g.hero += u.hero;
-      g.taken += u.taken;
-      g.healed += u.healed || 0;
-      if (u.died == null) {
-        g.alive++;
-        g.hp += u.hpLeft!;
-      } else g.died = Math.max(g.died, u.died);
-    }
-    return out.sort((p, q) => q.dealt + q.hero - p.dealt - p.hero);
-  };
-  const me = rows('you'),
-    en = rows('enemy'),
-    top = Math.max(1, ...me.concat(en).map((r) => r.dealt + r.hero));
-  const nm = (r: Row) => W.U[r.id].name + (r.n > 1 ? ' ×' + r.n : '');
-  const fate = (r: Row) =>
+    num = (v: number | undefined) => Math.round(v || 0).toLocaleString('en'),
+    dash = (v: number) => (Math.round(v) ? num(v) : '–'),
+    pct = (v: number, of: number) => (of > 0 ? Math.round((v / of) * 100) + '%' : '');
+  const me = sumRows(Z, 'you'),
+    en = sumRows(Z, 'enemy'),
+    top = Math.max(1, ...me.concat(en).map(SORTS.dmg[1]));
+  const nm = (r: SumRow) => W.U[r.id].name + (r.n > 1 ? ' ×' + r.n : '');
+  const fate = (r: SumRow) =>
     r.n > 1
       ? r.alive
         ? `${r.alive} of ${r.n} survived`
@@ -329,57 +381,110 @@ export function summaryHTML() {
       : r.alive
         ? `Survived · ${num(r.hp)} health`
         : `Fell at ${r.died}s`;
-  const table = (list: Row[], _side: number) => {
+  /* the breakdown under an opened row: where the damage came from, what was gained or wasted, how it held up */
+  const detail = (r: SumRow) => {
+    const dealt = W.sumKinds(r.dmg),
+      heroAll = W.sumKinds(r.hero),
+      all = dealt + heroAll,
+      took = W.sumKinds(r.took),
+      src = KINDS.map((k) => [k, (r.dmg[k] || 0) + (r.hero[k] || 0)] as const).filter(([, v]) => Math.round(v) > 0);
+    const bars = src.length
+      ? src
+          .map(
+            ([k, v]) =>
+              `<li><span>${KIND_NAME[k]}</span><span class="sbar"><i class="k-${k}" style="width:${((v / all) * 100).toFixed(1)}%"></i></span><b>${num(v)}</b><small>${pct(v, all)}</small></li>`,
+          )
+          .join('')
+      : '<li class="none">Dealt no damage.</li>';
+    const facts = (list: [string, number, string?][]) => {
+      const shown = list.filter(([, v]) => Math.round(v) > 0);
+      return shown.length
+        ? shown
+            .map(([l, v, x]) => `<li><span>${l}</span><b>${num(v)}</b>${x ? `<small>${x}</small>` : ''}</li>`)
+            .join('')
+        : '<li class="none">Nothing to note.</li>';
+    };
+    return `<tr class="sdet"><td colspan="9"><div class="sgrid">
+<section><h3>Damage by source</h3><ul class="srcs">${bars}</ul></section>
+<section><h3>Bonus and waste</h3><ul class="facts">${facts([
+      ['Kills', r.kills],
+      ['Extra from flanking', r.flank, pct(r.flank, dealt) + ' of damage to units'],
+      ['Extra on an undefended hero', r.rout, pct(r.rout, heroAll) + ' of damage to the hero'],
+      ['Soaked up by enemy shields', r.shielded, pct(r.shielded, dealt) + ' of damage to units'],
+      ['Overkill', r.overkill, 'past what it took to kill'],
+    ])}</ul></section>
+<section><h3>Holding up</h3><ul class="facts">${facts([
+      ['Damage taken', took],
+      ['Blocked by its shield', r.blocked, pct(r.blocked, took)],
+      ['Taken guarding an ally', r.guarded, pct(r.guarded, took)],
+      ['Taken for its summoner', r.soaked, pct(r.soaked, took)],
+      ['Healing done', r.heal],
+      ['Healing wasted', r.overheal, pct(r.overheal, r.heal + r.overheal) + ' landed on full health'],
+      ['Regenerated', r.regen],
+    ])}</ul></section></div></td></tr>`;
+  };
+  const sortKey = S.sumSort && SORTS[S.sumSort] ? S.sumSort : 'dmg';
+  const th = (k: string, cls = '') =>
+    `<th class="${cls}${k === sortKey ? ' on' : ''}" aria-sort="${k === sortKey ? 'descending' : 'none'}"><button data-act="sort:${k}">${SORTS[k][0]}</button></th>`;
+  const table = (list: SumRow[]) => {
     const t = list.reduce(
       (a, r) => ({
-        dealt: a.dealt + r.dealt,
-        hero: a.hero + r.hero,
-        taken: a.taken + r.taken,
-        healed: a.healed + r.healed,
+        dealt: a.dealt + W.sumKinds(r.dmg),
+        hero: a.hero + W.sumKinds(r.hero),
+        kills: a.kills + r.kills,
+        taken: a.taken + W.sumKinds(r.took),
+        blocked: a.blocked + r.blocked,
+        healed: a.healed + r.heal + r.regen,
       }),
-      { dealt: 0, hero: 0, taken: 0, healed: 0 },
+      { dealt: 0, hero: 0, kills: 0, taken: 0, blocked: 0, healed: 0 },
     );
-    return `<div class="scroll"><table class="bstat"><thead><tr><th>Unit</th><th class="bcol">Damage</th><th>To units</th><th>To hero</th><th>Taken</th><th>Healed</th><th>Outcome</th></tr></thead><tbody>${list
-      .map(
-        (
-          r,
-        ) => `<tr class="${r.alive ? '' : 'gone'}"><td><div class="un"><span class="ic u f${W.U[r.id].f}">${ART.unit(r.id)}</span><span>${nm(r)} ${stars(r.tier || 1)}${r.sum ? '<small>summoned</small>' : ''}</span></div></td>
-<td class="bcol"><span class="dbar" title="${num(r.dealt)} to units, ${num(r.hero)} to the hero"><i class="du" style="width:${((r.dealt / top) * 100).toFixed(1)}%"></i><i class="dh" style="width:${((r.hero / top) * 100).toFixed(1)}%"></i></span></td>
-<td>${num(r.dealt)}</td><td>${r.hero ? num(r.hero) : '–'}</td><td>${num(r.taken)}</td><td>${r.healed ? num(r.healed) : '–'}</td><td class="fate">${fate(r)}</td></tr>`,
-      )
+    return `<div class="scroll"><table class="bstat"><thead><tr><th>Unit</th>${th('dmg', 'bcol')}${th('units')}${th('hero')}${th('kills')}${th('taken')}${th('blocked')}${th('healed')}<th>Outcome</th></tr></thead><tbody>${list
+      .map((r) => {
+        const open = S.sumOpen === r.key,
+          d = W.sumKinds(r.dmg),
+          h = W.sumKinds(r.hero);
+        return `<tr class="srow${r.alive ? '' : ' gone'}${open ? ' open' : ''}" data-act="row:${r.key}"><td><button class="un" data-act="row:${r.key}" aria-expanded="${open}"><span class="ic u f${W.U[r.id].f}">${ART.unit(r.id)}</span><span>${nm(r)} ${stars(r.tier || 1)}${r.sum ? '<small>summoned</small>' : ''}</span><span class="chev" aria-hidden="true"></span></button></td>
+<td class="bcol"><span class="dbar" title="${num(d)} to units, ${num(h)} to the hero"><i class="du" style="width:${((d / top) * 100).toFixed(1)}%"></i><i class="dh" style="width:${((h / top) * 100).toFixed(1)}%"></i></span></td>
+<td>${num(d)}</td><td>${dash(h)}</td><td>${dash(r.kills)}</td><td>${num(W.sumKinds(r.took))}</td><td>${dash(r.blocked)}</td><td>${dash(r.heal + r.regen)}</td><td class="fate">${fate(r)}</td></tr>${open ? detail(r) : ''}`;
+      })
       .join('')}</tbody>
-<tfoot><tr><td>Total</td><td class="bcol"></td><td>${num(t.dealt)}</td><td>${num(t.hero)}</td><td>${num(t.taken)}</td><td>${t.healed ? num(t.healed) : '–'}</td><td></td></tr></tfoot></table></div>`;
+<tfoot><tr><td>Total</td><td class="bcol"></td><td>${num(t.dealt)}</td><td>${dash(t.hero)}</td><td>${dash(t.kills)}</td><td>${num(t.taken)}</td><td>${dash(t.blocked)}</td><td>${dash(t.healed)}</td><td></td></tr></tfoot></table></div>`;
   };
   const lost = [b.heroMax - b.heroHp[0], b.heroMax - b.heroHp[1]],
     notes = [];
-  const big = (list: Row[]) => list.slice().sort((p, q) => q.hero - p.hero)[0];
+  const big = (list: SumRow[]) => list.slice().sort((p, q) => W.sumKinds(q.hero) - W.sumKinds(p.hero))[0];
   if (Z.res !== 'win') {
     const t = big(en);
-    if (t && t.hero > 0)
-      notes.push(`Their ${nm(t)} dealt ${num(t.hero)} of the ${num(lost[0])} damage your hero took.`);
+    if (t && W.sumKinds(t.hero) > 0)
+      notes.push(`Their ${nm(t)} dealt ${num(W.sumKinds(t.hero))} of the ${num(lost[0])} damage your hero took.`);
   }
   if (Z.res !== 'loss') {
     const t = big(me);
-    if (t && t.hero > 0)
-      notes.push(`Your ${nm(t)} dealt ${num(t.hero)} of the ${num(lost[1])} damage their hero took.`);
+    if (t && W.sumKinds(t.hero) > 0)
+      notes.push(`Your ${nm(t)} dealt ${num(W.sumKinds(t.hero))} of the ${num(lost[1])} damage their hero took.`);
   }
-  const fx = b.effects || { you: {}, enemy: {} };
-  if (fx.you.rot || fx.you.burn)
+  /* Rot with no unit to credit (a leader's) is left out of the tables */
+  const lr = Z.st.unowned,
+    rotBy = (i: number) => (Z.st.lead[i] && W.LEADERS[Z.st.lead[i]!].text.includes('Rot') ? "leader's Rot" : 'Rot');
+  if (Math.round(lr[0].rot))
+    notes.push(`Your ${rotBy(0)} dealt ${num(lr[0].rot)} to their units, not counted in the tables.`);
+  if (Math.round(lr[1].rot))
+    notes.push(`Their ${rotBy(1)} dealt ${num(lr[1].rot)} to your units, not counted in the tables.`);
+  if (b.sudden)
     notes.push(
-      `Your ${[fx.you.rot ? 'Rot dealt ' + num(fx.you.rot) : '', fx.you.burn ? 'burn dealt ' + num(fx.you.burn) : ''].filter(Boolean).join(' and ')} to their units, on top of the figures below.`,
+      `The fight went to sudden death, which cost your hero ${num(Z.st.sudden[0])} and theirs ${num(Z.st.sudden[1])}.`,
     );
-  if (fx.enemy.rot || fx.enemy.burn)
-    notes.push(
-      `Their ${[fx.enemy.rot ? 'Rot dealt ' + num(fx.enemy.rot) : '', fx.enemy.burn ? 'burn dealt ' + num(fx.enemy.burn) : ''].filter(Boolean).join(' and ')} to your units.`,
-    );
-  if (b.sudden) notes.push('The fight went to sudden death.');
+  const foe = S.sumTab === 'enemy';
+  const tab = (k: 'you' | 'enemy', label: string, list: SumRow[]) => {
+    const on = (k === 'enemy') === foe;
+    return `<button role="tab" id="stab-${k}" class="stab${k === 'enemy' ? ' foe' : ''}${on ? ' on' : ''}" data-act="sumtab:${k}" aria-selected="${on}" aria-controls="stab-panel" tabindex="${on ? 0 : -1}">${label}<small>${num(list.reduce((a, r) => a + SORTS.dmg[1](r), 0))} damage</small></button>`;
+  };
   const hero = (label: string, i: number) =>
     `<div class="tile"><small>${label}</small><b>${num(b.heroHp[i])} <i>/ ${num(b.heroMax)}</i></b><span class="hpb"><i style="width:${Math.max(0, (b.heroHp[i] / b.heroMax) * 100).toFixed(1)}%"></i></span></div>`;
   return `<div class="wrap battle">${headHTML()}
 <section class="result ${Z.res}"><div><h2>${Z.title}</h2><p>${Z.bits.join(' ')}</p></div><span class="grow"></span><button class="primary" data-act="continue" id="sumgo">${Z.go}</button></section>
 <div class="tiles"><div class="tile"><small>${Z.round}</small><b>${S.run!.leader ? W.LEADERS[S.run!.leader].name.replace('The ', '') : 'You'} <i>against</i> ${Z.foe}</b></div>${hero('Your hero', 0)}${hero('Enemy hero', 1)}<div class="tile"><small>Length</small><b>${b.time}s</b></div></div>
 ${notes.length ? `<section class="panel"><h2>What decided it</h2><ul class="notes">${notes.map((x) => `<li>${x}</li>`).join('')}</ul></section>` : ''}
-<section class="panel"><div class="bar"><h2>Your warband</h2><span class="grow"></span><span class="key"><i class="du"></i>to units <i class="dh"></i>to their hero</span></div>${table(me, 0)}</section>
-<section class="panel side s1"><h2>The enemy</h2>${table(en, 1)}</section>
+<section class="panel stabbed"><div class="bar"><div class="stabs" role="tablist" aria-label="Whose stats">${tab('you', 'Your warband', me)}${tab('enemy', 'The enemy', en)}</div><span class="grow"></span><span class="key"><i class="du"></i>to units <i class="dh"></i>to ${foe ? 'your' : 'their'} hero</span></div><p class="odds">Choose a unit to see where its damage came from, or a column to sort by it.</p><div role="tabpanel" id="stab-panel" aria-labelledby="stab-${foe ? 'enemy' : 'you'}" class="${foe ? 'side s1' : ''}">${table(foe ? en : me)}</div></section>
 <p><button class="primary" data-act="continue">${Z.go}</button></p></div>`;
 }

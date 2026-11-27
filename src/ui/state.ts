@@ -1,10 +1,12 @@
 /* The UI's own state. Everything about the run itself lives in S.run and is changed only through the engine. */
-import type { Battle, BattleReport, Opponent, PlayerFaction, Run } from '../engine/index.ts';
+import type { Battle, BattleReport, BattleStats, Opponent, PlayerFaction, Run } from '../engine/index.ts';
 
 export type Screen = 'pick' | 'leader' | 'shop' | 'encounter' | 'battle' | 'summary' | 'end';
 
 export interface Summary {
   rep: BattleReport;
+  /** the full battle stats behind the summary tables */
+  st: BattleStats;
   res: 'win' | 'loss' | 'draw';
   title: string;
   bits: string[];
@@ -38,6 +40,11 @@ export interface UiState {
   hover?: number | null;
   drag?: boolean;
   sum?: Summary | null;
+  /** summary table: the column it is sorted by, and the unit row opened to show its breakdown */
+  sumSort?: string;
+  sumOpen?: string | null;
+  /** which side's table the summary shows */
+  sumTab?: 'you' | 'enemy';
 }
 
 export const S: UiState = {
