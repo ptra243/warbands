@@ -949,7 +949,7 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  color: var(--c, #e8e2d0);
+  color: var(--c, #b9b3a3);
   background: rgba(11, 13, 15, 0.82);
   box-shadow: inset 0 0 0 1.2px var(--c, #b9b3a3);
 }
