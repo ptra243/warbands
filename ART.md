@@ -13,7 +13,9 @@ The card art is in the game on the shop screen (the tall shop cards, the board a
 | `src/ui/portraits.ts` | The nine leader portraits, drawn with the same kit.                                              |
 | `tools/cards.ts`      | Renders the art large, as full cards and as battle tiles, and screenshots each.                  |
 | `art/reference/`      | Approved renders to match, and rejected ones to avoid.                                           |
-| `art/out/`            | Scratch output from the tool. Not committed.                                                     |
+| `art/vex/`            | Animated versions drawn in vex: `facets.vx.js` (the kit, ported), one `.vx.js` file per unit.    |
+| `tools/vex/`          | The vex tool, a pinned git submodule. See "Animation" below.                                     |
+| `art/out/`            | Scratch output from the tools. Not committed.                                                    |
 
 ## The working loop
 
@@ -35,6 +37,10 @@ Draw units in small batches that share a tribe or class, and compare them side b
 - **Thin highlight lines** along lit edges, with `L` at a width under 1 and reduced opacity.
 - **Light sources glow.** Use `glow` for orbs, eyes and flames, and `bolt` for lightning. A light source in the scene also tints nearby planes: add a low-opacity polygon of its colour over them.
 - **Backgrounds are simple and dark.** Two or three large planes, then a few props that say where we are. The figure must be the brightest, most saturated thing in the frame.
+- **One brightest area.** The face or the ability. Split big pale areas (beards, armour, capes) into facets and tone them below it. A glowing core counts too: keep it dim in the still and let it flare in animation.
+- **Spells light their caster.** A glowing effect tints the nearby face and clothes in its colour at low opacity.
+- **Tones separate parts of one material.** A unit made of one material (all bone, all steel) needs a different tone per part, or the parts merge.
+- **Skeletal units show gaps.** Thin parts (arm bones, fingers) are see-through to the background; the body gets a dark interior lit from inside. Solid bone reads as a statue.
 - **Scattered details** such as stars, embers and rain use `rnd(seed)` so they land in the same place on every render. Never use `Math.random`.
 
 ## Composition
@@ -45,7 +51,9 @@ Each illustration is a small scene: one figure, in a place, doing what the card 
 - **Focal point in the middle.** The face or the action sits in the central half of the frame, so it survives every crop.
 - **Keep the bottom quarter unimportant.** The name on a card and the health bar on a tile both cover it. Feet, floors and hems can go there. Hands, faces and effects cannot.
 - **Keep the top corners unimportant.** The cost coin covers the top left of a card and the rarity label the top right.
-- **Bold silhouette.** A battle tile is 113 pixels wide. The pose must read as a shape at that size.
+- **Bold silhouette.** A battle tile is 113 pixels wide. The pose must read as a shape at that size. Prefer fewer, chunkier parts (three thick fingers, not five thin ones).
+- **The outline stands out from the background.** Use light/dark contrast first, a rim light second. Check at real tile size.
+- **Floating effects show depth.** Orbs and the like shrink and dim behind the figure, grow in front, and never cover the face.
 
 ## Variety
 
@@ -64,6 +72,7 @@ Within a group, let cost show as mastery. The 1-cost Apprentice barely controls 
 - **Neck.** The owner has flagged necks more than once (`art/reference/rejected-necks.png`). Make the neck short, narrower than the jaw and much darker than the face (`sh(skin, 0.45)` to `0.58`), because it sits in the chin's shadow. Set the head low so little neck shows, and wrap a collar, cowl or beard around its base. A light neck as wide as the head makes the head look perched on a post.
 - **Faces.** Scene figures have simple eyes and a mouth where the expression matters: wide eyes on the Apprentice, a grin on the Fire Mage. The owner approved this on the mages. Draw an eye as a small almond shape with a dark iris and a highlight, and lay a lighter skin tone over the kit's dark eye sockets first, or the sockets read as a mask. Glowing slits for eyes were rejected on the Fire Mage. The leader portraits have no drawn features. Whether to reconcile the two is not decided, so ask before changing either.
 - **Arms.** A bare arm drawn as one thick line reads as a stick. Give it a sleeve, a second tone, or a bend.
+- **Hands.** A palm with separate fingers, or a fist. Never a plain circle or bare strokes. Add a cuff where it meets the sleeve.
 - **Hands on effects.** Draw the effect over the hand, with a glow, so the join is hidden.
 - **Arms across the body.** An arm the same colour as the torso it crosses disappears into it. The owner could not tell the Halberdier's arms from his gambeson. Give the arm a different material, such as a mail sleeve over a cloth body, a dark edge where it crosses the torso, and a visible elbow. Put the hand out past the body's outline where the pose allows.
 
@@ -106,11 +115,11 @@ A wide unit should also look bigger than its neighbours. The Archmage does not y
 
 ## Setting and colour by faction
 
-| Faction | Settings                                        | Background colours               |
-| ------- | ----------------------------------------------- | -------------------------------- |
-| Humans  | Keeps, studies, battlefields, clifftops, towers | Slate blue, warm brown, dusk red |
-| Elves   | Forest, moonlight, groves, altars               | Deep green, violet for Drow      |
-| Undead  | Graveyards, crypts, fog                         | Green-black, bone, sickly green  |
+| Faction | Settings                                        | Background colours                    |
+| ------- | ----------------------------------------------- | ------------------------------------- |
+| Humans  | Keeps, studies, battlefields, clifftops, towers | Slate blue, warm brown, dusk red      |
+| Elves   | Forest, moonlight, groves, altars               | Deep green, violet for Drow           |
+| Undead  | Graveyards, crypts, burial pits at dawn, fog    | Green-black, bone, rust, sickly green |
 
 Each unit has one signature colour for its clothing and one for its effect. Keep the ones already in `src/ui/art.ts` where they exist, so a unit is the same colour as its current icon.
 
@@ -126,6 +135,30 @@ Pose is the hardest part to get right from words alone. The Halberdier went thro
 - **How many.** One or two per unit. When there are several, pick the one that gives the unit an outline its group does not already have, and say why. The Halberdier took the low, square polearm stance over a side-on spear thrust, because the Knight already charges side-on and a thrust reads as a spear, not a halberd's sweep.
 - **What to take.** The pose and the weight: where the feet are, how the knees bend, where each hand sits. Not clothing, faces or style. The rule in "Taking inspiration" still holds.
 - **Where they live.** Not in the repository: most images online are copyrighted. A link or a note in the conversation is enough.
+
+## Animation
+
+Animated units are drawn in vex (`tools/vex`), a code-based vector tool with rigs, keyframes and particles. Its kit, `art/vex/facets.vx.js`, ports `facets.ts` with the same names, so `card-art.ts` code copies across almost line for line. The game does not use vex output yet: vex is where motion is designed and reviewed. How it reaches the game (exported sprite sheets, or the game animating its own drawing code) is not decided.
+
+Setup once: `git submodule update --init && npm --prefix tools/vex install`. Then:
+
+- `npm run art:vex -- art/vex/<unit>.vx.js` builds into `art/out/vex` (frame strips in `anims/`, previews in `_preview/`).
+- `npm run art:vex:serve -- art/vex/<unit>.vx.js` opens a live viewer that rebuilds on save; notes added in it are saved for Claude to read.
+
+Rules:
+
+- **Layers.** A unit is a background, a figure (a rig of bones with pivots) and, for casters and signature abilities, effects drawn live in code. Nothing in the background touches the figure: the figure's shadow belongs to the figure; a floor glow from its magic is an effect.
+- **Frame the biggest pose.** Fit the most extreme pose (arms raised, mid-slam) in the frame, not the resting one. Ground impacts must land above the bottom quarter.
+- **Motions.** An attack is wind-up, release, recoil, settle, with big readable poses. Idles are small and vary in timing between units so a board does not breathe in step. Motion toward the viewer is faked by scaling the limb up; rotation alone swings it sideways.
+- **Hits happen at the target.** The tile plays the wind-up. Projectiles, lunges and impacts belong to the battle screen, which knows where the target is: up from the player's row, down from the enemy's.
+- **Ranks change the pose, not just the colour.** Default pattern: 1★ grounded, 2★ empowered, 3★ ascended. Effect counts can grow by rank. Face, headwear and palette stay fixed so the unit is recognisable. Extra effects keep out of the top corners and the bottom quarter.
+- **Design deaths into the art.** A unit that transforms on death is drawn so its parts match the result. The Bone Colossus has a glowing seam and mirrored halves because it breaks into two Bone Warriors.
+- **Tiers of effort.** Every unit: a shared idle, shared hit/death/summon effects, a projectile preset. Per body type (caster, melee, archer): one shared rig and set of motions. Bespoke rank poses and effects only for showcase units such as legendaries and leaders.
+
+| Unit          | State                                                                                                                                                                                             |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Archmage      | Test. Idle and attack at 1★/2★/3★. Weak: the 3★ orb crown crowds the hat; the 1★ cloak looks limp.                                                                                                |
+| Bone Colossus | First draft, drawn in vex only (no `card-art.ts` scene yet). Crouch idle, rise and double slam. Weak: arms swing out sideways on the way down; small in the frame; raised fists don't quite meet. |
 
 ## Drawn so far
 

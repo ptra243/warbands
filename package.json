@@ -24,7 +24,9 @@
     "roundrobin": "node tools/roundrobin.ts",
     "board-vs-field": "node tools/board-vs-field.ts",
     "stats": "node tools/stats.ts",
-    "cards": "node tools/cards.ts"
+    "cards": "node tools/cards.ts",
+    "art:vex": "node tools/vex/bin/vex.js build --out art/out/vex",
+    "art:vex:serve": "node tools/vex/bin/vex.js serve"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
