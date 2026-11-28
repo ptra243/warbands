@@ -1,0 +1,4 @@
+[submodule "tools/vex"]
+	path = tools/vex
+	url = https://github.com/uilianks/vex.git
+	ignore = untracked

@@ -7,3 +7,5 @@ package-lock.json
 tests/shots
 test-results
 playwright-report
+art/vex
+tools/vex

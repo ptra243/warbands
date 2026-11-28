@@ -12,6 +12,8 @@ export default tseslint.config(
       'runs',
       'tests/golden/baseline.json',
       'tests/shots',
+      'art/vex',
+      'tools/vex',
       'test-results',
       'playwright-report',
     ],
